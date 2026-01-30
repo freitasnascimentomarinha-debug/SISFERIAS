@@ -1,0 +1,445 @@
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useVacation } from '../contexts/VacationContext';
+import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, Employee, VacationParcel } from '../types';
+import { User, Shield, Calendar, ArrowLeft, Save, Info, Ban, AlertTriangle, MessageSquare, Clock, Camera, Trash2 } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { differenceInDays, format, isValid, isAfter } from 'date-fns';
+
+const VacationForm: React.FC = () => {
+  const { user, isAuthenticated, refreshUser, users, fetchAllUsers, fetchProfile } = useAuth();
+  const { saveVacation, employees, addAuditLog } = useVacation();
+  const { id, userId } = useParams();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
+
+  const targetUserId = userId || user?.id || '';
+
+  const [planningYear, setPlanningYear] = useState(currentYear);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const existing = useMemo(() => {
+    if (id) return employees.find(e => e.id === id);
+    return employees.find(e => e.userId === targetUserId && (e.planningYear || currentYear) === planningYear);
+  }, [id, targetUserId, planningYear, employees, currentYear]);
+
+  const [name, setName] = useState('');
+  const [warName, setWarName] = useState('');
+  const [nip, setNip] = useState('');
+  const [sector, setSector] = useState('01');
+  const [category, setCategory] = useState<any>('praca');
+  const [rank, setRank] = useState('');
+  const [totalVacationDays, setTotalVacationDays] = useState(30);
+  const [parcelCount, setParcelCount] = useState('1');
+  const [parcels, setParcels] = useState<VacationParcel[]>([]);
+  const [justification, setJustification] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+
+
+  // Bloqueio efetivo para todos (incluindo admins conforme requisitos)
+  const targetUserObj = users.find(u => u.id === targetUserId);
+  const isBlocked = targetUserObj ? targetUserObj.isBlocked === true : (user?.id === targetUserId ? user?.isBlocked === true : false);
+
+  // Flag para avisar admin, mas o bloqueio acima agora é soberano
+  const adminOverride = user?.role === 'admin' && isBlocked;
+  const ranks = useMemo(() => {
+    return category === 'praca' ? PRACA_RANKS : category === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
+  }, [category]);
+
+  useEffect(() => {
+    refreshUser();
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    if (existing) {
+      setName(existing.name);
+      setWarName(existing.warName);
+      setNip(existing.nip);
+      setSector(existing.sector);
+      setCategory(existing.category);
+      setRank(existing.rank);
+      setTotalVacationDays(existing.totalVacationDays);
+      setJustification(existing.justification || '');
+      setPhotoUrl(existing.photoUrl);
+
+      const savedParcels = existing.vacationParcels.map(p => ({ ...p }));
+      setParcels(savedParcels);
+      setParcelCount(savedParcels.length.toString());
+    } else {
+      const baseEmployee = employees.find(e => e.userId === targetUserId);
+      if (baseEmployee) {
+        setName(baseEmployee.name);
+        setWarName(baseEmployee.warName);
+        setNip(baseEmployee.nip);
+        setSector(baseEmployee.sector);
+        setCategory(baseEmployee.category);
+        setRank(baseEmployee.rank);
+        setPhotoUrl(baseEmployee.photoUrl);
+      } else {
+        // If we have a targetUserId that is DIFFERENT from current user, 
+        // DO NOT fill with current user data. It's confusing.
+        // Only default to current user if we are indeed editing current user.
+        if (targetUserId === user?.id) {
+          setName(user?.name || '');
+          setCategory('praca');
+          setRank(PRACA_RANKS[0]);
+        } else {
+          // Clear or set Loading state ideally
+          setName('');
+          setCategory('praca');
+        }
+      }
+      setParcels([{ id: Math.random().toString(36).substr(2, 9), startDate: '', endDate: '', days: 0 }]);
+      setParcelCount('1');
+      setJustification('');
+      setTotalVacationDays(30);
+    }
+    setErrorMsg(null);
+  }, [existing, isAuthenticated, targetUserId, user?.name]);
+
+  const handleParcelCountChange = (newCountStr: string) => {
+    const count = parseInt(newCountStr);
+    setParcelCount(newCountStr);
+
+    setParcels(prev => {
+      if (count === prev.length) return prev;
+      if (count > prev.length) {
+        const newOnes = [];
+        for (let i = prev.length; i < count; i++) {
+          newOnes.push({ id: Math.random().toString(36).substr(2, 9), startDate: '', endDate: '', days: 0 });
+        }
+        return [...prev, ...newOnes];
+      }
+      return prev.slice(0, count);
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("A foto deve ter no máximo 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setPhotoUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoUrl(undefined);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleParcelChange = (parcelId: string, field: keyof VacationParcel, value: string) => {
+    if (isBlocked) return;
+    setErrorMsg(null);
+    setParcels(prev => prev.map(p => {
+      if (p.id === parcelId) {
+        const updated = { ...p, [field]: value };
+        if ((field === 'startDate' || field === 'endDate') && updated.startDate && updated.endDate) {
+          const s = new Date(updated.startDate + 'T00:00:00');
+          const e = new Date(updated.endDate + 'T00:00:00');
+          if (isValid(s) && isValid(e)) {
+            const days = differenceInDays(e, s) + 1;
+            updated.days = Math.max(0, days);
+          }
+        }
+        return updated;
+      }
+      return p;
+    }));
+  };
+
+  const scheduledTotal = parcels.reduce((acc, p) => acc + p.days, 0);
+  const remainingDays = totalVacationDays - scheduledTotal;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isBlocked) return;
+
+    if (scheduledTotal > totalVacationDays) {
+      setErrorMsg(`Erro: Você utilizou ${scheduledTotal} dias, ultrapassando o limite de ${totalVacationDays} dias.`);
+      return;
+    }
+
+    const invalidParcel = parcels.find(p => {
+      if (!p.startDate || !p.endDate) return false;
+      const s = new Date(p.startDate + 'T00:00:00');
+      const e = new Date(p.endDate + 'T00:00:00');
+      return isAfter(s, e);
+    });
+
+    if (invalidParcel) {
+      setErrorMsg('Erro: Há parcelas com data de início posterior à data de término.');
+      return;
+    }
+
+    const employeeData: Employee = {
+      id: existing?.id || '', // Empty string for new, handled in context
+      userId: targetUserId,
+      name, warName, nip, sector, category, rank, totalVacationDays,
+      planningYear,
+      vacationParcels: parcels,
+      justification,
+      photoUrl
+    };
+
+    const actor = user?.name || 'Sistema';
+
+    if (existing) {
+      // Comparação Campo a Campo para Auditoria Detalhada
+      const compareFields = [
+        { label: 'Nome', old: existing.name, new: name },
+        { label: 'Nome de Guerra', old: existing.warName, new: warName },
+        { label: 'NIP', old: existing.nip, new: nip },
+        { label: 'Setor', old: existing.sector, new: sector },
+        { label: 'Categoria', old: existing.category, new: category },
+        { label: 'Posto/Graduação', old: existing.rank, new: rank },
+        { label: 'Direito (Dias)', old: existing.totalVacationDays.toString(), new: totalVacationDays.toString() },
+        { label: 'Janela (Ano)', old: (existing.planningYear || '---').toString(), new: planningYear.toString() },
+        { label: 'Justificativa', old: existing.justification || 'Vazio', new: justification || 'Vazio' },
+        { label: 'Foto', old: existing.photoUrl ? 'Com Foto' : 'Sem Foto', new: photoUrl ? 'Com Foto' : 'Sem Foto' },
+      ];
+
+      compareFields.forEach(f => {
+        if (f.old !== f.new) {
+          addAuditLog({
+            userName: actor,
+            action: 'Alteração',
+            field: `${f.label} (${warName})`,
+            oldValue: f.old,
+            newValue: f.new
+          });
+        }
+      });
+
+      // Auditoria de Parcelas
+      const oldParcelsText = existing.vacationParcels.map((p, i) => `P${i + 1}: ${p.startDate || '--'} a ${p.endDate || '--'} (${p.days}d)`).join('\n');
+      const newParcelsText = parcels.map((p, i) => `P${i + 1}: ${p.startDate || '--'} a ${p.endDate || '--'} (${p.days}d)`).join('\n');
+
+      if (oldParcelsText !== newParcelsText) {
+        addAuditLog({
+          userName: actor,
+          action: 'Alteração',
+          field: `Períodos de Férias (${warName})`,
+          oldValue: oldParcelsText,
+          newValue: newParcelsText
+        });
+      }
+    } else {
+      addAuditLog({
+        userName: actor,
+        action: 'Criação',
+        field: `Férias ${planningYear} (${warName})`,
+        oldValue: '-',
+        newValue: `Direito: ${totalVacationDays} dias\n${parcels.map((p, i) => `P${i + 1}: ${p.startDate || '--'} a ${p.endDate || '--'}`).join('\n')}`
+      });
+    }
+
+    await saveVacation(employeeData);
+    await fetchProfile(targetUserId);
+    await fetchAllUsers();
+    navigate('/');
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10">
+      {isBlocked && (
+        <div className="mb-6 p-6 bg-red-100 border border-red-200 rounded-3xl flex items-center gap-4 text-red-700 animate-pulse">
+          <div className="bg-red-500 text-white p-3 rounded-2xl"><Ban size={24} /></div>
+          <div>
+            <h3 className="font-bold text-lg">Acesso Bloqueado para Lançamento</h3>
+            <p className="text-sm">Você está fora do período de alteração. Entre em contato com o administrador.</p>
+          </div>
+        </div>
+      )}
+
+
+
+      {errorMsg && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-600 font-bold animate-in fade-in slide-in-from-top-2">
+          <AlertTriangle size={20} />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="bg-orange-500 p-6 text-white relative">
+          <button type="button" onClick={() => navigate(-1)} className="absolute top-6 left-6 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2"><Calendar size={24} /></div>
+            <h2 className="text-2xl font-bold">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
+            <p className="text-[11px] text-orange-100 mt-0.5">Janela de Planejamento Selecionada: {planningYear}</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-10">
+          <fieldset disabled={isBlocked} className="space-y-10">
+            <section>
+              <div className="flex items-center gap-2 mb-6 text-slate-900 font-bold border-b border-slate-100 pb-2">
+                <User size={18} className="text-orange-500" /> Dados do Militar e Janela
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-8 mb-8 items-center md:items-start">
+                <div className="relative group">
+                  <div className="w-32 h-32 rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center relative shadow-inner">
+                    {photoUrl ? (
+                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-slate-400 text-center flex flex-col items-center">
+                        <Camera size={24} className="mb-1" />
+                        <span className="text-[10px] font-bold uppercase">Foto</span>
+                      </div>
+                    )}
+                    {!isBlocked && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 bg-white text-orange-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
+                        {photoUrl && <button type="button" onClick={removePhoto} className="p-2 bg-white text-red-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Trash2 size={18} /></button>}
+                      </div>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 flex-1 w-full">
+                  <div className="space-y-1.5 bg-orange-50 p-3 rounded-2xl border border-orange-100">
+                    <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Janela do Ano (Planejamento)</label>
+                    <select
+                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-2 text-sm font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                      value={planningYear}
+                      onChange={e => setPlanningYear(parseInt(e.target.value))}
+                    >
+                      {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Quantidade de dias de direito</label>
+                    <input type="number" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-bold" value={totalVacationDays} onChange={e => setTotalVacationDays(parseInt(e.target.value) || 0)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
+                    <input required className="input-field" value={name} onChange={e => setName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Nome de Guerra</label>
+                    <input required className="input-field" value={warName} onChange={e => setWarName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">NIP</label>
+                    <input required className="input-field" value={nip} onChange={e => setNip(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Setor (NEO)</label>
+                    <select className="input-field" value={sector} onChange={e => setSector(e.target.value)}>
+                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
+                    <select
+                      className="input-field"
+                      value={category}
+                      onChange={e => {
+                        const newCat = e.target.value;
+                        setCategory(newCat);
+                        const newRanks = newCat === 'praca' ? PRACA_RANKS : newCat === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
+                        setRank(newRanks[0]);
+                      }}
+                    >
+                      <option value="praca">Praça</option>
+                      <option value="oficial">Oficial</option>
+                      <option value="civil">Servidor Civil</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Posto/Graduação</label>
+                    <select className="input-field" value={rank} onChange={e => setRank(e.target.value)}>
+                      {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2 text-slate-900 font-bold">
+                  <Calendar size={18} className="text-orange-500" /> Períodos de Férias ({planningYear})
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Saldo Restante</span>
+                    <span className={`text-sm font-black ${remainingDays < 0 ? 'text-red-500' : 'text-green-600'}`}>{remainingDays} dias</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="text-xs font-bold text-slate-500 uppercase">Dividir em quantas parcelas?</label>
+                <select className="input-field mt-1.5" value={parcelCount} onChange={e => handleParcelCountChange(e.target.value)}>
+                  <option value="1">1 parcela</option>
+                  <option value="2">2 parcelas</option>
+                  <option value="3">3 parcelas</option>
+                  <option value="4">4 parcelas</option>
+                </select>
+              </div>
+
+              <div className="space-y-6">
+                {parcels.map((p, idx) => (
+                  <div key={p.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div className="flex justify-between items-center mb-4">
+                      <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className="input-field py-2" value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className="input-field py-2" value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center gap-2 mb-6 text-slate-900 font-bold border-b border-slate-100 pb-2">
+                <MessageSquare size={18} className="text-orange-500" /> Justificativa
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
+                  <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[120px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
+                  <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
+                </div>
+              </div>
+            </section>
+          </fieldset>
+
+          <div className="flex gap-4 pt-6 border-t border-slate-100">
+            <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center gap-2 transition-all"><ArrowLeft size={18} /> Voltar</button>
+            {!isBlocked ? (
+              <button type="submit" className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
+            ) : (
+              <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
+            )}
+          </div>
+        </form>
+      </div>
+      <style>{`
+        .input-field { width: 100%; padding: 10px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; outline: none; transition: all 0.2s; }
+        .input-field:focus { border-color: #f97316; box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1); }
+      `}</style>
+    </div>
+  );
+};
+
+export default VacationForm;

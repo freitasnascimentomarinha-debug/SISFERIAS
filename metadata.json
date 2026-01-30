@@ -1,0 +1,5 @@
+{
+  "name": "SISFÉRIAS - Marinha do Brasil",
+  "description": "Sistema completo para gerenciamento de férias de militares e servidores civis, com dashboard interativo, calendário, emissão de papeleta e área de segurança.",
+  "requestFramePermissions": []
+}
