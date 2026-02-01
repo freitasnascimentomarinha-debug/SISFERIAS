@@ -42,6 +42,12 @@ const Security: React.FC = () => {
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
 
+  // Segurança da Aba Gestão de Contas
+  const [isAccountTabAuthenticated, setIsAccountTabAuthenticated] = useState(false);
+  const [showAccountPassModal, setShowAccountPassModal] = useState(false);
+  const [accountPassInput, setAccountPassInput] = useState('');
+  const [accountPassError, setAccountPassError] = useState(false);
+
   const navigate = useNavigate();
   const { users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
@@ -276,6 +282,20 @@ const Security: React.FC = () => {
     }
   };
 
+  const handleAccountTabAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accountPassInput === 'dp159') {
+      setIsAccountTabAuthenticated(true);
+      setShowAccountPassModal(false);
+      setActiveTab('accounts');
+      setAccountPassInput('');
+      setAccountPassError(false);
+    } else {
+      setAccountPassError(true);
+      setAccountPassInput('');
+    }
+  };
+
   const formatAuditValue = (val: string) => {
     if (!val || val === '-') return val;
     const dateRegex = /(\d{4})-(\d{2})-(\d{2})/g;
@@ -448,7 +468,7 @@ const Security: React.FC = () => {
       {/* MODAL EXCLUIR AVISO */}
       {isDeleteNoticeModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-[32px) shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="bg-red-500 p-6 text-white flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <AlertCircle size={24} />
@@ -474,6 +494,63 @@ const Security: React.FC = () => {
         </div>
       )}
 
+      {/* MODAL ACESSO GESTÃO DE CONTAS */}
+      {showAccountPassModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <Lock size={24} />
+                <h3 className="font-bold text-lg">Acesso Restrito</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAccountPassModal(false);
+                  setAccountPassError(false);
+                  setAccountPassInput('');
+                }}
+                className="hover:bg-white/20 p-1.5 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto">
+                <UserCog size={32} />
+              </div>
+              <div className="text-center">
+                <p className="text-slate-900 font-bold text-lg">Gestão de Contas</p>
+                <p className="text-sm text-slate-500 mt-2">Digite a senha específica desta aba para prosseguir.</p>
+              </div>
+
+              <form onSubmit={handleAccountTabAccess} className="space-y-4">
+                <div className="space-y-1">
+                  <input
+                    type="password"
+                    className={`w-full px-4 py-3 bg-slate-50 border ${accountPassError ? 'border-red-500' : 'border-slate-200'} rounded-xl outline-none focus:ring-2 focus:ring-slate-900`}
+                    placeholder="Senha de Acesso"
+                    value={accountPassInput}
+                    onChange={e => { setAccountPassInput(e.target.value); setAccountPassError(false); }}
+                    autoFocus
+                  />
+                  {accountPassError && (
+                    <p className="text-red-500 text-xs font-bold pt-1 flex items-center gap-1">
+                      <AlertCircle size={12} /> Senha incorreta!
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition-all"
+                >
+                  Confirmar Acesso
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-end mb-10">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
@@ -486,7 +563,18 @@ const Security: React.FC = () => {
       <div className="flex flex-wrap gap-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl w-fit">
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
         <TabButton icon={<FileText size={18} />} label="Justificativas" active={activeTab === 'justifications'} onClick={() => setActiveTab('justifications')} />
-        <TabButton icon={<UserCog size={18} />} label="Gestão de Contas" active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} />
+        <TabButton
+          icon={<UserCog size={18} />}
+          label="Gestão de Contas"
+          active={activeTab === 'accounts'}
+          onClick={() => {
+            if (isAccountTabAuthenticated) {
+              setActiveTab('accounts');
+            } else {
+              setShowAccountPassModal(true);
+            }
+          }}
+        />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </div>
@@ -836,8 +924,8 @@ const Security: React.FC = () => {
                               });
                             }}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${u.role === 'admin'
-                                ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white'
+                              ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white'
                               }`}
                           >
                             <Shield size={14} /> {u.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}

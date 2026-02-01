@@ -128,7 +128,7 @@ const Home: React.FC = () => {
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Efetivo Cadastrado</p>
               <p className="text-2xl font-black text-slate-900">{totalRegisteredCount}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Militares Únicos</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">Colaboradores</p>
             </div>
           </div>
 
@@ -148,7 +148,7 @@ const Home: React.FC = () => {
                   />
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">{onVacationCount} militares de férias agora</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{onVacationCount} colabores de férias</p>
             </div>
           </div>
 
