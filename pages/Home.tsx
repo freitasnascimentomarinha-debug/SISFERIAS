@@ -148,7 +148,7 @@ const Home: React.FC = () => {
                   />
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">{onVacationCount} colabores de férias</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase">{onVacationCount} Em férias</p>
             </div>
           </div>
 
