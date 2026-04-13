@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, MessageSquare, Save, Clock, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, MessageSquare, Save, Clock, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { SECTORS, User, Notice } from '../types';
@@ -12,7 +12,7 @@ const Security: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'justifications' | 'accounts' | 'logs' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'justifications' | 'accounts' | 'logs' | 'settings' | 'visibility'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -49,7 +49,7 @@ const Security: React.FC = () => {
   const [accountPassError, setAccountPassError] = useState(false);
 
   const navigate = useNavigate();
-  const { users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole } = useAuth();
+  const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, fetchAllUsers } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
 
   const allSectors = useMemo(() => {
@@ -301,6 +301,37 @@ const Security: React.FC = () => {
     }
   };
 
+  // Filtro para aba de Visibilidade
+  const [visibilitySearch, setVisibilitySearch] = useState('');
+
+  const adminUsers = useMemo(() => {
+    return users.filter(u => u.role === 'admin').filter(u =>
+      u.name.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
+      (u.sector || '').toLowerCase().includes(visibilitySearch.toLowerCase())
+    );
+  }, [users, visibilitySearch]);
+
+  const handleToggleViewAllSectors = async (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) return;
+    const newValue = !targetUser.viewAllSectors;
+    const { error } = await supabase.from('profiles').update({ view_all_sectors: newValue }).eq('id', userId);
+    if (!error) {
+      await fetchAllUsers();
+      addAuditLog({
+        userName: 'Admin',
+        action: 'Alteração',
+        field: `Visibilidade de Setor (${targetUser.name})`,
+        oldValue: targetUser.viewAllSectors ? 'Todos os Setores' : 'Apenas Seu Setor',
+        newValue: newValue ? 'Todos os Setores' : 'Apenas Seu Setor'
+      });
+    } else {
+      console.error("Error toggling viewAllSectors:", error);
+      alert("Erro ao atualizar visibilidade: " + error.message);
+    }
+  };
+
   const formatAuditValue = (val: string) => {
     if (!val || val === '-') return val;
     const dateRegex = /(\d{4})-(\d{2})-(\d{2})/g;
@@ -518,6 +549,7 @@ const Security: React.FC = () => {
           onClick={() => setActiveTab('accounts')}
         />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+        <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
       </div>
 
@@ -891,6 +923,74 @@ const Security: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'visibility' && (
+          <div className="p-8 animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Eye className="text-orange-500" size={24} /> Visibilidade por Setor
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">Configure se cada administrador pode visualizar dados de todos os setores ou apenas do seu próprio setor.</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar administrador..."
+                  className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-80"
+                  value={visibilitySearch}
+                  onChange={e => setVisibilitySearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {adminUsers.length === 0 ? (
+              <div className="py-20 text-center text-slate-400 font-medium border-4 border-dashed border-slate-50 rounded-[40px]">
+                <EyeOff size={48} className="mx-auto mb-4 opacity-10" />
+                Nenhum administrador encontrado.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {adminUsers.map(u => (
+                  <div key={u.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-lg">{u.name}</h4>
+                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">
+                          {u.email}
+                        </p>
+                        <p className="text-[10px] mt-1 uppercase font-black tracking-widest">
+                          <span className="text-orange-600">Setor: {u.sector || 'Não definido'}</span>
+                        </p>
+                      </div>
+                      <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-tighter uppercase border ${u.viewAllSectors ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                        {u.viewAllSectors ? 'Visão Global' : 'Apenas Setor'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-4">
+                      <button
+                        onClick={() => handleToggleViewAllSectors(u.id)}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${
+                          u.viewAllSectors
+                            ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white'
+                        }`}
+                      >
+                        {u.viewAllSectors ? (
+                          <><EyeOff size={16} /> Restringir ao Setor</>
+                        ) : (
+                          <><Eye size={16} /> Liberar Todos os Setores</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: p.email || '',
         role: p.role as 'admin' | 'user',
         isBlocked: p.is_blocked || false,
+        viewAllSectors: !!p.view_all_sectors,
         password: ''
       }));
       setUsers(allUsers);
@@ -93,6 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: data.email,
           role: data.role as 'admin' | 'user',
           isBlocked: !!data.is_blocked,
+          viewAllSectors: !!data.view_all_sectors,
           password: '' // Don't store password in state
         };
 

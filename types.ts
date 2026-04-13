@@ -38,6 +38,7 @@ export interface User {
   password?: string;
   role: 'admin' | 'user';
   isBlocked?: boolean;
+  viewAllSectors?: boolean;
 }
 
 export interface AuditLog {

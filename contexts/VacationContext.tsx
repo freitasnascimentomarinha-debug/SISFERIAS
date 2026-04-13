@@ -41,9 +41,9 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const fetchData = async () => {
     if (!user) return;
 
-    // Fetch Employees — admin vê apenas seu setor, user vê todos (filtro adicional pode ser aplicado na UI)
+    // Fetch Employees — admin vê apenas seu setor (exceto se viewAllSectors estiver ativado)
     let empQuery = supabase.from('employees').select('*');
-    if (user.role === 'admin' && user.sector) {
+    if (user.role === 'admin' && user.sector && !user.viewAllSectors) {
       empQuery = empQuery.eq('sector', user.sector);
     }
     const { data: empData } = await empQuery;
