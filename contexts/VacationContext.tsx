@@ -41,8 +41,12 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const fetchData = async () => {
     if (!user) return;
 
-    // Fetch Employees
-    const { data: empData } = await supabase.from('employees').select('*');
+    // Fetch Employees — admin vê apenas seu setor, user vê todos (filtro adicional pode ser aplicado na UI)
+    let empQuery = supabase.from('employees').select('*');
+    if (user.role === 'admin' && user.sector) {
+      empQuery = empQuery.eq('sector', user.sector);
+    }
+    const { data: empData } = await empQuery;
     if (empData) {
       // Map Supabase data to local types if needed (snake_case to camelCase)
       // Assumption: Database defines exact column names matching types or we map them here
