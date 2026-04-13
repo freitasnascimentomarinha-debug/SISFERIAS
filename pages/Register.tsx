@@ -11,6 +11,7 @@ const Register: React.FC = () => {
   const [nip, setNip] = useState('');
   const [category, setCategory] = useState('praca');
   const [sector, setSector] = useState('01');
+  const [isCustomSector, setIsCustomSector] = useState(false);
   const [rank, setRank] = useState(PRACA_RANKS[0]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -168,17 +169,29 @@ const Register: React.FC = () => {
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Setor</label>
-            <input 
-              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
-              list="register-sector-list"
-              value={sector}
-              onChange={e => setSector(e.target.value)}
-              placeholder="Digite ou selecione"
-              disabled={loading || !!success}
-            />
-            <datalist id="register-sector-list">
-              {SECTORS.map(s => <option key={s} value={s} />)}
-            </datalist>
+            {isCustomSector ? (
+              <div className="flex gap-2">
+                <input 
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium flex-1"
+                  value={sector}
+                  onChange={e => setSector(e.target.value)}
+                  placeholder="Nome do novo setor"
+                  disabled={loading || !!success}
+                  autoFocus
+                />
+                <button type="button" onClick={() => { setIsCustomSector(false); setSector(SECTORS[0]); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+              </div>
+            ) : (
+              <select 
+                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
+                value={sector}
+                onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); } }}
+                disabled={loading || !!success}
+              >
+                {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="__new__">+ Cadastrar novo setor...</option>
+              </select>
+            )}
           </div>
 
           <div className="space-y-1.5">

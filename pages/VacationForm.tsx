@@ -36,6 +36,7 @@ const VacationForm: React.FC = () => {
   const [warName, setWarName] = useState('');
   const [nip, setNip] = useState('');
   const [sector, setSector] = useState('01');
+  const [isCustomSector, setIsCustomSector] = useState(false);
   const [category, setCategory] = useState<any>('praca');
   const [rank, setRank] = useState('');
   const [totalVacationDays, setTotalVacationDays] = useState(30);
@@ -358,10 +359,17 @@ const VacationForm: React.FC = () => {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
-                    <input className="input-field" list="sector-list" value={sector} onChange={e => setSector(e.target.value)} placeholder="Digite ou selecione" />
-                    <datalist id="sector-list">
-                      {allSectors.map(s => <option key={s} value={s} />)}
-                    </datalist>
+                    {isCustomSector ? (
+                      <div className="flex gap-2">
+                        <input className="input-field flex-1" value={sector} onChange={e => setSector(e.target.value)} placeholder="Nome do novo setor" autoFocus />
+                        <button type="button" onClick={() => { setIsCustomSector(false); setSector(allSectors[0] || ''); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                      </div>
+                    ) : (
+                      <select className="input-field" value={sector} onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); } }}>
+                        {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
+                        <option value="__new__">+ Cadastrar novo setor...</option>
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
