@@ -19,6 +19,11 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
     return isValid(d) ? d : new Date(NaN);
   };
 
+  const toPercent = (value: number, total: number) => {
+    if (total <= 0) return 0;
+    return Math.round((value / total) * 100);
+  };
+
   const data = months.map((m, idx) => {
     // Cálculo do mês e ano alvo para o índice
     const targetMonth = idx === 0 ? 11 : idx - 1;
@@ -45,11 +50,13 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
 
     const idealPerMonth = totalPossible / 12;
     const cumulativeIdeal = Math.round(idealPerMonth * (idx + 1));
+    const cumulativeRealPercent = toPercent(cumulativeReal, totalPossible);
+    const cumulativeIdealPercent = toPercent(cumulativeIdeal, totalPossible);
 
     return {
       month: m,
-      'Média Real': cumulativeReal,
-      'Distribuição Ideal': cumulativeIdeal,
+      'Média Real (%)': cumulativeRealPercent,
+      'Distribuição Ideal (%)': cumulativeIdealPercent,
       fullLabel: `${m}/${targetYear}`
     };
   });
@@ -65,13 +72,20 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
             tickLine={false} 
             tick={{ fontSize: 10, fill: '#64748b', fontWeight: 'bold' }} 
           />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            domain={[0, 100]}
+            tickFormatter={(value) => `${value}%`}
+            tick={{ fontSize: 10, fill: '#64748b' }}
+          />
           <Tooltip 
             labelStyle={{ fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}
             labelFormatter={(value, items) => {
                const item = items[0]?.payload;
                return item?.fullLabel || value;
             }}
+            formatter={(value: number) => [`${value}%`, undefined]}
             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
           />
           <Legend 
@@ -81,7 +95,7 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
           />
           <Line 
             type="monotone" 
-            dataKey="Média Real" 
+            dataKey="Média Real (%)" 
             stroke="#f97316" 
             strokeWidth={3} 
             dot={{ r: 4, fill: '#f97316', strokeWidth: 0 }}
@@ -89,7 +103,7 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
           />
           <Line 
             type="monotone" 
-            dataKey="Distribuição Ideal" 
+            dataKey="Distribuição Ideal (%)" 
             stroke="#cbd5e1" 
             strokeDasharray="5 5" 
             strokeWidth={2}
