@@ -14,6 +14,11 @@ const VacationForm: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const allSectors = useMemo(() => {
+    const fromEmployees = employees.map(e => e.sector).filter(Boolean);
+    return [...new Set([...SECTORS, ...fromEmployees])].sort();
+  }, [employees]);
+
   const currentYear = new Date().getFullYear();
   const availableYears = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
@@ -87,12 +92,25 @@ const VacationForm: React.FC = () => {
         // Only default to current user if we are indeed editing current user.
         if (targetUserId === user?.id) {
           setName(user?.name || '');
-          setCategory('praca');
-          setRank(PRACA_RANKS[0]);
+          setWarName(user?.warName || '');
+          setNip(user?.nip || '');
+          setSector(user?.sector || '01');
+          setCategory(user?.category || 'praca');
+          setRank(user?.rank || PRACA_RANKS[0]);
         } else {
-          // Clear or set Loading state ideally
-          setName('');
-          setCategory('praca');
+          // Try to fill from users list (admin editing another user)
+          const targetProfile = users.find(u => u.id === targetUserId);
+          if (targetProfile) {
+            setName(targetProfile.name || '');
+            setWarName(targetProfile.warName || '');
+            setNip(targetProfile.nip || '');
+            setSector(targetProfile.sector || '01');
+            setCategory(targetProfile.category || 'praca');
+            setRank(targetProfile.rank || PRACA_RANKS[0]);
+          } else {
+            setName('');
+            setCategory('praca');
+          }
         }
       }
       setParcels([{ id: Math.random().toString(36).substr(2, 9), startDate: '', endDate: '', days: 0 }]);
@@ -339,10 +357,11 @@ const VacationForm: React.FC = () => {
                     <input required className="input-field" value={nip} onChange={e => setNip(e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Setor (NEO)</label>
-                    <select className="input-field" value={sector} onChange={e => setSector(e.target.value)}>
-                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
+                    <input className="input-field" list="sector-list" value={sector} onChange={e => setSector(e.target.value)} placeholder="Digite ou selecione" />
+                    <datalist id="sector-list">
+                      {allSectors.map(s => <option key={s} value={s} />)}
+                    </datalist>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>

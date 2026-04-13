@@ -11,14 +11,16 @@ const Header: React.FC = () => {
 
   if (!user) return null;
 
-  const navItems = [
+  const allNavItems = [
     { label: 'Início', path: '/home', icon: <Home size={18} /> },
-    { label: 'Painel', path: '/', icon: <LayoutDashboard size={18} /> },
+    { label: 'Painel', path: '/', icon: <LayoutDashboard size={18} />, adminOnly: true },
     { label: 'Lançar Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
-    { label: 'Calendário', path: '/calendar', icon: <Calendar size={18} /> },
+    { label: 'Calendário', path: '/calendar', icon: <Calendar size={18} />, adminOnly: true },
     { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },
     { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} /> },
   ];
+
+  const navItems = allNavItems.filter(item => !item.adminOnly || user.role === 'admin');
 
   return (
     <>

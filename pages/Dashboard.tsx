@@ -12,6 +12,11 @@ const Dashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
+
+  const allSectors = useMemo(() => {
+    const fromEmployees = employees.map(e => e.sector).filter(Boolean);
+    return [...new Set([...fromEmployees])].sort();
+  }, [employees]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -209,10 +214,10 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Setor (NEO)</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase">Setor</label>
             <select className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" value={sectorFilter} onChange={e => setSectorFilter(e.target.value)}>
               <option value="all">Todos</option>
-              {['01', '02', 'Secom', '10', '20', '30', '40', '50', '60', '70', 'Outro'].map(s => <option key={s} value={s}>{s}</option>)}
+              {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 

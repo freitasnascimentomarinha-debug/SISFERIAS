@@ -193,7 +193,7 @@ const Home: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <p className="text-[9px] text-slate-400 text-center mt-2 font-medium uppercase tracking-tighter">Dados deduplicados por NIP/CPF</p>
+
           </div>
         </div>
 

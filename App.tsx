@@ -18,6 +18,13 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (user?.role !== 'admin') return <Navigate to="/home" />;
+  return <>{children}</>;
+};
+
 const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen">
@@ -26,11 +33,11 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/" element={<AdminRoute><Dashboard /></AdminRoute>} />
         <Route path="/vacation-form" element={<PrivateRoute><VacationForm /></PrivateRoute>} />
         <Route path="/vacation-form/:id" element={<PrivateRoute><VacationForm /></PrivateRoute>} />
         <Route path="/vacation-form/user/:userId" element={<PrivateRoute><VacationForm /></PrivateRoute>} />
-        <Route path="/calendar" element={<PrivateRoute><CalendarView /></PrivateRoute>} />
+        <Route path="/calendar" element={<AdminRoute><CalendarView /></AdminRoute>} />
         <Route path="/print" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/print/:id" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/security" element={<PrivateRoute><Security /></PrivateRoute>} />

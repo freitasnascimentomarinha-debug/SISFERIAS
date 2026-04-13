@@ -29,6 +29,11 @@ export interface Employee {
 export interface User {
   id: string;
   name: string;
+  warName?: string;
+  nip?: string;
+  category?: MilitaryCategory;
+  sector?: string;
+  rank?: string;
   email: string;
   password?: string;
   role: 'admin' | 'user';

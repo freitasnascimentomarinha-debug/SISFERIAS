@@ -1,11 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sun, Mail, Lock, User, Eye, EyeOff, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Sun, Mail, Lock, User, Eye, EyeOff, AlertTriangle, CheckCircle2, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
+  const [warName, setWarName] = useState('');
+  const [nip, setNip] = useState('');
+  const [category, setCategory] = useState('praca');
+  const [sector, setSector] = useState('01');
+  const [rank, setRank] = useState(PRACA_RANKS[0]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -15,6 +21,10 @@ const Register: React.FC = () => {
   const [success, setSuccess] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const ranks = useMemo(() => {
+    return category === 'praca' ? PRACA_RANKS : category === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
+  }, [category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +37,9 @@ const Register: React.FC = () => {
     }
     
     setLoading(true);
-    const registered = await register(name, email, password);
+    const registered = await register(name, email, password, 'user', {
+      warName, nip, category, sector, rank
+    });
     
     if (registered) {
       setSuccess('Cadastro realizado com sucesso! Redirecionando para o login...');
@@ -75,7 +87,7 @@ const Register: React.FC = () => {
                 value={name} 
                 onChange={e => setName(e.target.value)} 
                 className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text" 
-                placeholder="Seu nome" 
+                placeholder="Seu nome completo" 
                 disabled={loading || !!success}
               />
               <User 
@@ -83,6 +95,90 @@ const Register: React.FC = () => {
                 size={18} 
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Nome de Guerra</label>
+            <div className="relative group">
+              <input 
+                required 
+                value={warName} 
+                onChange={e => setWarName(e.target.value)} 
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text" 
+                placeholder="Nome de guerra" 
+                disabled={loading || !!success}
+              />
+              <Shield 
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors pointer-events-none" 
+                size={18} 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">NIP</label>
+            <div className="relative group">
+              <input 
+                required 
+                value={nip} 
+                onChange={e => setNip(e.target.value)} 
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text" 
+                placeholder="Número de Identificação Pessoal" 
+                disabled={loading || !!success}
+              />
+              <User 
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors pointer-events-none" 
+                size={18} 
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Categoria</label>
+              <select 
+                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
+                value={category}
+                onChange={e => {
+                  const newCat = e.target.value;
+                  setCategory(newCat);
+                  const newRanks = newCat === 'praca' ? PRACA_RANKS : newCat === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
+                  setRank(newRanks[0]);
+                }}
+                disabled={loading || !!success}
+              >
+                <option value="praca">Praça</option>
+                <option value="oficial">Oficial</option>
+                <option value="civil">Servidor Civil</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Posto/Graduação</label>
+              <select 
+                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
+                value={rank}
+                onChange={e => setRank(e.target.value)}
+                disabled={loading || !!success}
+              >
+                {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Setor</label>
+            <input 
+              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
+              list="register-sector-list"
+              value={sector}
+              onChange={e => setSector(e.target.value)}
+              placeholder="Digite ou selecione"
+              disabled={loading || !!success}
+            />
+            <datalist id="register-sector-list">
+              {SECTORS.map(s => <option key={s} value={s} />)}
+            </datalist>
           </div>
 
           <div className="space-y-1.5">

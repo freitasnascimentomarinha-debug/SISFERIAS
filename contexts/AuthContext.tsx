@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   users: User[]; // Kept for interface compatibility, but might be empty or restricted
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, pass: string, role?: 'admin' | 'user') => Promise<boolean>;
+  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   getRegisteredUsers: () => User[]; // Might need to be async or removed/deprecated
@@ -59,6 +59,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const allUsers = data.map(p => ({
         id: p.id,
         name: p.name || '',
+        warName: p.war_name || '',
+        nip: p.nip || '',
+        category: p.category || '',
+        sector: p.sector || '',
+        rank: p.rank || '',
         email: p.email || '',
         role: p.role as 'admin' | 'user',
         isBlocked: p.is_blocked || false,
@@ -80,6 +85,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const profileData: User = {
           id: data.id,
           name: data.name,
+          warName: data.war_name || '',
+          nip: data.nip || '',
+          category: data.category || '',
+          sector: data.sector || '',
+          rank: data.rank || '',
           email: data.email,
           role: data.role as 'admin' | 'user',
           isBlocked: !!data.is_blocked,
@@ -119,7 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user'): Promise<boolean> => {
+  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<boolean> => {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -134,7 +144,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name,
         email,
         role,
-        is_blocked: false
+        is_blocked: false,
+        war_name: extra?.warName || '',
+        nip: extra?.nip || '',
+        category: extra?.category || '',
+        sector: extra?.sector || '',
+        rank: extra?.rank || ''
       }]);
 
       if (profileError) {

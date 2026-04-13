@@ -52,6 +52,11 @@ const Security: React.FC = () => {
   const { users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
 
+  const allSectors = useMemo(() => {
+    const fromEmployees = employees.map(e => e.sector).filter(Boolean);
+    return [...new Set([...SECTORS, ...fromEmployees])].sort();
+  }, [employees]);
+
   // Bloqueio Automático por Prazo
   const [deadline, setDeadline] = useState(() => localStorage.getItem('vacation_deadline') || '');
   const lastProcessedDeadline = useRef<string | null>(null);
@@ -494,63 +499,6 @@ const Security: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL ACESSO GESTÃO DE CONTAS */}
-      {showAccountPassModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Lock size={24} />
-                <h3 className="font-bold text-lg">Acesso Restrito</h3>
-              </div>
-              <button
-                onClick={() => {
-                  setShowAccountPassModal(false);
-                  setAccountPassError(false);
-                  setAccountPassInput('');
-                }}
-                className="hover:bg-white/20 p-1.5 rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto">
-                <UserCog size={32} />
-              </div>
-              <div className="text-center">
-                <p className="text-slate-900 font-bold text-lg">Gestão de Contas</p>
-                <p className="text-sm text-slate-500 mt-2">Digite a senha específica desta aba para prosseguir.</p>
-              </div>
-
-              <form onSubmit={handleAccountTabAccess} className="space-y-4">
-                <div className="space-y-1">
-                  <input
-                    type="password"
-                    className={`w-full px-4 py-3 bg-slate-50 border ${accountPassError ? 'border-red-500' : 'border-slate-200'} rounded-xl outline-none focus:ring-2 focus:ring-slate-900`}
-                    placeholder="Senha de Acesso"
-                    value={accountPassInput}
-                    onChange={e => { setAccountPassInput(e.target.value); setAccountPassError(false); }}
-                    autoFocus
-                  />
-                  {accountPassError && (
-                    <p className="text-red-500 text-xs font-bold pt-1 flex items-center gap-1">
-                      <AlertCircle size={12} /> Senha incorreta!
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition-all"
-                >
-                  Confirmar Acesso
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex justify-between items-end mb-10">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
@@ -567,13 +515,7 @@ const Security: React.FC = () => {
           icon={<UserCog size={18} />}
           label="Gestão de Contas"
           active={activeTab === 'accounts'}
-          onClick={() => {
-            if (isAccountTabAuthenticated) {
-              setActiveTab('accounts');
-            } else {
-              setShowAccountPassModal(true);
-            }
-          }}
+          onClick={() => setActiveTab('accounts')}
         />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -839,7 +781,7 @@ const Security: React.FC = () => {
                   onChange={e => setJustifSector(e.target.value)}
                 >
                   <option value="all">Todos os Setores</option>
-                  {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                  {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </div>
