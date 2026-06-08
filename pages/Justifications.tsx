@@ -7,10 +7,19 @@ const Justifications: React.FC = () => {
   const { employees } = useVacation();
   const [justifSearch, setJustifSearch] = useState('');
   const [justifSector, setJustifSector] = useState('all');
+  const [justifYear, setJustifYear] = useState('all');
 
   const allSectors = useMemo(() => {
     const fromEmployees = employees.map(e => e.sector).filter(Boolean);
     return [...new Set([...SECTORS, ...fromEmployees])].sort();
+  }, [employees]);
+
+  const allYears = useMemo(() => {
+    const years = employees
+      .map(e => e.planningYear)
+      .filter((year): year is number => !!year)
+      .sort((a, b) => b - a);
+    return [...new Set(years)];
   }, [employees]);
 
   const filteredJustifications = useMemo(() => {
@@ -19,9 +28,10 @@ const Justifications: React.FC = () => {
       const matchText = e.warName.toLowerCase().includes(justifSearch.toLowerCase()) ||
         e.name.toLowerCase().includes(justifSearch.toLowerCase());
       const matchSector = justifSector === 'all' || e.sector === justifSector;
-      return hasJustif && matchText && matchSector;
+      const matchYear = justifYear === 'all' || (e.planningYear || 0).toString() === justifYear;
+      return hasJustif && matchText && matchSector && matchYear;
     });
-  }, [employees, justifSearch, justifSector]);
+  }, [employees, justifSearch, justifSector, justifYear]);
 
   const visibleJustifications = useMemo(() => {
     return employees.filter(e => e.justification && e.justification.trim().length > 0);
@@ -102,6 +112,14 @@ const Justifications: React.FC = () => {
             >
               <option value="all">Todos os Setores</option>
               {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              value={justifYear}
+              onChange={e => setJustifYear(e.target.value)}
+            >
+              <option value="all">Todas as Janelas</option>
+              {allYears.map(y => <option key={y} value={y.toString()}>{y}</option>)}
             </select>
           </div>
         </div>
