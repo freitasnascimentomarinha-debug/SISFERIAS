@@ -143,6 +143,17 @@ const Dashboard: React.FC = () => {
     setPlanningFilter('all');
   };
 
+  const reportFilters = {
+    janela: planningYear.toString(),
+    busca: search || 'Todos',
+    categoria: catFilter === 'all' ? 'Todas' : catFilter,
+    setor: sectorFilter === 'all' ? 'Todos' : sectorFilter,
+    periodo: startDate || endDate ? `${startDate || '--'} a ${endDate || '--'}` : 'Todos',
+    statusHoje: onVacationFilter === 'all' ? 'Todos' : onVacationFilter === 'yes' ? 'Em férias hoje' : 'Não está em férias',
+    saldo: remainingFilter === 'all' ? 'Todos' : remainingFilter === 'none' ? 'Nenhum dia restante' : remainingFilter === 'more10' ? 'Mais de 10 dias' : 'Até 10 dias',
+    planejamento: planningFilter === 'all' ? 'Todos' : planningFilter === 'pending' ? 'Tem dias a planejar' : 'Tudo planejado'
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print mb-10">
@@ -151,7 +162,7 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500">Visão geral das Férias da Tripulação</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <ExportButtons />
+          <ExportButtons employees={filteredEmployees} filters={reportFilters} />
         </div>
       </div>
 

@@ -751,6 +751,7 @@ const Security: React.FC = () => {
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Status Lançamento</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Nome</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">E-mail</th>
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Setor</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest text-center">Gestão</th>
                   </tr>
                 </thead>
@@ -767,6 +768,7 @@ const Security: React.FC = () => {
                         </td>
                         <td className="py-5 px-4 font-bold text-slate-800">{u.name}</td>
                         <td className="py-5 px-4 text-slate-500">{u.email}</td>
+                        <td className="py-5 px-4 text-slate-600 font-semibold">{getResolvedSector(u) || 'Não definido'}</td>
                         <td className="py-5 px-4">
                           <div className="flex items-center justify-center gap-2">
                             <ActionButton

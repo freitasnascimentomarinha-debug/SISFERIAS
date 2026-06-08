@@ -1,12 +1,25 @@
 
 import React from 'react';
-import { useVacation } from '../contexts/VacationContext';
 import { Download, FileDown } from 'lucide-react';
 import { format, startOfDay, isBefore, isAfter, isValid, differenceInDays } from 'date-fns';
+import { Employee } from '../types';
 
-const ExportButtons: React.FC = () => {
-  const { employees } = useVacation();
+interface ExportButtonsProps {
+  employees: Employee[];
+  filters?: Record<string, string>;
+}
+
+const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters }) => {
   const now = startOfDay(new Date());
+
+  const escapeHtml = (value: string) => {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
 
   const safeParseDate = (dateStr: string) => {
     if (!dateStr) return new Date(NaN);
@@ -57,8 +70,48 @@ const ExportButtons: React.FC = () => {
       return;
     }
 
+    let totalGozadosGlobal = 0;
+    let totalDireitoGlobal = 0;
+    let totalParcelas = 0;
+    let emAndamentoCount = 0;
+
+    const setorMap = employees.reduce((acc, emp) => {
+      const key = emp.sector || 'Não definido';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topSectors = Object.entries(setorMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    const maxSectorCount = topSectors.length > 0 ? Math.max(...topSectors.map(([, c]) => c)) : 1;
+
+    const sectorBars = topSectors.map(([sector, count], idx) => {
+      const barWidth = Math.max(8, Math.round((count / maxSectorCount) * 260));
+      const y = idx * 26;
+      const label = escapeHtml(sector);
+      return `
+        <g transform="translate(0, ${y})">
+          <text x="0" y="14" font-size="11" fill="#334155" font-weight="600">${label}</text>
+          <rect x="150" y="2" width="260" height="16" rx="8" fill="#e2e8f0" />
+          <rect x="150" y="2" width="${barWidth}" height="16" rx="8" fill="url(#barGradient)" />
+          <text x="420" y="14" font-size="11" fill="#0f172a" font-weight="700">${count}</text>
+        </g>
+      `;
+    }).join('');
+
+    const filtersContent = Object.entries(filters || {}).map(([key, value]) => {
+      const normalizedKey = key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, c => c.toUpperCase())
+        .trim();
+      return `<span class="chip"><b>${escapeHtml(normalizedKey)}:</b> ${escapeHtml(value || 'Todos')}</span>`;
+    }).join('');
+
     const tableContent = employees.map(emp => {
       let totalGozadoMilitar = 0;
+      totalDireitoGlobal += emp.totalVacationDays;
       
       const parcelRows = emp.vacationParcels.map((p, idx) => {
         const pStart = safeParseDate(p.startDate);
@@ -73,8 +126,10 @@ const ExportButtons: React.FC = () => {
         } else if (isValid(pStart) && isValid(pEnd) && !isBefore(now, pStart) && !isAfter(now, pEnd)) {
           status = 'Em andamento';
           diasGozadosNestaParcela = Math.max(0, differenceInDays(now, pStart) + 1);
+          emAndamentoCount += 1;
         }
 
+        totalParcelas += 1;
         totalGozadoMilitar += diasGozadosNestaParcela;
 
         return `
@@ -92,6 +147,7 @@ const ExportButtons: React.FC = () => {
       }).join('');
 
       const saldoRestante = Math.max(0, emp.totalVacationDays - totalGozadoMilitar);
+      totalGozadosGlobal += totalGozadoMilitar;
 
       // Linha de Soma Total para o Militar
       const summaryRow = `
@@ -106,24 +162,111 @@ const ExportButtons: React.FC = () => {
       return parcelRows + summaryRow;
     }).join('');
 
+    const totalRestanteGlobal = Math.max(0, totalDireitoGlobal - totalGozadosGlobal);
+    const taxaConclusao = totalDireitoGlobal > 0 ? Math.round((totalGozadosGlobal / totalDireitoGlobal) * 100) : 0;
+
     printWindow.document.write(`
       <html>
         <head>
           <title>Relatório de Férias - MB</title>
           <style>
-            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
-            h1 { text-align: center; text-transform: uppercase; font-size: 18px; margin-bottom: 5px; }
-            p.meta { text-align: center; font-size: 12px; margin-bottom: 30px; color: #64748b; }
-            table { width: 100%; border-collapse: collapse; font-size: 10px; }
-            th, td { border: 1px solid #000; padding: 6px; text-align: left; }
-            th { background-color: #f1f5f9; text-transform: uppercase; font-weight: bold; }
-            .summary-row { background-color: #f8fafc; font-size: 11px; }
+            body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 18px; color: #0f172a; background: #f8fafc; }
+            .header {
+              background: linear-gradient(120deg, #ea580c, #f97316 55%, #fb923c);
+              color: white;
+              border-radius: 16px;
+              padding: 18px 20px;
+              margin-bottom: 14px;
+              box-shadow: 0 10px 22px rgba(234, 88, 12, 0.22);
+            }
+            .header h1 { margin: 0 0 4px 0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.7px; }
+            .meta { margin: 0; font-size: 12px; opacity: 0.95; }
+            .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0 10px 0; }
+            .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; }
+            .card .label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+            .card .value { margin-top: 3px; font-size: 18px; font-weight: 800; color: #0f172a; }
+            .card .sub { margin-top: 2px; font-size: 10px; color: #64748b; }
+            .section {
+              background: white;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 12px;
+              margin: 10px 0;
+            }
+            .section-title { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: #334155; }
+            .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+            .chip {
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              font-size: 10px;
+              color: #334155;
+              background: #fff7ed;
+              border: 1px solid #fed7aa;
+              border-radius: 999px;
+              padding: 4px 8px;
+            }
+            .chart-wrap { padding: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; background: white; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
+            th { background-color: #f1f5f9; text-transform: uppercase; font-weight: 800; color: #334155; }
+            tr:nth-child(even) td { background: #fcfdff; }
+            .summary-row td { background-color: #eef2ff !important; font-size: 10px; }
+            .footer { margin-top: 16px; text-align: right; font-size: 9px; font-style: italic; color: #64748b; }
             @page { size: A4; margin: 1cm; }
           </style>
         </head>
         <body>
-          <h1>Relatório Consolidado de Férias</h1>
-          <p class="meta">Marinha do Brasil - Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+          <div class="header">
+            <h1>Relatório Consolidado de Férias</h1>
+            <p class="meta">Marinha do Brasil • Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} • Base filtrada do Painel</p>
+          </div>
+
+          <div class="cards">
+            <div class="card">
+              <div class="label">Militares Filtrados</div>
+              <div class="value">${employees.length}</div>
+              <div class="sub">registros</div>
+            </div>
+            <div class="card">
+              <div class="label">Dias Gozados</div>
+              <div class="value">${totalGozadosGlobal}</div>
+              <div class="sub">dias computados</div>
+            </div>
+            <div class="card">
+              <div class="label">Dias Restantes</div>
+              <div class="value">${totalRestanteGlobal}</div>
+              <div class="sub">saldo atual</div>
+            </div>
+            <div class="card">
+              <div class="label">Taxa de Conclusão</div>
+              <div class="value">${taxaConclusao}%</div>
+              <div class="sub">sobre o total de direito</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Filtros Aplicados</h3>
+            <div class="chips">${filtersContent || '<span class="chip">Sem filtros específicos</span>'}</div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Gráfico • Distribuição por Setor</h3>
+            <div class="chart-wrap">
+              <svg width="100%" viewBox="0 0 460 ${Math.max(110, topSectors.length * 26 + 16)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Distribuição por setor">
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#f97316" />
+                    <stop offset="100%" stop-color="#ea580c" />
+                  </linearGradient>
+                </defs>
+                ${sectorBars || '<text x="0" y="20" font-size="12" fill="#64748b">Sem dados para exibir</text>'}
+              </svg>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3 class="section-title">Detalhamento de Parcelas (${totalParcelas} parcelas, ${emAndamentoCount} em andamento)</h3>
           <table>
             <thead>
               <tr>
@@ -141,7 +284,8 @@ const ExportButtons: React.FC = () => {
               ${tableContent}
             </tbody>
           </table>
-          <div style="margin-top: 40px; text-align: right; font-size: 9px; font-style: italic; color: #94a3b8;">
+          </div>
+          <div class="footer">
             Sistema de Controle de Férias MB - Baseado no saldo de direito individual.
           </div>
           <script>
