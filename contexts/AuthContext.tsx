@@ -19,6 +19,7 @@ interface AuthContextType {
   fetchAllUsers: () => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   toggleUserRole: (userId: string) => Promise<void>;
+  setUserSectorVisibility: (userId: string, viewAllSectors: boolean) => Promise<{ success: boolean; errorMessage?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,13 +84,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (data && !error) {
+        let resolvedSector = data.sector || '';
+        if (!resolvedSector) {
+          const { data: employeeData } = await supabase
+            .from('employees')
+            .select('sector')
+            .eq('user_id', userId)
+            .limit(1)
+            .maybeSingle();
+          resolvedSector = employeeData?.sector || '';
+        }
+
         const profileData: User = {
           id: data.id,
           name: data.name,
           warName: data.war_name || '',
           nip: data.nip || '',
           category: data.category || '',
-          sector: data.sector || '',
+          sector: resolvedSector,
           rank: data.rank || '',
           email: data.email,
           role: data.role as 'admin' | 'user',
@@ -279,6 +291,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const setUserSectorVisibility = async (userId: string, viewAllSectors: boolean): Promise<{ success: boolean; errorMessage?: string }> => {
+    const updateLocalStates = () => {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, viewAllSectors } : u));
+      if (user?.id === userId) {
+        setUser(prev => prev ? { ...prev, viewAllSectors } : prev);
+      }
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ view_all_sectors: viewAllSectors })
+      .eq('id', userId);
+
+    if (!error) {
+      updateLocalStates();
+      return { success: true };
+    }
+
+    return { success: false, errorMessage: error.message };
+  };
+
   const refreshUser = async () => {
     if (user) await fetchProfile(user.id);
     await fetchAllUsers();
@@ -300,7 +333,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       refreshUser,
       fetchAllUsers,
       fetchProfile,
-      toggleUserRole
+      toggleUserRole,
+      setUserSectorVisibility
     }}>
       {!loading && children}
     </AuthContext.Provider>

@@ -43,8 +43,13 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Fetch Employees — admin vê apenas seu setor (exceto se viewAllSectors estiver ativado)
     let empQuery = supabase.from('employees').select('*');
-    if (user.role === 'admin' && user.sector && !user.viewAllSectors) {
-      empQuery = empQuery.eq('sector', user.sector);
+    if (user.role === 'admin' && !user.viewAllSectors) {
+      if (user.sector) {
+        empQuery = empQuery.eq('sector', user.sector);
+      } else {
+        // Se o setor não está definido, nunca conceder visão global por padrão.
+        empQuery = empQuery.eq('id', '__no_results__');
+      }
     }
     const { data: empData } = await empQuery;
     if (empData) {
@@ -146,7 +151,14 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     // Sincronizar nome no Perfil (tabela profiles)
     if (!error) {
-      await supabase.from('profiles').update({ name: data.name }).eq('id', data.userId);
+      await supabase.from('profiles').update({
+        name: data.name,
+        war_name: data.warName,
+        nip: data.nip,
+        category: data.category,
+        sector: data.sector,
+        rank: data.rank
+      }).eq('id', data.userId);
       await fetchData();
     } else {
       console.error("Error saving vacation:", error);

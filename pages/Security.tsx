@@ -49,7 +49,7 @@ const Security: React.FC = () => {
   const [accountPassError, setAccountPassError] = useState(false);
 
   const navigate = useNavigate();
-  const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, fetchAllUsers } = useAuth();
+  const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
 
   const allSectors = useMemo(() => {
@@ -304,21 +304,25 @@ const Security: React.FC = () => {
   // Filtro para aba de Visibilidade
   const [visibilitySearch, setVisibilitySearch] = useState('');
 
+  const getResolvedSector = (u: User) => {
+    if (u.sector && u.sector.trim().length > 0) return u.sector;
+    return employees.find(e => e.userId === u.id)?.sector || '';
+  };
+
   const adminUsers = useMemo(() => {
     return users.filter(u => u.role === 'admin').filter(u =>
       u.name.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
       u.email.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
-      (u.sector || '').toLowerCase().includes(visibilitySearch.toLowerCase())
+      getResolvedSector(u).toLowerCase().includes(visibilitySearch.toLowerCase())
     );
-  }, [users, visibilitySearch]);
+  }, [users, visibilitySearch, employees]);
 
   const handleToggleViewAllSectors = async (userId: string) => {
     const targetUser = users.find(u => u.id === userId);
     if (!targetUser) return;
     const newValue = !targetUser.viewAllSectors;
-    const { error } = await supabase.from('profiles').update({ view_all_sectors: newValue }).eq('id', userId);
-    if (!error) {
-      await fetchAllUsers();
+    const result = await setUserSectorVisibility(userId, newValue);
+    if (result.success) {
       addAuditLog({
         userName: 'Admin',
         action: 'Alteração',
@@ -327,8 +331,8 @@ const Security: React.FC = () => {
         newValue: newValue ? 'Todos os Setores' : 'Apenas Seu Setor'
       });
     } else {
-      console.error("Error toggling viewAllSectors:", error);
-      alert("Erro ao atualizar visibilidade: " + error.message);
+      console.error("Error toggling viewAllSectors:", result.errorMessage);
+      alert("Erro ao atualizar visibilidade: " + (result.errorMessage || 'Erro desconhecido'));
     }
   };
 
@@ -963,7 +967,7 @@ const Security: React.FC = () => {
                           {u.email}
                         </p>
                         <p className="text-[10px] mt-1 uppercase font-black tracking-widest">
-                          <span className="text-orange-600">Setor: {u.sector || 'Não definido'}</span>
+                          <span className="text-orange-600">Setor: {getResolvedSector(u) || 'Não definido'}</span>
                         </p>
                       </div>
                       <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-tighter uppercase border ${u.viewAllSectors ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
