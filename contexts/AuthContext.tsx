@@ -55,15 +55,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const fetchAllUsers = async () => {
-    const { data } = await supabase.from('profiles').select('*');
-    if (data) {
-      const allUsers = data.map(p => ({
+    const [{ data: profiles }, { data: employeeSectors }] = await Promise.all([
+      supabase.from('profiles').select('*'),
+      supabase.from('employees').select('user_id, sector')
+    ]);
+
+    if (profiles) {
+      const sectorByUserId = new Map<string, string>();
+      (employeeSectors || []).forEach(employee => {
+        if (!sectorByUserId.has(employee.user_id) && employee.sector) {
+          sectorByUserId.set(employee.user_id, employee.sector);
+        }
+      });
+
+      const allUsers = profiles.map(p => ({
         id: p.id,
         name: p.name || '',
         warName: p.war_name || '',
         nip: p.nip || '',
         category: p.category || '',
-        sector: p.sector || '',
+        sector: p.sector || sectorByUserId.get(p.id) || '',
         rank: p.rank || '',
         email: p.email || '',
         role: p.role as 'admin' | 'user',

@@ -7,9 +7,10 @@ import { Employee } from '../types';
 interface ExportButtonsProps {
   employees: Employee[];
   filters?: Record<string, string>;
+  planningYear?: number;
 }
 
-const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters }) => {
+const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, planningYear = new Date().getFullYear() }) => {
   const now = startOfDay(new Date());
 
   const escapeHtml = (value: string) => {
@@ -25,6 +26,11 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters }) => 
     if (!dateStr) return new Date(NaN);
     const d = new Date(dateStr + 'T00:00:00');
     return isValid(d) ? d : new Date(NaN);
+  };
+
+  const toPercent = (value: number, total: number) => {
+    if (total <= 0) return 0;
+    return Math.round((value / total) * 100);
   };
 
   const exportCSV = () => {
@@ -70,36 +76,74 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters }) => 
       return;
     }
 
+    const months = ['Dez', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov'];
+    const chartData = months.map((month, idx) => {
+      let totalPossible = 0;
+      let cumulativeReal = 0;
+
+      for (let i = 0; i <= idx; i++) {
+        const loopMonth = i === 0 ? 11 : i - 1;
+        const loopYear = i === 0 ? planningYear - 1 : planningYear;
+
+        employees.forEach(emp => {
+          if (i === 0) totalPossible += emp.totalVacationDays;
+
+          emp.vacationParcels.forEach(parcel => {
+            const start = safeParseDate(parcel.startDate);
+            if (isValid(start) && start.getMonth() === loopMonth && start.getFullYear() === loopYear) {
+              cumulativeReal += parcel.days;
+            }
+          });
+        });
+      }
+
+      const idealPerMonth = totalPossible / 12;
+      const cumulativeIdeal = Math.round(idealPerMonth * (idx + 1));
+
+      return {
+        month,
+        real: toPercent(cumulativeReal, totalPossible),
+        ideal: toPercent(cumulativeIdeal, totalPossible),
+        label: `${month}/${idx === 0 ? planningYear - 1 : planningYear}`
+      };
+    });
+
+    const chartWidth = 720;
+    const chartHeight = 280;
+    const leftPad = 54;
+    const rightPad = 24;
+    const topPad = 24;
+    const bottomPad = 42;
+    const innerWidth = chartWidth - leftPad - rightPad;
+    const innerHeight = chartHeight - topPad - bottomPad;
+    const stepX = chartData.length > 1 ? innerWidth / (chartData.length - 1) : innerWidth;
+    const yFor = (value: number) => topPad + innerHeight - (value / 100) * innerHeight;
+    const xFor = (index: number) => leftPad + index * stepX;
+
+    const realPath = chartData.map((point, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index)} ${yFor(point.real)}`).join(' ');
+    const idealPath = chartData.map((point, index) => `${index === 0 ? 'M' : 'L'} ${xFor(index)} ${yFor(point.ideal)}`).join(' ');
+
+    const gridLines = [0, 25, 50, 75, 100].map(value => `
+      <g>
+        <line x1="${leftPad}" y1="${yFor(value)}" x2="${chartWidth - rightPad}" y2="${yFor(value)}" stroke="#e2e8f0" stroke-dasharray="4 4" />
+        <text x="${leftPad - 12}" y="${yFor(value) + 4}" text-anchor="end" font-size="10" fill="#64748b">${value}%</text>
+      </g>
+    `).join('');
+
+    const xLabels = chartData.map((point, index) => `
+      <g>
+        <text x="${xFor(index)}" y="${chartHeight - 18}" text-anchor="middle" font-size="10" fill="#64748b" font-weight="700">${point.month}</text>
+      </g>
+    `).join('');
+
+    const realDots = chartData.map((point, index) => `
+      <circle cx="${xFor(index)}" cy="${yFor(point.real)}" r="4" fill="#f97316" />
+    `).join('');
+
     let totalGozadosGlobal = 0;
     let totalDireitoGlobal = 0;
     let totalParcelas = 0;
     let emAndamentoCount = 0;
-
-    const setorMap = employees.reduce((acc, emp) => {
-      const key = emp.sector || 'Não definido';
-      acc[key] = (acc[key] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const topSectors = Object.entries(setorMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-
-    const maxSectorCount = topSectors.length > 0 ? Math.max(...topSectors.map(([, c]) => c)) : 1;
-
-    const sectorBars = topSectors.map(([sector, count], idx) => {
-      const barWidth = Math.max(8, Math.round((count / maxSectorCount) * 260));
-      const y = idx * 26;
-      const label = escapeHtml(sector);
-      return `
-        <g transform="translate(0, ${y})">
-          <text x="0" y="14" font-size="11" fill="#334155" font-weight="600">${label}</text>
-          <rect x="150" y="2" width="260" height="16" rx="8" fill="#e2e8f0" />
-          <rect x="150" y="2" width="${barWidth}" height="16" rx="8" fill="url(#barGradient)" />
-          <text x="420" y="14" font-size="11" fill="#0f172a" font-weight="700">${count}</text>
-        </g>
-      `;
-    }).join('');
 
     const filtersContent = Object.entries(filters || {}).map(([key, value]) => {
       const normalizedKey = key
@@ -251,16 +295,26 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters }) => 
           </div>
 
           <div class="section">
-            <h3 class="section-title">Gráfico • Distribuição por Setor</h3>
+            <h3 class="section-title">Gráfico • Distribuição de Férias</h3>
             <div class="chart-wrap">
-              <svg width="100%" viewBox="0 0 460 ${Math.max(110, topSectors.length * 26 + 16)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Distribuição por setor">
+              <svg width="100%" viewBox="0 0 ${chartWidth} ${chartHeight}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Distribuição de férias">
                 <defs>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                  <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stop-color="#f97316" />
                     <stop offset="100%" stop-color="#ea580c" />
                   </linearGradient>
                 </defs>
-                ${sectorBars || '<text x="0" y="20" font-size="12" fill="#64748b">Sem dados para exibir</text>'}
+                ${gridLines}
+                <path d="${idealPath}" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="${realPath}" fill="none" stroke="url(#lineGradient)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                ${realDots}
+                ${xLabels}
+                <g transform="translate(${chartWidth - 230}, 8)">
+                  <circle cx="8" cy="8" r="5" fill="#f97316" />
+                  <text x="22" y="12" font-size="11" fill="#334155" font-weight="700">Média Real (%)</text>
+                  <line x1="130" y1="8" x2="154" y2="8" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="7 5" stroke-linecap="round" />
+                  <text x="162" y="12" font-size="11" fill="#334155" font-weight="700">Distribuição Ideal (%)</text>
+                </g>
               </svg>
             </div>
           </div>

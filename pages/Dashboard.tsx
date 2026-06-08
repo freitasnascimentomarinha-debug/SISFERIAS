@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500">Visão geral das Férias da Tripulação</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <ExportButtons employees={filteredEmployees} filters={reportFilters} />
+          <ExportButtons employees={filteredEmployees} filters={reportFilters} planningYear={planningYear} />
         </div>
       </div>
 
