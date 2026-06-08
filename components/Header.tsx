@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Sun, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X } from 'lucide-react';
+import { LogOut, Sun, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X, MessageSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
@@ -14,6 +14,7 @@ const Header: React.FC = () => {
   const allNavItems = [
     { label: 'Início', path: '/home', icon: <Home size={18} /> },
     { label: 'Painel', path: '/', icon: <LayoutDashboard size={18} />, adminOnly: true },
+    { label: 'Justificativas', path: '/justifications', icon: <MessageSquare size={18} />, adminOnly: true },
     { label: 'Lançar Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
     { label: 'Calendário', path: '/calendar', icon: <Calendar size={18} />, adminOnly: true },
     { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },

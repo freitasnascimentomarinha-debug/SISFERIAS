@@ -12,6 +12,7 @@ import VacationForm from './pages/VacationForm';
 import CalendarView from './pages/CalendarView';
 import Security from './pages/Security';
 import PrintVacation from './pages/PrintVacation';
+import Justifications from './pages/Justifications';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -34,6 +35,7 @@ const AppContent: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
         <Route path="/" element={<AdminRoute><Dashboard /></AdminRoute>} />
+        <Route path="/justifications" element={<AdminRoute><Justifications /></AdminRoute>} />
         <Route path="/vacation-form" element={<PrivateRoute><VacationForm /></PrivateRoute>} />
         <Route path="/vacation-form/:id" element={<PrivateRoute><VacationForm /></PrivateRoute>} />
         <Route path="/vacation-form/user/:userId" element={<PrivateRoute><VacationForm /></PrivateRoute>} />

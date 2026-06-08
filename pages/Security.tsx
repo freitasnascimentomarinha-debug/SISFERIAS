@@ -2,26 +2,22 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, MessageSquare, Save, Clock, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { SECTORS, User, Notice } from '../types';
+import { User } from '../types';
 import { supabase } from '../lib/supabase';
 
 const Security: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'justifications' | 'accounts' | 'logs' | 'settings' | 'visibility'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
   const [logStart, setLogStart] = useState('');
   const [logEnd, setLogEnd] = useState('');
-
-  // Filtros para Justificativas
-  const [justifSearch, setJustifSearch] = useState('');
-  const [justifSector, setJustifSector] = useState('all');
 
   // Filtro para Gestão de Contas
   const [accountSearch, setAccountSearch] = useState('');
@@ -51,11 +47,6 @@ const Security: React.FC = () => {
   const navigate = useNavigate();
   const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
-
-  const allSectors = useMemo(() => {
-    const fromEmployees = employees.map(e => e.sector).filter(Boolean);
-    return [...new Set([...SECTORS, ...fromEmployees])].sort();
-  }, [employees]);
 
   // Bloqueio Automático por Prazo
   const [deadline, setDeadline] = useState(() => localStorage.getItem('vacation_deadline') || '');
@@ -184,16 +175,6 @@ const Security: React.FC = () => {
       return matchText && matchDate;
     });
   }, [logSearch, auditLogs, logStart, logEnd]);
-
-  const filteredJustifications = useMemo(() => {
-    return employees.filter(e => {
-      const hasJustif = e.justification && e.justification.trim().length > 0;
-      const matchText = e.warName.toLowerCase().includes(justifSearch.toLowerCase()) ||
-        e.name.toLowerCase().includes(justifSearch.toLowerCase());
-      const matchSector = justifSector === 'all' || e.sector === justifSector;
-      return hasJustif && matchText && matchSector;
-    });
-  }, [employees, justifSearch, justifSector]);
 
   const handleToggleBlock = (userId: string, name: string) => {
     const u = users.find(u => u.id === userId);
@@ -552,7 +533,6 @@ const Security: React.FC = () => {
         />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-        <TabButton icon={<FileText size={18} />} label="Justificativas" active={activeTab === 'justifications'} onClick={() => setActiveTab('justifications')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
       </div>
@@ -794,61 +774,6 @@ const Security: React.FC = () => {
                   })}
                 </tbody>
               </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'justifications' && (
-          <div className="p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><MessageSquare className="text-orange-500" size={24} /> Justificativas da Tripulação</h3>
-              <div className="flex flex-wrap gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Filtrar por nome..."
-                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-64"
-                    value={justifSearch}
-                    onChange={e => setJustifSearch(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
-                  value={justifSector}
-                  onChange={e => setJustifSector(e.target.value)}
-                >
-                  <option value="all">Todos os Setores</option>
-                  {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredJustifications.length === 0 ? (
-                <div className="col-span-full py-20 text-center text-slate-400 font-medium border-4 border-dashed border-slate-50 rounded-[40px]">
-                  <MessageSquare size={48} className="mx-auto mb-4 opacity-10" />
-                  Nenhuma justificativa encontrada para os filtros aplicados.
-                </div>
-              ) : (
-                filteredJustifications.map(emp => (
-                  <div key={emp.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-lg">{emp.rank} {emp.warName}</h4>
-                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">
-                          NIP: {emp.nip} • SETOR: {emp.sector} • <span className="text-orange-600">JANELA: {emp.planningYear || 'Não especificada'}</span>
-                        </p>
-                      </div>
-                      <span className="text-[9px] bg-orange-50 text-orange-600 border border-orange-100 px-3 py-1 rounded-full font-black tracking-tighter uppercase">Privado</span>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-slate-100 text-sm text-slate-600 italic leading-relaxed relative">
-                      <div className="absolute -top-3 left-4 text-orange-200 opacity-50"><MessageSquare size={24} fill="currentColor" /></div>
-                      "{emp.justification}"
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
           </div>
         )}
