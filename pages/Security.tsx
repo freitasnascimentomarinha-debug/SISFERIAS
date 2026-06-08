@@ -544,17 +544,17 @@ const Security: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl w-fit">
-        <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-        <TabButton icon={<FileText size={18} />} label="Justificativas" active={activeTab === 'justifications'} onClick={() => setActiveTab('justifications')} />
         <TabButton
           icon={<UserCog size={18} />}
           label="Gestão de Contas"
           active={activeTab === 'accounts'}
           onClick={() => setActiveTab('accounts')}
         />
-        <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
+        <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+        <TabButton icon={<FileText size={18} />} label="Justificativas" active={activeTab === 'justifications'} onClick={() => setActiveTab('justifications')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+        <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
