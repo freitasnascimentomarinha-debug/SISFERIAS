@@ -447,15 +447,15 @@ const PrintVacation: React.FC = () => {
       )}
 
       <div className="bg-white rounded-[40px] shadow-2xl border border-slate-100 overflow-hidden">
-        <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-8 text-white flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-2xl"><Printer size={32} /></div>
+            <div className="p-3 bg-white/15 rounded-2xl"><Printer size={32} /></div>
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Emissão de Documento</h2>
-              <p className="text-slate-400 text-sm">Pág 1 (Papeleta) | Pág 2 (Anexo) - Ambas em Paisagem</p>
+              <p className="text-orange-100 text-sm">Pág 1 (Papeleta) | Pág 2 (Anexo) - Ambas em Paisagem</p>
             </div>
           </div>
-          <button onClick={() => navigate(-1)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
+          <button onClick={() => navigate(-1)} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
         </div>
 
         <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
