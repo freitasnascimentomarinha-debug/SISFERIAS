@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sun, Mail, Lock, Eye, EyeOff, Info } from 'lucide-react';
+import { Sun, Mail, Lock, Eye, EyeOff, Info, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [emailOrNip, setEmailOrNip] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
@@ -17,11 +17,11 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const success = await login(email, password);
+    const success = await login(emailOrNip, password);
     if (success) {
       navigate('/home');
     } else {
-      setError('Credenciais inválidas. Verifique seu e-mail e senha.');
+      setError('Credenciais inválidas. Verifique seu e-mail/NIP e senha.');
     }
     setLoading(false);
   };
@@ -50,17 +50,17 @@ const Login: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">E-mail</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">E-mail ou NIP</label>
             <div className="relative group">
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={emailOrNip}
+                onChange={(e) => setEmailOrNip(e.target.value)}
                 className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text"
-                placeholder="seu@email.com"
+                placeholder="seu@email.com ou seu NIP"
               />
-              <Mail 
+              <User 
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors pointer-events-none" 
                 size={18} 
               />

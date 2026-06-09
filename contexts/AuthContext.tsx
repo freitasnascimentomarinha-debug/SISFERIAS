@@ -135,8 +135,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, pass: string): Promise<boolean> => {
+  const login = async (emailOrNip: string, pass: string): Promise<boolean> => {
     try {
+      let email = emailOrNip.trim();
+
+      // Se não parece um e-mail, tenta resolver pelo NIP
+      if (!email.includes('@')) {
+        const { data: profile, error: nipError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('nip', email)
+          .maybeSingle();
+        if (nipError || !profile?.email) return false;
+        email = profile.email;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pass
