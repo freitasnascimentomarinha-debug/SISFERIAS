@@ -141,25 +141,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Se não parece um e-mail, tenta resolver pelo NIP via função SECURITY DEFINER
       if (!email.includes('@')) {
+        console.log('[Login] Tentando resolver NIP:', email);
         const { data: resolvedEmail, error: nipError } = await supabase
           .rpc('get_email_by_nip', { p_nip: email });
-        if (nipError || !resolvedEmail) return false;
+        console.log('[Login] Resultado RPC:', { resolvedEmail, nipError });
+        if (nipError) {
+          console.error('[Login] Erro na RPC get_email_by_nip:', nipError);
+          return false;
+        }
+        if (!resolvedEmail) {
+          console.warn('[Login] NIP não encontrado na base:', email);
+          return false;
+        }
         email = resolvedEmail as string;
+        console.log('[Login] Email resolvido pelo NIP:', email);
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pass
       });
-      if (error || !data.user) throw error;
+      if (error) {
+        console.error('[Login] Falha no signInWithPassword:', error);
+        return false;
+      }
+      if (!data.user) return false;
 
-      // Essencial: Aguardar o carregamento do perfil antes de retornar sucesso
-      // Isso evita o redirecionamento precoce que causa o "double login"
       await fetchProfile(data.user.id);
-
       return true;
     } catch (e) {
-      console.error("Login failed:", e);
+      console.error('[Login] Exceção:', e);
       return false;
     }
   };
