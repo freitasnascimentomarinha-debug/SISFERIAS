@@ -154,18 +154,6 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       throw new Error(upsertError.message || 'Não foi possível salvar o lançamento.');
     }
 
-    // Sincronizar nome no Perfil (tabela profiles)
-    const { error: profileError } = await supabase.from('profiles').update({
-      name: data.name,
-      war_name: data.warName,
-      sector: data.sector,
-    }).eq('id', data.userId);
-
-    if (profileError) {
-      console.error('Error syncing profile after vacation save:', profileError);
-      throw new Error(profileError.message || 'Lançamento salvo, mas houve falha ao sincronizar perfil.');
-    }
-
     await fetchData();
   };
 
