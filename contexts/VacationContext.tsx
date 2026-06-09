@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Employee, AuditLog, VacationParcel, SystemSettings, Notice } from '../types';
+import { Employee, AuditLog, VacationParcel, SystemSettings, Notice, StaffMember } from '../types';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -19,12 +19,17 @@ interface VacationContextType {
   togglePinNotice: (id: string, currentPinStatus: boolean) => Promise<void>;
 }
 
+const defaultStaffMember = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
+
 const defaultSettings: SystemSettings = {
   institutionName: 'MARINHA DO BRASIL',
   totalManpower: 100,
   notices: [
     { id: '1', title: 'Bem-vindo ao Novo Sistema', content: 'Utilize o menu superior para navegar pelas funcionalidades de lançamento e consulta.', date: new Date().toISOString() }
-  ]
+  ],
+  diretor: defaultStaffMember('Diretor'),
+  viceDiretor: defaultStaffMember('Vice-Diretor'),
+  encPessoal: defaultStaffMember('Encarregado do Dep. Pessoal'),
 };
 
 const VacationContext = createContext<VacationContextType | undefined>(undefined);
@@ -88,12 +93,17 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Fetch Settings
     const { data: setData } = await supabase.from('system_settings').select('*').single();
     if (setData) {
-      setSettings({
+      const staff = setData.staff_json || {};
+      setSettings(prev => ({
+        ...prev,
         institutionName: setData.institution_name,
         totalManpower: setData.total_manpower,
         logoUrl: setData.logo_url,
+        diretor: staff.diretor || defaultStaffMember('Diretor'),
+        viceDiretor: staff.viceDiretor || defaultStaffMember('Vice-Diretor'),
+        encPessoal: staff.encPessoal || defaultStaffMember('Encarregado do Dep. Pessoal'),
         notices: [] // need to fetch notices separately
-      });
+      }));
     }
 
     // Fetch Notices
@@ -198,7 +208,12 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       id: 1,
       institution_name: newSettings.institutionName,
       total_manpower: newSettings.totalManpower,
-      logo_url: newSettings.logoUrl
+      logo_url: newSettings.logoUrl,
+      staff_json: {
+        diretor: newSettings.diretor,
+        viceDiretor: newSettings.viceDiretor,
+        encPessoal: newSettings.encPessoal,
+      }
     });
 
     setSettings(prev => ({ ...prev, ...newSettings }));

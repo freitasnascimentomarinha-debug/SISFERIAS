@@ -2,10 +2,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { User } from '../types';
+import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
 import { supabase } from '../lib/supabase';
 
 const Security: React.FC = () => {
@@ -47,6 +47,19 @@ const Security: React.FC = () => {
   const navigate = useNavigate();
   const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
+
+  const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
+
+  const [staffDiretor, setStaffDiretor] = useState<StaffMember>(settings.diretor || defaultStaff('Diretor'));
+  const [staffViceDiretor, setStaffViceDiretor] = useState<StaffMember>(settings.viceDiretor || defaultStaff('Vice-Diretor'));
+  const [staffEncPessoal, setStaffEncPessoal] = useState<StaffMember>(settings.encPessoal || defaultStaff('Encarregado do Dep. Pessoal'));
+  const [staffSaveSuccess, setStaffSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (settings.diretor) setStaffDiretor(settings.diretor);
+    if (settings.viceDiretor) setStaffViceDiretor(settings.viceDiretor);
+    if (settings.encPessoal) setStaffEncPessoal(settings.encPessoal);
+  }, [settings.diretor, settings.viceDiretor, settings.encPessoal]);
 
   // Bloqueio Automático por Prazo
   const [deadline, setDeadline] = useState(() => localStorage.getItem('vacation_deadline') || '');
@@ -132,6 +145,13 @@ const Security: React.FC = () => {
       oldValue: target.isPinned ? 'Fixado' : 'Normal',
       newValue: !target.isPinned ? 'Fixado' : 'Normal'
     });
+  };
+
+  const handleSaveStaff = async () => {
+    await updateSettings({ ...settings, diretor: staffDiretor, viceDiretor: staffViceDiretor, encPessoal: staffEncPessoal });
+    addAuditLog({ userName: 'Admin', action: 'Alteração', field: 'Autoridades Assinantes', oldValue: '-', newValue: `Diretor: ${staffDiretor.name} | Vice: ${staffViceDiretor.name} | Enc. Pessoal: ${staffEncPessoal.name}` });
+    setStaffSaveSuccess(true);
+    setTimeout(() => setStaffSaveSuccess(false), 3000);
   };
 
   const sortedNotices = useMemo(() => {
@@ -666,6 +686,74 @@ const Security: React.FC = () => {
                     </button>
                     <p className="text-[10px] text-slate-400 font-medium text-center mt-2">Esta senha é usada para acessar esta área restrita do sistema.</p>
                   </div>
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-6">
+                    <UserCog className="text-orange-500" size={24} /> Autoridades Assinantes
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-4">Preencha os dados abaixo para que sejam aplicados automaticamente em todas as papeletas do sistema.</p>
+                  {(['diretor', 'viceDiretor', 'encPessoal'] as const).map((role) => {
+                    const labels = { diretor: 'Diretor', viceDiretor: 'Vice-Diretor', encPessoal: 'Enc. Pessoal' };
+                    const stateMap = { diretor: staffDiretor, viceDiretor: staffViceDiretor, encPessoal: staffEncPessoal };
+                    const setterMap = { diretor: setStaffDiretor, viceDiretor: setStaffViceDiretor, encPessoal: setStaffEncPessoal };
+                    const member = stateMap[role];
+                    const setMember = setterMap[role];
+                    const catRanks = member.category === 'oficial' ? OFICIAL_RANKS : member.category === 'praca' ? PRACA_RANKS : CIVIL_RANKS;
+                    return (
+                      <div key={role} className="mb-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield size={14} className="text-orange-500" />
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{labels[role]}</span>
+                        </div>
+                        <input
+                          className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="Nome Completo"
+                          value={member.name}
+                          onChange={e => setMember({ ...member, name: e.target.value })}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="NIP"
+                            value={member.nip}
+                            onChange={e => setMember({ ...member, nip: e.target.value })}
+                          />
+                          <select
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            value={member.category}
+                            onChange={e => setMember({ ...member, category: e.target.value as any, rank: '' })}
+                          >
+                            <option value="oficial">Oficial</option>
+                            <option value="praca">Praça</option>
+                            <option value="civil">Civil</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            value={member.rank}
+                            onChange={e => setMember({ ...member, rank: e.target.value })}
+                          >
+                            <option value="">Patente</option>
+                            {catRanks.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <input
+                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder="Função"
+                            value={member.function}
+                            onChange={e => setMember({ ...member, function: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button
+                    onClick={handleSaveStaff}
+                    className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+                  >
+                    {staffSaveSuccess ? <><CheckCircle2 size={18} /> Salvo!</> : <><Save size={18} /> Salvar Autoridades</>}
+                  </button>
                 </section>
               </div>
 

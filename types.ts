@@ -60,11 +60,22 @@ export interface Notice {
   isPinned?: boolean;
 }
 
+export interface StaffMember {
+  name: string;
+  nip: string;
+  rank: string;
+  category: MilitaryCategory;
+  function: string;
+}
+
 export interface SystemSettings {
   institutionName: string;
   logoUrl?: string;
   totalManpower: number;
   notices: Notice[];
+  diretor?: StaffMember;
+  viceDiretor?: StaffMember;
+  encPessoal?: StaffMember;
 }
 
 export const SECTORS = ['01', '02', 'Secom', '10', '20', '30', '40', '50', '60', '70', 'Outro'];

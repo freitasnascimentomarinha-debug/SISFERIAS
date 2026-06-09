@@ -5,14 +5,7 @@ import { useVacation } from '../contexts/VacationContext';
 import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock, User, Camera } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid, addDays, startOfDay, isAfter } from 'date-fns';
-import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
-
-interface StaffMember {
-  name: string;
-  nip: string;
-  rank: string;
-  category: MilitaryCategory;
-  function: string;
+import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, StaffMember } from '../types';
 }
 
 const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all";
@@ -49,7 +42,7 @@ const StaffInputGroup = ({ label, member, onChange }: { label: string, member: S
 
 const PrintVacation: React.FC = () => {
   const { user } = useAuth();
-  const { employees, addAuditLog, updateParcelNup } = useVacation();
+  const { employees, addAuditLog, updateParcelNup, settings } = useVacation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -74,9 +67,9 @@ const PrintVacation: React.FC = () => {
   const [address, setAddress] = useState({ street: '', number: '', complement: '', zip: '', city: '', state: '' });
 
   const [encarregado, setEncarregado] = useState<StaffMember>({ name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado' });
-  const [encarregadoDep, setEncarregadoDep] = useState<StaffMember>({ name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
-  const [viceDiretor, setViceDiretor] = useState<StaffMember>({ name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
-  const [diretor, setDiretor] = useState<StaffMember>({ name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
+  const [encarregadoDep, setEncarregadoDep] = useState<StaffMember>(settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
+  const [viceDiretor, setViceDiretor] = useState<StaffMember>(settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
+  const [diretor, setDiretor] = useState<StaffMember>(settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
 
   // Identifica o ID do militar para criar uma chave única no LocalStorage
   const targetId = id || user?.id;
@@ -105,15 +98,21 @@ const PrintVacation: React.FC = () => {
       if (data.phone) setPhone(data.phone);
       if (data.address) setAddress(data.address);
       if (data.encarregado) setEncarregado(data.encarregado);
-      if (data.encarregadoDep) setEncarregadoDep(data.encarregadoDep);
-      if (data.viceDiretor) setViceDiretor(data.viceDiretor);
-      if (data.diretor) setDiretor(data.diretor);
+      // For shared staff, prefer local override but fall back to global settings
+      setEncarregadoDep(data.encarregadoDep || settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
+      setViceDiretor(data.viceDiretor || settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
+      setDiretor(data.diretor || settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
       if (data.observations) setObservations(data.observations);
       if (data.ship) setShip(data.ship);
       if (data.specialization) setSpecialization(data.specialization);
       if (data.licTime) setLicTime(data.licTime);
       if (data.aprTime) setAprTime(data.aprTime);
       if (data.isDesmuniciado) setIsDesmuniciado(data.isDesmuniciado);
+    } else {
+      // No per-user data: use global settings defaults
+      if (settings.encPessoal) setEncarregadoDep(settings.encPessoal);
+      if (settings.viceDiretor) setViceDiretor(settings.viceDiretor);
+      if (settings.diretor) setDiretor(settings.diretor);
     }
   }, [storageKey]);
 

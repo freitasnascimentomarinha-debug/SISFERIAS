@@ -29,6 +29,7 @@ const VacationForm: React.FC = () => {
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   const [footerErrorMsg, setFooterErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+  const [parcelToDelete, setParcelToDelete] = useState<string | null>(null);
 
   const existing = useMemo(() => {
     if (id) return employees.find(e => e.id === id);
@@ -191,6 +192,15 @@ const VacationForm: React.FC = () => {
     }));
   };
 
+  const handleDeleteParcel = (parcelId: string) => {
+    setParcels(prev => {
+      const next = prev.filter(p => p.id !== parcelId);
+      setParcelCount(next.length.toString());
+      return next;
+    });
+    setParcelToDelete(null);
+  };
+
   const scheduledTotal = parcels.reduce((acc, p) => acc + p.days, 0);
   const remainingDays = totalVacationDays - scheduledTotal;
 
@@ -246,11 +256,6 @@ const VacationForm: React.FC = () => {
     if (totalVacationDays <= 0) {
       missingFields.push('Quantidade de dias de direito deve ser maior que 0.');
       nextFieldErrors.totalVacationDays = true;
-    }
-
-    if (parcels.length === 0) {
-      missingFields.push('Ao menos uma parcela de férias.');
-      nextFieldErrors.parcelCount = true;
     }
 
     parcels.forEach((parcel, idx) => {
@@ -539,7 +544,18 @@ const VacationForm: React.FC = () => {
                   <div key={p.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                     <div className="flex justify-between items-center mb-4">
                       <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
+                        {parcelToDelete === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-red-600 mr-1">Tem certeza?</span>
+                            <button type="button" onClick={() => handleDeleteParcel(p.id)} className="px-2 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">Sim</button>
+                            <button type="button" onClick={() => setParcelToDelete(null)} className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">Não</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setParcelToDelete(p.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Apagar parcela"><Trash2 size={14} /></button>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
