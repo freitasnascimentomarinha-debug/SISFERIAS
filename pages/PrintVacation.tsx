@@ -61,7 +61,6 @@ const PrintVacation: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [nup, setNup] = useState('');
   const [printError, setPrintError] = useState<string | null>(null);
-  const [isNupSaved, setIsNupSaved] = useState(false);
 
   // Estados dos campos de preenchimento
   const [ship, setShip] = useState('CENTRO DE OPERAÇÕES DO ABASTECIMENTO');
@@ -123,11 +122,13 @@ const PrintVacation: React.FC = () => {
   }, [targetId, employees, selectedYear]);
 
   const parcel = employee?.vacationParcels[selectedParcelIdx];
+  const currentStoredNup = (parcel?.nup || '').trim();
+  const currentInputNup = nup.trim();
+  const isCurrentParcelNupSaved = currentStoredNup.length > 0 && currentInputNup === currentStoredNup;
 
   useEffect(() => {
     setNup(parcel?.nup || '');
     setPrintError(null);
-    setIsNupSaved(false);
   }, [employee?.id]);
 
   const handleYearChange = (year: number) => {
@@ -135,14 +136,12 @@ const PrintVacation: React.FC = () => {
     setSelectedParcelIdx(0);
     setNup('');
     setPrintError(null);
-    setIsNupSaved(false);
   };
 
   const handleParcelChange = (index: number) => {
     setSelectedParcelIdx(index);
     setNup('');
     setPrintError(null);
-    setIsNupSaved(false);
   };
 
   const handleSave = async (): Promise<boolean> => {
@@ -181,11 +180,9 @@ const PrintVacation: React.FC = () => {
     if (employee && parcel) {
       try {
         await updateParcelNup(employee.id, parcel.id, nup.trim());
-        setIsNupSaved(true);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao salvar NUP da parcela.';
         setPrintError(message);
-        setIsNupSaved(false);
         return false;
       }
     }
@@ -538,18 +535,20 @@ const PrintVacation: React.FC = () => {
                    value={nup}
                    onChange={e => {
                      setNup(e.target.value);
-                     setIsNupSaved(false);
                      if (printError) setPrintError(null);
                    }}
                  />
                  <div className="flex items-center justify-between gap-3">
                    <p className="text-[10px] text-slate-500">Ao trocar de parcela, o campo NUP é limpo automaticamente.</p>
-                   {nup.trim() && (
-                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full border ${isNupSaved ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
-                       {isNupSaved ? 'NUP salvo' : 'NUP pendente'}
+                   {employee && parcel && (
+                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full border ${isCurrentParcelNupSaved ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
+                       {isCurrentParcelNupSaved ? 'NUP salvo' : 'NUP pendente'}
                      </span>
                    )}
                  </div>
+                 {!currentInputNup && employee && parcel && (
+                   <p className="text-[10px] text-amber-700 font-semibold">Esta parcela ainda nao possui NUP confirmado no campo de edicao atual.</p>
+                 )}
                </div>
                {printError && (
                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold">
