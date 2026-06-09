@@ -61,6 +61,7 @@ const PrintVacation: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [nup, setNup] = useState('');
   const [printError, setPrintError] = useState<string | null>(null);
+  const [isNupSaved, setIsNupSaved] = useState(false);
 
   // Estados dos campos de preenchimento
   const [ship, setShip] = useState('CENTRO DE OPERAÇÕES DO ABASTECIMENTO');
@@ -124,12 +125,28 @@ const PrintVacation: React.FC = () => {
   const parcel = employee?.vacationParcels[selectedParcelIdx];
 
   useEffect(() => {
+    setNup(parcel?.nup || '');
+    setPrintError(null);
+    setIsNupSaved(false);
+  }, [employee?.id]);
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setSelectedParcelIdx(0);
     setNup('');
     setPrintError(null);
-  }, [selectedYear, selectedParcelIdx, employee?.id]);
+    setIsNupSaved(false);
+  };
 
-  const handleSave = () => {
-    if (!storageKey) return;
+  const handleParcelChange = (index: number) => {
+    setSelectedParcelIdx(index);
+    setNup('');
+    setPrintError(null);
+    setIsNupSaved(false);
+  };
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!storageKey) return false;
 
     const oldDataRaw = localStorage.getItem(storageKey);
     const newData = { phone, address, encarregado, encarregadoDep, viceDiretor, diretor, observations, ship, specialization, licTime, aprTime, isDesmuniciado };
@@ -160,8 +177,22 @@ const PrintVacation: React.FC = () => {
     }
 
     localStorage.setItem(storageKey, JSON.stringify(newData));
+
+    if (employee && parcel) {
+      try {
+        await updateParcelNup(employee.id, parcel.id, nup.trim());
+        setIsNupSaved(true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Falha ao salvar NUP da parcela.';
+        setPrintError(message);
+        setIsNupSaved(false);
+        return false;
+      }
+    }
+
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
+    return true;
   };
 
   const handlePrint = async () => {
@@ -175,16 +206,11 @@ const PrintVacation: React.FC = () => {
       return;
     }
 
-    handleSave();
-
-    try {
-      await updateParcelNup(employee.id, parcel.id, nup.trim());
-      setPrintError(null);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha ao salvar NUP da parcela.';
-      setPrintError(message);
+    const saved = await handleSave();
+    if (!saved) {
       return;
     }
+    setPrintError(null);
 
     addAuditLog({
       userName: user?.name || 'Sistema',
@@ -491,13 +517,13 @@ const PrintVacation: React.FC = () => {
                <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1">
                    <label className="text-[10px] font-bold text-slate-500 uppercase">Ano</label>
-                   <select className={inputClass} value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))}>
+                   <select className={inputClass} value={selectedYear} onChange={e => handleYearChange(parseInt(e.target.value))}>
                      {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                    </select>
                  </div>
                  <div className="space-y-1">
                    <label className="text-[10px] font-bold text-slate-500 uppercase">Parcela</label>
-                   <select className={inputClass} value={selectedParcelIdx} onChange={e => setSelectedParcelIdx(parseInt(e.target.value))} disabled={!employee}>
+                   <select className={inputClass} value={selectedParcelIdx} onChange={e => handleParcelChange(parseInt(e.target.value))} disabled={!employee}>
                      {employee ? employee.vacationParcels.map((p, i) => (
                        <option key={i} value={i}>P{i + 1} ({p.days} dias)</option>
                      )) : <option>Nenhum dado</option>}
@@ -512,10 +538,18 @@ const PrintVacation: React.FC = () => {
                    value={nup}
                    onChange={e => {
                      setNup(e.target.value);
+                     setIsNupSaved(false);
                      if (printError) setPrintError(null);
                    }}
                  />
-                 <p className="text-[10px] text-slate-500">Ao trocar de parcela, o campo NUP é limpo automaticamente.</p>
+                 <div className="flex items-center justify-between gap-3">
+                   <p className="text-[10px] text-slate-500">Ao trocar de parcela, o campo NUP é limpo automaticamente.</p>
+                   {nup.trim() && (
+                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full border ${isNupSaved ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
+                       {isNupSaved ? 'NUP salvo' : 'NUP pendente'}
+                     </span>
+                   )}
+                 </div>
                </div>
                {printError && (
                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold">
@@ -592,7 +626,7 @@ const PrintVacation: React.FC = () => {
         </div>
 
         <div className="p-8 border-t border-slate-100 flex gap-4">
-          <button onClick={handleSave} className="px-10 py-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-3xl flex items-center justify-center gap-3 transition-all flex-1">
+          <button onClick={() => { void handleSave(); }} className="px-10 py-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-3xl flex items-center justify-center gap-3 transition-all flex-1">
             <Save size={20} /> Salvar Dados
           </button>
           <button 

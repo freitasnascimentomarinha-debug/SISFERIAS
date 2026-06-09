@@ -586,7 +586,7 @@ const Security: React.FC = () => {
           active={activeTab === 'accounts'}
           onClick={() => setActiveTab('accounts')}
         />
-        <TabButton icon={<FileText size={18} />} label="Acompanhamento de Papeleta" active={activeTab === 'tracking'} onClick={() => setActiveTab('tracking')} />
+        <TabButton icon={<FileText size={18} />} label="NUP" active={activeTab === 'tracking'} onClick={() => setActiveTab('tracking')} />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -986,7 +986,7 @@ const Security: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="text-orange-500" size={24} /> Acompanhamento de Papeleta
+                  <FileText className="text-orange-500" size={24} /> NUP
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">Acompanhe cada parcela de férias e o NUP vinculado ao documento de impressão.</p>
               </div>
