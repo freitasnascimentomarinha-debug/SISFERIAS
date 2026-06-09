@@ -7,6 +7,7 @@ const Tramite: React.FC = () => {
   const { employees } = useVacation();
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const trackingRows = useMemo(() => {
     const today = startOfDay(new Date());
@@ -50,6 +51,13 @@ const Tramite: React.FC = () => {
     return trackingRows.filter(row => {
       const matchYear = yearFilter === 'all' || row.planningYear.toString() === yearFilter;
       if (!matchYear) return false;
+
+      const matchStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'regular' && !row.shouldHighlight) ||
+        (statusFilter === 'pending' && row.shouldHighlight);
+      if (!matchStatus) return false;
+
       if (!term) return true;
 
       return (
@@ -60,7 +68,7 @@ const Tramite: React.FC = () => {
         row.nup.toLowerCase().includes(term)
       );
     });
-  }, [trackingRows, search, yearFilter]);
+  }, [trackingRows, search, yearFilter, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filteredRows.length;
@@ -74,9 +82,9 @@ const Tramite: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <FileText className="text-orange-500" size={32} /> Tramite
+            <FileText className="text-orange-500" size={32} /> Trâmite
           </h2>
-          <p className="text-slate-500">Acompanhamento do NUP por parcela de ferias, respeitando a visibilidade da sua conta.</p>
+          <p className="text-slate-500">Acompanhamento do NUP por parcela de férias.</p>
         </div>
       </div>
 
@@ -106,7 +114,7 @@ const Tramite: React.FC = () => {
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><FileText className="text-orange-500" size={24} /> Controle de Tramite</h3>
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><FileText className="text-orange-500" size={24} /> Controle de Trâmite</h3>
           <div className="flex flex-wrap gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -126,11 +134,20 @@ const Tramite: React.FC = () => {
               <option value="all">Todas as Janelas</option>
               {years.map(y => <option key={y} value={y.toString()}>{y}</option>)}
             </select>
+            <select
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Todos os Status</option>
+              <option value="regular">Regular</option>
+              <option value="pending">Sem NUP (atrasado)</option>
+            </select>
           </div>
         </div>
 
         <div className="mb-5 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold flex items-center gap-2">
-          <Filter size={16} /> Linhas destacadas indicam parcela iniciada (ou passada) sem NUP informado.
+          <Filter size={16} /> Linhas destacadas indicam parcelas de férias desatualizadas ou documentos não inseridos no SIGAD (Sem NUP). Contatar o colaborar para correção urgente.
         </div>
 
         <div className="overflow-x-auto">
