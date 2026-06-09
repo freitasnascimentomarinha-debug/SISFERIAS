@@ -141,13 +141,13 @@ const Tramite: React.FC = () => {
             >
               <option value="all">Todos os Status</option>
               <option value="regular">Regular</option>
-              <option value="pending">Sem NUP (atrasado)</option>
+              <option value="pending">Discrepante</option>
             </select>
           </div>
         </div>
 
         <div className="mb-5 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold flex items-center gap-2">
-          <Filter size={16} /> Linhas destacadas indicam parcelas de férias desatualizadas ou documentos não inseridos no SIGAD (Sem NUP). Contatar o colaborar para correção urgente.
+          <Filter size={16} /> Linhas destacadas indicam parcelas de férias desatualizadas ou documentos não inseridos no SIGAD (Sem NUP). Contatar o colaborador para que ele efetue a atualização de sua parcela de férias ou insira a papeleta no SIGAD para correr o trâmite de assinaturas.
         </div>
 
         <div className="overflow-x-auto">
@@ -174,7 +174,7 @@ const Tramite: React.FC = () => {
                     <td className="py-4 px-4">
                       {row.shouldHighlight ? (
                         <span className="inline-flex items-center gap-1.5 text-red-600 font-black text-[10px] uppercase tracking-wider">
-                          <AlertCircle size={13} /> Sem NUP (atrasado)
+                          <AlertCircle size={13} /> Discrepante
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-green-600 font-black text-[10px] uppercase tracking-wider">
