@@ -15,6 +15,7 @@ const Header: React.FC = () => {
     { label: 'Início', path: '/home', icon: <Home size={18} /> },
     { label: 'Painel', path: '/', icon: <LayoutDashboard size={18} />, adminOnly: true },
     { label: 'Justificativas', path: '/justifications', icon: <MessageSquare size={18} />, adminOnly: true },
+    { label: 'Trâmite', path: '/tramite', icon: <FileText size={18} />, adminOnly: true },
     { label: 'Lançar Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
     { label: 'Calendário', path: '/calendar', icon: <Calendar size={18} />, adminOnly: true },
     { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },

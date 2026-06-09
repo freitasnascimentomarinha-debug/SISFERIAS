@@ -598,7 +598,6 @@ const Security: React.FC = () => {
         />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
-        <TabButton icon={<FileText size={18} />} label="NUP" active={activeTab === 'tracking'} onClick={() => setActiveTab('tracking')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
       </div>
