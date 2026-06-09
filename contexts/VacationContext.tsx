@@ -159,7 +159,6 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       name: data.name,
       war_name: data.warName,
       nip: data.nip,
-      category: data.category,
       sector: data.sector,
       rank: data.rank
     }).eq('id', data.userId);

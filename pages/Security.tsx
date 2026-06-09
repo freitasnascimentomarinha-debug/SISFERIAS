@@ -285,6 +285,7 @@ const Security: React.FC = () => {
   // Filtro para aba de Visibilidade
   const [visibilitySearch, setVisibilitySearch] = useState('');
   const [trackingSearch, setTrackingSearch] = useState('');
+  const [trackingYearFilter, setTrackingYearFilter] = useState<string>('all');
 
   const getResolvedSector = (u: User) => {
     if (u.sector && u.sector.trim().length > 0) return u.sector;
@@ -335,22 +336,31 @@ const Security: React.FC = () => {
 
   const filteredTrackingRows = useMemo(() => {
     const term = trackingSearch.trim().toLowerCase();
-    if (!term) return trackingRows;
-    return trackingRows.filter(row =>
-      row.employeeName.toLowerCase().includes(term) ||
-      row.warName.toLowerCase().includes(term) ||
-      row.rank.toLowerCase().includes(term) ||
-      row.sector.toLowerCase().includes(term) ||
-      row.ownerEmail.toLowerCase().includes(term) ||
-      row.nup.toLowerCase().includes(term)
-    );
-  }, [trackingRows, trackingSearch]);
+    return trackingRows.filter(row => {
+      const matchYear = trackingYearFilter === 'all' || row.planningYear.toString() === trackingYearFilter;
+      if (!matchYear) return false;
+      if (!term) return true;
+      return (
+        row.employeeName.toLowerCase().includes(term) ||
+        row.warName.toLowerCase().includes(term) ||
+        row.rank.toLowerCase().includes(term) ||
+        row.sector.toLowerCase().includes(term) ||
+        row.ownerEmail.toLowerCase().includes(term) ||
+        row.nup.toLowerCase().includes(term)
+      );
+    });
+  }, [trackingRows, trackingSearch, trackingYearFilter]);
 
   const trackingStats = useMemo(() => {
-    const total = trackingRows.length;
-    const withNup = trackingRows.filter(row => row.nup.trim().length > 0).length;
-    const pending = trackingRows.filter(row => row.shouldHighlight).length;
+    const total = filteredTrackingRows.length;
+    const withNup = filteredTrackingRows.filter(row => row.nup.trim().length > 0).length;
+    const pending = filteredTrackingRows.filter(row => row.shouldHighlight).length;
     return { total, withNup, pending };
+  }, [filteredTrackingRows]);
+
+  const trackingYears = useMemo(() => {
+    const years = Array.from(new Set(trackingRows.map(r => r.planningYear))).sort((a, b) => b - a);
+    return years;
   }, [trackingRows]);
 
   const handleToggleViewAllSectors = async (userId: string) => {
@@ -586,9 +596,9 @@ const Security: React.FC = () => {
           active={activeTab === 'accounts'}
           onClick={() => setActiveTab('accounts')}
         />
-        <TabButton icon={<FileText size={18} />} label="NUP" active={activeTab === 'tracking'} onClick={() => setActiveTab('tracking')} />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+        <TabButton icon={<FileText size={18} />} label="NUP" active={activeTab === 'tracking'} onClick={() => setActiveTab('tracking')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
       </div>
@@ -990,15 +1000,27 @@ const Security: React.FC = () => {
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">Acompanhe cada parcela de férias e o NUP vinculado ao documento de impressão.</p>
               </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Buscar por nome, e-mail, setor ou NUP..."
-                  className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-96"
-                  value={trackingSearch}
-                  onChange={e => setTrackingSearch(e.target.value)}
-                />
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome, e-mail, setor ou NUP..."
+                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-96"
+                    value={trackingSearch}
+                    onChange={e => setTrackingSearch(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500"
+                  value={trackingYearFilter}
+                  onChange={e => setTrackingYearFilter(e.target.value)}
+                >
+                  <option value="all">Janela: Todas</option>
+                  {trackingYears.map(year => (
+                    <option key={year} value={year.toString()}>{`Janela: ${year}`}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
