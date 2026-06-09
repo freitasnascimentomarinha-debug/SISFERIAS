@@ -538,12 +538,13 @@ const Security: React.FC = () => {
                 <Trash2 size={40} />
               </div>
               <div className="text-center">
-                <p className="text-slate-900 font-bold text-lg">Deseja excluir {targetUser.name}?</p>
+                <p className="text-slate-900 font-bold text-lg">Tem certeza disso?</p>
+                <p className="text-slate-700 font-semibold mt-1">Excluir a conta de {targetUser.name}.</p>
                 <p className="text-sm text-slate-500 mt-2">Esta ação é irreversível e todos os dados associados a este usuário serão permanentemente removidos.</p>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
+                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Não</button>
                 <button onClick={handleExecuteDelete} className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-100 hover:bg-red-600 transition-all">Sim, Excluir</button>
               </div>
             </div>
