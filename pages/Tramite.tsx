@@ -145,7 +145,7 @@ const Tramite: React.FC = () => {
             >
               <option value="all">Todos os Status</option>
               <option value="regular">Regular</option>
-              <option value="pending">Discrepante</option>
+              <option value="pending">Não Lançou</option>
             </select>
           </div>
         </div>
@@ -178,7 +178,7 @@ const Tramite: React.FC = () => {
                     <td className="py-4 px-4">
                       {row.shouldHighlight ? (
                         <span className="inline-flex items-center gap-1.5 text-red-600 font-black text-[10px] uppercase tracking-wider">
-                          <AlertCircle size={13} /> Discrepante
+                          <AlertCircle size={13} /> Não Lançou
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-green-600 font-black text-[10px] uppercase tracking-wider">
