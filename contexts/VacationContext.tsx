@@ -159,7 +159,6 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       name: data.name,
       war_name: data.warName,
       sector: data.sector,
-      rank: data.rank
     }).eq('id', data.userId);
 
     if (profileError) {
