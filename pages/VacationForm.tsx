@@ -27,6 +27,7 @@ const VacationForm: React.FC = () => {
   const [planningYear, setPlanningYear] = useState(currentYear);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [footerErrorMsg, setFooterErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
   const existing = useMemo(() => {
@@ -123,6 +124,7 @@ const VacationForm: React.FC = () => {
     }
     setErrorMsg(null);
     setErrorDetails([]);
+    setFooterErrorMsg(null);
     setFieldErrors({});
   }, [existing, isAuthenticated, targetUserId, user?.name]);
 
@@ -212,6 +214,7 @@ const VacationForm: React.FC = () => {
 
     setErrorMsg(null);
     setErrorDetails([]);
+    setFooterErrorMsg(null);
     const nextFieldErrors: Record<string, boolean> = {};
 
     const missingFields: string[] = [];
@@ -271,8 +274,7 @@ const VacationForm: React.FC = () => {
     setFieldErrors({});
 
     if (scheduledTotal > totalVacationDays) {
-      setErrorMsg(`Erro: Você utilizou ${scheduledTotal} dias, ultrapassando o limite de ${totalVacationDays} dias.`);
-      setErrorDetails([]);
+      setFooterErrorMsg(`Erro: Você utilizou ${scheduledTotal} dias, ultrapassando o limite de ${totalVacationDays} dias.`);
       return;
     }
 
@@ -570,6 +572,13 @@ const VacationForm: React.FC = () => {
               <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
             )}
           </div>
+
+          {footerErrorMsg && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 text-red-600 animate-in fade-in slide-in-from-bottom-2">
+              <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+              <p className="font-bold">{footerErrorMsg}</p>
+            </div>
+          )}
         </form>
       </div>
       <style>{`
