@@ -176,8 +176,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
 
-      // Create profile
-      const { error: profileError } = await supabase.from('profiles').insert([{
+      // Create profile. If optional columns are not present in the database yet,
+      // retry with a minimal payload so registration can still succeed.
+      const profilePayload = {
         id: authData.user.id,
         name,
         email,
@@ -188,15 +189,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         category: extra?.category || '',
         sector: extra?.sector || '',
         rank: extra?.rank || ''
-      }]);
+      };
+
+      const { error: profileError } = await supabase.from('profiles').insert([profilePayload]);
 
       if (profileError) {
-        console.error("Profile creation failed:", profileError);
-        return {
-          success: false,
-          errorCode: profileError.code,
-          errorMessage: profileError.message
-        };
+        const message = (profileError.message || '').toLowerCase();
+        const isMissingProfileColumn =
+          message.includes('could not find the') &&
+          message.includes('column') &&
+          message.includes('profiles');
+
+        if (isMissingProfileColumn) {
+          const minimalProfilePayload = {
+            id: authData.user.id,
+            name,
+            email,
+            role,
+            is_blocked: false
+          };
+
+          const { error: minimalInsertError } = await supabase
+            .from('profiles')
+            .insert([minimalProfilePayload]);
+
+          if (minimalInsertError) {
+            console.error('Profile creation failed (fallback):', minimalInsertError);
+            return {
+              success: false,
+              errorCode: minimalInsertError.code,
+              errorMessage: minimalInsertError.message
+            };
+          }
+        } else {
+          console.error('Profile creation failed:', profileError);
+          return {
+            success: false,
+            errorCode: profileError.code,
+            errorMessage: profileError.message
+          };
+        }
       }
 
       return { success: true };
