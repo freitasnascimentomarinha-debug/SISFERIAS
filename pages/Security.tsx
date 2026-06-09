@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../types';
@@ -1118,7 +1118,36 @@ const Security: React.FC = () => {
                 <div className="relative flex-1">
                   <input type="date" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logEnd} onChange={e => setLogEnd(e.target.value)} />
                 </div>
-                <button onClick={() => { setLogStart(''); setLogEnd(''); setLogSearch(''); }} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-all"><Filter size={18} /></button>
+                <button onClick={() => { setLogStart(''); setLogEnd(''); setLogSearch(''); }} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-all" title="Limpar filtros"><Filter size={18} /></button>
+              </div>
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={() => {
+                    const header = ['Data e Hora', 'Usuário', 'Ação', 'Campo', 'Valor Anterior', 'Novo Valor'];
+                    const rows = filteredLogs.map(log => [
+                      format(new Date(log.timestamp), 'dd/MM/yyyy HH:mm:ss'),
+                      log.userName,
+                      log.action,
+                      log.field,
+                      log.oldValue || '-',
+                      log.newValue || '-'
+                    ]);
+                    const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+                    const csv = [header, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
+                    const BOM = '\uFEFF';
+                    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `auditoria_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95"
+                  title="Exportar histórico filtrado para Excel"
+                >
+                  <Download size={16} /> Exportar Excel ({filteredLogs.length} registros)
+                </button>
               </div>
             </div>
             <div className="overflow-x-auto">

@@ -112,7 +112,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     // Fetch Audit Logs
-    const { data: logData } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false }).limit(100);
+    const { data: logData } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false });
     if (logData) {
       setAuditLogs(logData.map(l => ({
         id: l.id,
