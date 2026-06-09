@@ -158,7 +158,6 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     const { error: profileError } = await supabase.from('profiles').update({
       name: data.name,
       war_name: data.warName,
-      nip: data.nip,
       sector: data.sector,
       rank: data.rank
     }).eq('id', data.userId);
