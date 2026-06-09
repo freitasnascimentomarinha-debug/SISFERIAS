@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, FileText, Filter, Search, ShieldCheck } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, subDays } from 'date-fns';
 import { useVacation } from '../contexts/VacationContext';
 
 const Tramite: React.FC = () => {
@@ -17,6 +17,8 @@ const Tramite: React.FC = () => {
         const start = parcel.startDate ? startOfDay(new Date(parcel.startDate + 'T00:00:00')) : null;
         const missingNup = !parcel.nup || parcel.nup.trim().length === 0;
         const shouldHighlight = !!start && today.getTime() >= start.getTime() && missingNup;
+        const shouldInsertInSigad = !!start && missingNup && today.getTime() < start.getTime() && today.getTime() >= subDays(start, 15).getTime();
+        const isPlanned = missingNup && !shouldHighlight && !shouldInsertInSigad;
 
         return {
           key: `${employee.id}-${parcel.id}`,
@@ -31,6 +33,8 @@ const Tramite: React.FC = () => {
           days: parcel.days,
           nup: parcel.nup || '',
           shouldHighlight,
+          shouldInsertInSigad,
+          isPlanned,
         };
       });
     }).sort((a, b) => {
@@ -197,8 +201,12 @@ const Tramite: React.FC = () => {
                     <td className="py-4 px-4">
                       {row.nup ? (
                         <span className="font-bold text-slate-900">{row.nup}</span>
+                      ) : row.shouldInsertInSigad ? (
+                        <span className="font-black text-blue-600 text-[11px] uppercase">Inserir no SIGAD</span>
+                      ) : row.isPlanned ? (
+                        <span className="font-black text-purple-600 text-[11px] uppercase">Planejado</span>
                       ) : (
-                        <span className="text-red-600 font-black text-[11px] uppercase">Nao informado</span>
+                        <span className="text-red-600 font-black text-[11px] uppercase">Discrepante</span>
                       )}
                     </td>
                   </tr>
