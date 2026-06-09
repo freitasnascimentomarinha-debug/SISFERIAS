@@ -26,6 +26,8 @@ const VacationForm: React.FC = () => {
 
   const [planningYear, setPlanningYear] = useState(currentYear);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
   const existing = useMemo(() => {
     if (id) return employees.find(e => e.id === id);
@@ -120,6 +122,8 @@ const VacationForm: React.FC = () => {
       setTotalVacationDays(30);
     }
     setErrorMsg(null);
+    setErrorDetails([]);
+    setFieldErrors({});
   }, [existing, isAuthenticated, targetUserId, user?.name]);
 
   const handleParcelCountChange = (newCountStr: string) => {
@@ -160,6 +164,14 @@ const VacationForm: React.FC = () => {
   const handleParcelChange = (parcelId: string, field: keyof VacationParcel, value: string) => {
     if (isBlocked) return;
     setErrorMsg(null);
+    setErrorDetails([]);
+    const parcelFieldKey = `parcel-${parcelId}-${field}`;
+    setFieldErrors(prev => {
+      if (!prev[parcelFieldKey]) return prev;
+      const next = { ...prev };
+      delete next[parcelFieldKey];
+      return next;
+    });
     setParcels(prev => prev.map(p => {
       if (p.id === parcelId) {
         const updated = { ...p, [field]: value };
@@ -180,12 +192,87 @@ const VacationForm: React.FC = () => {
   const scheduledTotal = parcels.reduce((acc, p) => acc + p.days, 0);
   const remainingDays = totalVacationDays - scheduledTotal;
 
+  const clearFieldError = (field: string) => {
+    setFieldErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const getInputClass = (hasError: boolean, baseClass = 'input-field') => {
+    if (!hasError) return baseClass;
+    return `${baseClass} border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-200`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isBlocked) return;
 
+    setErrorMsg(null);
+    setErrorDetails([]);
+    const nextFieldErrors: Record<string, boolean> = {};
+
+    const missingFields: string[] = [];
+
+    if (!targetUserId) {
+      missingFields.push('Militar/usuário de destino.');
+      nextFieldErrors.targetUserId = true;
+    }
+    if (!name.trim()) {
+      missingFields.push('Nome completo.');
+      nextFieldErrors.name = true;
+    }
+    if (!warName.trim()) {
+      missingFields.push('Nome de guerra.');
+      nextFieldErrors.warName = true;
+    }
+    if (!nip.trim()) {
+      missingFields.push('NIP.');
+      nextFieldErrors.nip = true;
+    }
+    if (!sector.trim()) {
+      missingFields.push('Setor.');
+      nextFieldErrors.sector = true;
+    }
+    if (!rank.trim()) {
+      missingFields.push('Posto/graduação.');
+      nextFieldErrors.rank = true;
+    }
+    if (totalVacationDays <= 0) {
+      missingFields.push('Quantidade de dias de direito deve ser maior que 0.');
+      nextFieldErrors.totalVacationDays = true;
+    }
+
+    if (parcels.length === 0) {
+      missingFields.push('Ao menos uma parcela de férias.');
+      nextFieldErrors.parcelCount = true;
+    }
+
+    parcels.forEach((parcel, idx) => {
+      if (!parcel.startDate) {
+        missingFields.push(`Data de início da Parcela ${idx + 1}.`);
+        nextFieldErrors[`parcel-${parcel.id}-startDate`] = true;
+      }
+      if (!parcel.endDate) {
+        missingFields.push(`Data de término da Parcela ${idx + 1}.`);
+        nextFieldErrors[`parcel-${parcel.id}-endDate`] = true;
+      }
+    });
+
+    if (missingFields.length > 0) {
+      setErrorMsg('Não foi possível salvar. Preencha os campos obrigatórios abaixo:');
+      setErrorDetails(missingFields);
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+
+    setFieldErrors({});
+
     if (scheduledTotal > totalVacationDays) {
       setErrorMsg(`Erro: Você utilizou ${scheduledTotal} dias, ultrapassando o limite de ${totalVacationDays} dias.`);
+      setErrorDetails([]);
       return;
     }
 
@@ -198,6 +285,7 @@ const VacationForm: React.FC = () => {
 
     if (invalidParcel) {
       setErrorMsg('Erro: Há parcelas com data de início posterior à data de término.');
+      setErrorDetails([]);
       return;
     }
 
@@ -263,10 +351,16 @@ const VacationForm: React.FC = () => {
       });
     }
 
-    await saveVacation(employeeData);
-    await fetchProfile(targetUserId);
-    await fetchAllUsers();
-    navigate('/');
+    try {
+      await saveVacation(employeeData);
+      await fetchProfile(targetUserId);
+      await fetchAllUsers();
+      navigate('/');
+    } catch (error) {
+      const saveError = error instanceof Error ? error.message : 'Falha desconhecida.';
+      setErrorMsg(`Erro ao salvar férias: ${saveError}`);
+      setErrorDetails(['Verifique os dados informados e tente novamente.']);
+    }
   };
 
   return (
@@ -284,9 +378,18 @@ const VacationForm: React.FC = () => {
 
 
       {errorMsg && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-600 font-bold animate-in fade-in slide-in-from-top-2">
-          <AlertTriangle size={20} />
-          <span>{errorMsg}</span>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 text-red-600 animate-in fade-in slide-in-from-top-2">
+          <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold">{errorMsg}</p>
+            {errorDetails.length > 0 && (
+              <ul className="list-disc pl-5 mt-1 text-sm font-medium space-y-0.5">
+                {errorDetails.map((detail, index) => (
+                  <li key={`${detail}-${index}`}>{detail}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
@@ -343,29 +446,37 @@ const VacationForm: React.FC = () => {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Quantidade de dias de direito</label>
-                    <input type="number" className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 font-bold" value={totalVacationDays} onChange={e => setTotalVacationDays(parseInt(e.target.value) || 0)} />
+                    <input
+                      type="number"
+                      className={`w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 font-bold ${fieldErrors.totalVacationDays ? 'bg-red-50 border-red-400 focus:ring-red-200' : 'bg-slate-50 border-slate-200 focus:ring-orange-500'}`}
+                      value={totalVacationDays}
+                      onChange={e => {
+                        setTotalVacationDays(parseInt(e.target.value) || 0);
+                        clearFieldError('totalVacationDays');
+                      }}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
-                    <input required className="input-field" value={name} onChange={e => setName(e.target.value)} />
+                    <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome de Guerra</label>
-                    <input required className="input-field" value={warName} onChange={e => setWarName(e.target.value)} />
+                    <input required className={getInputClass(!!fieldErrors.warName)} value={warName} onChange={e => { setWarName(e.target.value); clearFieldError('warName'); }} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">NIP</label>
-                    <input required className="input-field" value={nip} onChange={e => setNip(e.target.value)} />
+                    <input required className={getInputClass(!!fieldErrors.nip)} value={nip} onChange={e => { setNip(e.target.value); clearFieldError('nip'); }} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
                     {isCustomSector ? (
                       <div className="flex gap-2">
-                        <input className="input-field flex-1" value={sector} onChange={e => setSector(e.target.value)} placeholder="Nome do novo setor" autoFocus />
+                        <input className={getInputClass(!!fieldErrors.sector, 'input-field flex-1')} value={sector} onChange={e => { setSector(e.target.value); clearFieldError('sector'); }} placeholder="Nome do novo setor" autoFocus />
                         <button type="button" onClick={() => { setIsCustomSector(false); setSector(allSectors[0] || ''); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
                       </div>
                     ) : (
-                      <select className="input-field" value={sector} onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); } }}>
+                      <select className={getInputClass(!!fieldErrors.sector)} value={sector} onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); clearFieldError('sector'); } }}>
                         {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
                         <option value="__new__">+ Cadastrar novo setor...</option>
                       </select>
@@ -390,7 +501,7 @@ const VacationForm: React.FC = () => {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Posto/Graduação</label>
-                    <select className="input-field" value={rank} onChange={e => setRank(e.target.value)}>
+                    <select className={getInputClass(!!fieldErrors.rank)} value={rank} onChange={e => { setRank(e.target.value); clearFieldError('rank'); }}>
                       {ranks.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
@@ -413,7 +524,7 @@ const VacationForm: React.FC = () => {
 
               <div className="mb-6">
                 <label className="text-xs font-bold text-slate-500 uppercase">Dividir em quantas parcelas?</label>
-                <select className="input-field mt-1.5" value={parcelCount} onChange={e => handleParcelCountChange(e.target.value)}>
+                <select className={getInputClass(!!fieldErrors.parcelCount, 'input-field mt-1.5')} value={parcelCount} onChange={e => { handleParcelCountChange(e.target.value); clearFieldError('parcelCount'); }}>
                   <option value="1">1 parcela</option>
                   <option value="2">2 parcelas</option>
                   <option value="3">3 parcelas</option>
@@ -429,8 +540,8 @@ const VacationForm: React.FC = () => {
                       <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className="input-field py-2" value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className="input-field py-2" value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
                     </div>
                   </div>
                 ))}

@@ -147,23 +147,28 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       dbEmployee.id = data.id;
     }
 
-    const { error } = await supabase.from('employees').upsert(dbEmployee);
+    const { error: upsertError } = await supabase.from('employees').upsert(dbEmployee);
+    if (upsertError) {
+      console.error('Error saving vacation:', upsertError);
+      throw new Error(upsertError.message || 'Não foi possível salvar o lançamento.');
+    }
 
     // Sincronizar nome no Perfil (tabela profiles)
-    if (!error) {
-      await supabase.from('profiles').update({
-        name: data.name,
-        war_name: data.warName,
-        nip: data.nip,
-        category: data.category,
-        sector: data.sector,
-        rank: data.rank
-      }).eq('id', data.userId);
-      await fetchData();
-    } else {
-      console.error("Error saving vacation:", error);
-      alert("Erro ao salvar: " + error.message);
+    const { error: profileError } = await supabase.from('profiles').update({
+      name: data.name,
+      war_name: data.warName,
+      nip: data.nip,
+      category: data.category,
+      sector: data.sector,
+      rank: data.rank
+    }).eq('id', data.userId);
+
+    if (profileError) {
+      console.error('Error syncing profile after vacation save:', profileError);
+      throw new Error(profileError.message || 'Lançamento salvo, mas houve falha ao sincronizar perfil.');
     }
+
+    await fetchData();
   };
 
   const deleteVacation = async (id: string) => {
