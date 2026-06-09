@@ -9,6 +9,7 @@ interface VacationContextType {
   auditLogs: AuditLog[];
   settings: SystemSettings;
   saveVacation: (data: Employee) => Promise<void>;
+  updateParcelNup: (employeeId: string, parcelId: string, nup: string) => Promise<void>;
   deleteVacation: (id: string) => Promise<void>;
   getEmployeeByUserId: (userId: string) => Employee | undefined;
   addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => Promise<void>;
@@ -171,6 +172,34 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     await fetchData();
   };
 
+  const updateParcelNup = async (employeeId: string, parcelId: string, nup: string) => {
+    const targetEmployee = employees.find(e => e.id === employeeId);
+    if (!targetEmployee) {
+      throw new Error('Registro de férias não encontrado para salvar o NUP.');
+    }
+
+    const normalizedNup = nup.trim();
+    const updatedParcels = targetEmployee.vacationParcels.map(parcel => {
+      if (parcel.id !== parcelId) return parcel;
+      return { ...parcel, nup: normalizedNup };
+    });
+
+    const { error } = await supabase
+      .from('employees')
+      .update({ vacation_parcels: JSON.stringify(updatedParcels) })
+      .eq('id', employeeId);
+
+    if (error) {
+      console.error('Error updating parcel NUP:', error);
+      throw new Error(error.message || 'Não foi possível salvar o NUP da parcela.');
+    }
+
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id !== employeeId) return emp;
+      return { ...emp, vacationParcels: updatedParcels };
+    }));
+  };
+
   const deleteVacation = async (id: string) => {
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (!error) {
@@ -260,7 +289,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   return (
     <VacationContext.Provider value={{
       employees, auditLogs, settings,
-      saveVacation, deleteVacation,
+      saveVacation, updateParcelNup, deleteVacation,
       getEmployeeByUserId, addAuditLog, updateSettings,
       addNotice, deleteNotice, togglePinNotice
     }}>

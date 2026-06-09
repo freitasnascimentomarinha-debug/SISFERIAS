@@ -8,6 +8,7 @@ export interface VacationParcel {
   startDate: string;
   endDate: string;
   days: number;
+  nup?: string;
 }
 
 export interface Employee {

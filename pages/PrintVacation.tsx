@@ -49,7 +49,7 @@ const StaffInputGroup = ({ label, member, onChange }: { label: string, member: S
 
 const PrintVacation: React.FC = () => {
   const { user } = useAuth();
-  const { employees, addAuditLog } = useVacation();
+  const { employees, addAuditLog, updateParcelNup } = useVacation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -59,6 +59,8 @@ const PrintVacation: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedParcelIdx, setSelectedParcelIdx] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [nup, setNup] = useState('');
+  const [printError, setPrintError] = useState<string | null>(null);
 
   // Estados dos campos de preenchimento
   const [ship, setShip] = useState('CENTRO DE OPERAÇÕES DO ABASTECIMENTO');
@@ -121,6 +123,11 @@ const PrintVacation: React.FC = () => {
 
   const parcel = employee?.vacationParcels[selectedParcelIdx];
 
+  useEffect(() => {
+    setNup('');
+    setPrintError(null);
+  }, [selectedYear, selectedParcelIdx, employee?.id]);
+
   const handleSave = () => {
     if (!storageKey) return;
 
@@ -157,20 +164,34 @@ const PrintVacation: React.FC = () => {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!employee || !parcel) {
       alert("Selecione um militar com planejamento válido antes de imprimir.");
       return;
     }
 
+    if (!nup.trim()) {
+      setPrintError('Preencha o NUP da parcela para imprimir/gerar PDF.');
+      return;
+    }
+
     handleSave();
+
+    try {
+      await updateParcelNup(employee.id, parcel.id, nup.trim());
+      setPrintError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha ao salvar NUP da parcela.';
+      setPrintError(message);
+      return;
+    }
 
     addAuditLog({
       userName: user?.name || 'Sistema',
       action: 'Impressão',
       field: `Papeleta: ${employee.rank} ${employee.warName}`,
       oldValue: '-',
-      newValue: `Janela: ${selectedYear} | Parcela: ${selectedParcelIdx + 1} (${parcel.days}d)`
+      newValue: `Janela: ${selectedYear} | Parcela: ${selectedParcelIdx + 1} (${parcel.days}d) | NUP: ${nup.trim()}`
     });
 
     const safeParse = (d: string) => d ? format(new Date(d + 'T00:00:00'), 'dd/MM/yyyy') : '---';
@@ -240,6 +261,11 @@ const PrintVacation: React.FC = () => {
                   <span class="text-[14px] font-bold text-red-navy px-2">${parcel.days} dias</span>
                   <span class="text-[7px] text-red-navy uppercase font-bold">Duração</span>
                 </div>
+              </div>
+
+              <div class="text-center mt-2 mb-3">
+                <span class="text-[9px] font-bold uppercase">NUP do Processo: </span>
+                <span class="text-[12px] font-bold text-red-navy border-b border-black px-2">${nup.trim()}</span>
               </div>
 
               <div class="text-center my-4">
@@ -378,7 +404,7 @@ const PrintVacation: React.FC = () => {
                   <div>
                     <h2 class="text-[18px] font-bold uppercase text-slate-900 leading-tight">${employee.rank} ${employee.name}</h2>
                     <p class="text-[11px] font-bold text-red-navy uppercase tracking-widest">NIP: ${employee.nip} | ESP: ${specialization}</p>
-                    <p class="text-[10px] text-slate-500 uppercase mt-0.5">SETOR: ${employee.sector} | JANELA: ${selectedYear} | ${parcel.days} DIAS</p>
+                    <p class="text-[10px] text-slate-500 uppercase mt-0.5">SETOR: ${employee.sector} | JANELA: ${selectedYear} | ${parcel.days} DIAS | NUP: ${nup.trim()}</p>
                   </div>
                 </div>
                 <div class="text-right">
@@ -478,6 +504,24 @@ const PrintVacation: React.FC = () => {
                    </select>
                  </div>
                </div>
+               <div className="space-y-1">
+                 <label className="text-[10px] font-bold text-slate-500 uppercase">NUP (Obrigatório para Impressão/PDF)</label>
+                 <input
+                   className={`${inputClass} ${printError ? 'border-red-400 bg-red-50 focus:ring-red-300' : ''}`}
+                   placeholder="Ex: 62012.000123/2026-91"
+                   value={nup}
+                   onChange={e => {
+                     setNup(e.target.value);
+                     if (printError) setPrintError(null);
+                   }}
+                 />
+                 <p className="text-[10px] text-slate-500">Ao trocar de parcela, o campo NUP é limpo automaticamente.</p>
+               </div>
+               {printError && (
+                 <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold">
+                   {printError}
+                 </div>
+               )}
                <div className="space-y-1">
                  <label className="text-[10px] font-bold text-slate-500 uppercase">Emissão do Doc</label>
                  <input type="date" className={inputClass} value={docDate} onChange={e => setDocDate(e.target.value)} />
