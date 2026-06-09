@@ -6,7 +6,6 @@ import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid, addDays, startOfDay, isAfter } from 'date-fns';
 import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, StaffMember } from '../types';
-}
 
 const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all";
 
