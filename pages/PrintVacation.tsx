@@ -129,18 +129,16 @@ const PrintVacation: React.FC = () => {
   useEffect(() => {
     setNup(parcel?.nup || '');
     setPrintError(null);
-  }, [employee?.id]);
+  }, [employee?.id, parcel?.id, parcel?.nup]);
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year);
     setSelectedParcelIdx(0);
-    setNup('');
     setPrintError(null);
   };
 
   const handleParcelChange = (index: number) => {
     setSelectedParcelIdx(index);
-    setNup('');
     setPrintError(null);
   };
 
