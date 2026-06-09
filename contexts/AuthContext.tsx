@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   users: User[]; // Kept for interface compatibility, but might be empty or restricted
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<boolean>;
+  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<{ success: boolean; errorCode?: string; errorMessage?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   getRegisteredUsers: () => User[]; // Might need to be async or removed/deprecated
@@ -154,14 +154,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<boolean> => {
+  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; errorCode?: string; errorMessage?: string }> => {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: pass,
       });
 
-      if (authError || !authData.user) throw authError;
+      if (authError) {
+        return {
+          success: false,
+          errorCode: authError.code,
+          errorMessage: authError.message
+        };
+      }
+
+      if (!authData.user) {
+        return {
+          success: false,
+          errorMessage: 'Nao foi possivel criar o usuario de autenticacao.'
+        };
+      }
 
       // Create profile
       const { error: profileError } = await supabase.from('profiles').insert([{
@@ -179,14 +192,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (profileError) {
         console.error("Profile creation failed:", profileError);
-        // Optional: Delete auth user if profile creation fails?
-        return false;
+        return {
+          success: false,
+          errorCode: profileError.code,
+          errorMessage: profileError.message
+        };
       }
 
-      return true;
+      return { success: true };
     } catch (e) {
       console.error("Registration failed:", e);
-      return false;
+      const errorMessage = e instanceof Error ? e.message : 'Erro inesperado ao cadastrar usuario.';
+      return { success: false, errorMessage };
     }
   };
 

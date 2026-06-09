@@ -38,17 +38,32 @@ const Register: React.FC = () => {
     }
     
     setLoading(true);
-    const registered = await register(name, email, password, 'user', {
+    const result = await register(name, email, password, 'user', {
       warName, nip, category, sector, rank
     });
     
-    if (registered) {
+    if (result.success) {
       setSuccess('Cadastro realizado com sucesso! Redirecionando para o login...');
       setTimeout(() => {
         navigate('/login');
       }, 2500);
     } else {
-      setError('Este e-mail já está cadastrado no sistema.');
+      const normalizedMessage = (result.errorMessage || '').toLowerCase();
+      const isDuplicatedEmail =
+        normalizedMessage.includes('already registered') ||
+        normalizedMessage.includes('already exists') ||
+        normalizedMessage.includes('duplicate key') ||
+        normalizedMessage.includes('duplicate') ||
+        normalizedMessage.includes('já está cadastrado') ||
+        normalizedMessage.includes('ja esta cadastrado') ||
+        result.errorCode === '23505' ||
+        result.errorCode === 'user_already_exists';
+
+      if (isDuplicatedEmail) {
+        setError('Este e-mail ja esta cadastrado no sistema.');
+      } else {
+        setError(result.errorMessage || 'Nao foi possivel concluir o cadastro. Tente novamente.');
+      }
     }
     setLoading(false);
   };
