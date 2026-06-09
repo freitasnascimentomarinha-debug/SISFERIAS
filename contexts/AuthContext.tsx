@@ -139,15 +139,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       let email = emailOrNip.trim();
 
-      // Se não parece um e-mail, tenta resolver pelo NIP
+      // Se não parece um e-mail, tenta resolver pelo NIP via função SECURITY DEFINER
       if (!email.includes('@')) {
-        const { data: profile, error: nipError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('nip', email)
-          .maybeSingle();
-        if (nipError || !profile?.email) return false;
-        email = profile.email;
+        const { data: resolvedEmail, error: nipError } = await supabase
+          .rpc('get_email_by_nip', { p_nip: email });
+        if (nipError || !resolvedEmail) return false;
+        email = resolvedEmail as string;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
