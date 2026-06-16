@@ -206,7 +206,7 @@ const Tramite: React.FC = () => {
                       ) : row.isPlanned ? (
                         <span className="font-black text-purple-600 text-[11px] uppercase">Planejado</span>
                       ) : (
-                        <span className="text-red-600 font-black text-[11px] uppercase">Não Lançou</span>
+                        <span className="text-red-600 font-black text-[11px] uppercase">Sem Papeleta</span>
                       )}
                     </td>
                   </tr>
