@@ -46,9 +46,10 @@ const PrintVacation: React.FC = () => {
   const navigate = useNavigate();
 
   const currentYear = new Date().getFullYear();
+  const defaultRightYear = currentYear - 1;
   const availableYears = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
   
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedYear, setSelectedYear] = useState(defaultRightYear);
   const [selectedParcelIdx, setSelectedParcelIdx] = useState(0);
   const [showToast, setShowToast] = useState(false);
   const [nup, setNup] = useState('');
