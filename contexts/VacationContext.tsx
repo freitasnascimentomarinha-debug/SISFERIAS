@@ -153,15 +153,27 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       justification: data.justification
     };
 
-    // Only add ID if it exists and is not empty
     if (data.id) {
-      dbEmployee.id = data.id;
-    }
+      // Edição direta do registro existente
+      const { error: updateError } = await supabase
+        .from('employees')
+        .update(dbEmployee)
+        .eq('id', data.id);
 
-    const { error: upsertError } = await supabase.from('employees').upsert(dbEmployee);
-    if (upsertError) {
-      console.error('Error saving vacation:', upsertError);
-      throw new Error(upsertError.message || 'Não foi possível salvar o lançamento.');
+      if (updateError) {
+        console.error('Error updating vacation:', updateError);
+        throw new Error(updateError.message || 'Não foi possível atualizar o lançamento.');
+      }
+    } else {
+      // Novo lançamento: garante 1 registro por militar por ano de direito
+      const { error: upsertError } = await supabase
+        .from('employees')
+        .upsert(dbEmployee, { onConflict: 'user_id,planning_year' });
+
+      if (upsertError) {
+        console.error('Error saving vacation:', upsertError);
+        throw new Error(upsertError.message || 'Não foi possível salvar o lançamento.');
+      }
     }
 
     await fetchData();
