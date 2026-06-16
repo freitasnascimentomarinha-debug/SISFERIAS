@@ -442,7 +442,7 @@ const VacationForm: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 flex-1 w-full">
                   <div className="space-y-1.5 bg-orange-50 p-3 rounded-2xl border border-orange-100">
-                    <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Janela do Ano (Planejamento)</label>
+                    <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Férias referente ao ano</label>
                     <select
                       className="w-full bg-white border border-orange-200 rounded-xl px-4 py-2 text-sm font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
                       value={planningYear}

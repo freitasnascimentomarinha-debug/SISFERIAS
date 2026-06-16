@@ -39,7 +39,9 @@ const Dashboard: React.FC = () => {
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
-      const matchYear = (emp.planningYear || currentYear) === planningYear;
+      // Ano exibido no Painel representa o ano de gozo (janela).
+      // O direito cadastrado pertence ao ano anterior.
+      const matchYear = ((emp.planningYear || currentYear) + 1) === planningYear;
       if (!matchYear) return false;
 
       const matchSearch = emp.warName.toLowerCase().includes(search.toLowerCase()) || emp.nip.includes(search);

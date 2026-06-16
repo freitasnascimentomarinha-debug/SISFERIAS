@@ -2,7 +2,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Employee } from '../types';
-import { isValid } from 'date-fns';
+import { endOfDay, isAfter, isBefore, isValid } from 'date-fns';
 
 interface VacationChartProps {
   employees: Employee[];
@@ -12,6 +12,8 @@ interface VacationChartProps {
 const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear = 2026 }) => {
   // Janela de planejamento padrão sugerida: Dez (Ano Anterior) até Nov (Ano Atual)
   const months = ['Dez', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov'];
+  const windowStart = new Date(planningYear - 1, 11, 1);
+  const windowEnd = endOfDay(new Date(planningYear, 10, 30));
   
   const safeParseDate = (dateStr: string) => {
     if (!dateStr) return new Date(NaN);
@@ -22,6 +24,13 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
   const toPercent = (value: number, total: number) => {
     if (total <= 0) return 0;
     return Math.round((value / total) * 100);
+  };
+
+  const isParcelInsideWindow = (startDate: string, endDate: string) => {
+    const start = safeParseDate(startDate);
+    const end = safeParseDate(endDate);
+    if (!isValid(start) || !isValid(end)) return false;
+    return !isBefore(start, windowStart) && !isAfter(end, windowEnd);
   };
 
   const data = months.map((m, idx) => {
@@ -41,7 +50,12 @@ const VacationChart: React.FC<VacationChartProps> = ({ employees, planningYear =
         
         emp.vacationParcels.forEach(p => {
           const start = safeParseDate(p.startDate);
-          if (isValid(start) && start.getMonth() === loopMonth && start.getFullYear() === loopYear) {
+          if (
+            isValid(start) &&
+            isParcelInsideWindow(p.startDate, p.endDate) &&
+            start.getMonth() === loopMonth &&
+            start.getFullYear() === loopYear
+          ) {
             cumulativeReal += p.days;
           }
         });
