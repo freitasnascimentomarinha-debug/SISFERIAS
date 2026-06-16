@@ -20,11 +20,12 @@ const VacationForm: React.FC = () => {
   }, [employees]);
 
   const currentYear = new Date().getFullYear();
+  const defaultRightYear = currentYear - 1;
   const availableYears = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
 
   const targetUserId = userId || user?.id || '';
 
-  const [planningYear, setPlanningYear] = useState(currentYear);
+  const [planningYear, setPlanningYear] = useState(defaultRightYear);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   const [footerErrorMsg, setFooterErrorMsg] = useState<string | null>(null);
