@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Building2, Filter, MessageSquare, Search, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Filter, MessageSquare, Search, ShieldCheck, User as UserIcon, Users } from 'lucide-react';
 import { useVacation } from '../contexts/VacationContext';
 import { SECTORS } from '../types';
 
@@ -155,11 +155,22 @@ const Justifications: React.FC = () => {
             filteredJustifications.map(emp => (
               <div key={emp.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all group">
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-lg">{emp.rank} {emp.warName}</h4>
-                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">
-                      NIP: {emp.nip} • SETOR: {emp.sector} • <span className="text-orange-600">JANELA: {emp.planningYear || 'Não especificada'}</span>
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold overflow-hidden shadow-sm ${emp.photoUrl ? 'bg-white' : 'bg-slate-700'}`}>
+                      {emp.photoUrl ? (
+                        <img src={emp.photoUrl} alt={emp.warName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg flex items-center justify-center w-full h-full">
+                          {emp.warName ? emp.warName.charAt(0).toUpperCase() : <UserIcon size={18} />}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-lg">{emp.rank} {emp.warName}</h4>
+                      <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">
+                        NIP: {emp.nip} • SETOR: {emp.sector} • <span className="text-orange-600">JANELA: {emp.planningYear || 'Não especificada'}</span>
+                      </p>
+                    </div>
                   </div>
                   <span className="text-[9px] bg-orange-50 text-orange-600 border border-orange-100 px-3 py-1 rounded-full font-black tracking-tighter uppercase">Privado</span>
                 </div>
