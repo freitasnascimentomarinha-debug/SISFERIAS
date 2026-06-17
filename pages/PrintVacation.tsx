@@ -363,17 +363,22 @@ const PrintVacation: React.FC = () => {
                  <span class="border-b border-black flex-1 font-bold text-[11px]">${phone}</span>
               </div>
 
-              <div class="flex items-center gap-4 mt-auto">
-                <div class="flex-1">
-                   <div class="flex items-center gap-2">
-                    <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
-                    <span class="border-b border-black flex-1 text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
-                  </div>
-                </div>
+              <div class="flex items-center gap-2 mb-4">
+                <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
+                <span class="border-b border-black flex-1 text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-6 mt-auto text-center">
                 <div class="flex-1 text-center">
                   <div class="border-t border-black pt-1">
                     <p class="text-[9px] font-bold text-red-navy uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
                     <p class="text-[7px] uppercase">${viceDiretor.function}</p>
+                  </div>
+                </div>
+                <div class="flex-1 text-center">
+                  <div class="border-t border-black pt-1">
+                    <p class="text-[9px] font-bold text-red-navy uppercase">${encarregado.rank} ${encarregado.name}</p>
+                    <p class="text-[7px] uppercase">${encarregado.function}</p>
                   </div>
                 </div>
               </div>
