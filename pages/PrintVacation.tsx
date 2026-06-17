@@ -215,6 +215,7 @@ const PrintVacation: React.FC = () => {
     });
 
     const safeParse = (d: string) => d ? format(new Date(d + 'T00:00:00'), 'dd/MM/yyyy') : '---';
+    const hasAttachmentPage = observations.trim().length > 0;
     
     const currentParcelStart = parcel.startDate || '9999-12-31';
     let totalDaysConsumedAtThisPoint = 0;
@@ -405,11 +406,12 @@ const PrintVacation: React.FC = () => {
 
               <div class="mt-4 text-[7px] italic text-slate-300 flex justify-between">
                 <span>Controle MB - Papeleta Eletrônica</span>
-                <span>Pág 1/2</span>
+                <span>Pág 1/${hasAttachmentPage ? '2' : '1'}</span>
               </div>
             </div>
           </div>
 
+          ${hasAttachmentPage ? `
           <div class="page-landscape">
             <div class="column">
               <div class="flex justify-between items-center mb-4 border-b border-slate-900 pb-2">
@@ -474,6 +476,7 @@ const PrintVacation: React.FC = () => {
               </div>
             </div>
           </div>
+          ` : ''}
         </body>
       </html>
     `);
@@ -498,7 +501,7 @@ const PrintVacation: React.FC = () => {
             <div className="p-3 bg-white/15 rounded-2xl"><Printer size={32} /></div>
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Emissão de Documento</h2>
-              <p className="text-orange-100 text-sm">Pág 1 (Papeleta) | Pág 2 (Anexo) - Ambas em Paisagem</p>
+              <p className="text-orange-100 text-sm">A pág. 2 (anexo) só é gerada quando houver texto preenchido no anexo.</p>
             </div>
           </div>
           <button onClick={() => navigate(-1)} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
@@ -630,7 +633,7 @@ const PrintVacation: React.FC = () => {
             disabled={!employee} 
             className="px-10 py-5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-3xl shadow-xl shadow-orange-100 flex items-center justify-center gap-3 transition-all flex-1 disabled:opacity-50"
           >
-            <Printer size={20} /> Imprimir Documento (2 Págs)
+            <Printer size={20} /> Imprimir Documento{observations.trim() ? ' (2 Págs)' : ''}
           </button>
         </div>
       </div>
