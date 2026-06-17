@@ -391,7 +391,7 @@ const PrintVacation: React.FC = () => {
                 <li>Garanta os meios financeiros e logísticos necessários para seu regresso no prazo estipulado.</li>
                 <li>Providencie seu retorno com antecedência. Exceder o prazo de licença é falta grave passível de punição disciplinar.</li>
                 <li>Mantenha conduta exemplar, condizente com a hierarquia e as tradições da Marinha do Brasil.</li>
-                <li>Tomei conhecimento formal destas instruções em _____/_____/_____.</li>
+                <li>Tomei conhecimento formal destas instruções na data da assinatura.</li>
               </ol>
 
               <div class="mt-auto pt-6 text-center">
