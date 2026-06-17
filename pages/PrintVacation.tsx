@@ -273,9 +273,9 @@ const PrintVacation: React.FC = () => {
               </div>
 
               <div class="flex justify-between items-end mt-2 px-4">
-                <span class="uppercase text-[8px] font-bold">Autorização de Férias Referente ao Ano</span>
-                <div class="flex flex-col items-center">
-                  <span class="text-[14px] font-bold text-red-navy border-b border-red-navy px-2 leading-none">${selectedYear}</span>
+                <div class="flex items-end gap-2">
+                  <span class="uppercase text-[8px] font-bold">Autorização de Férias Referente ao Ano</span>
+                  <span class="text-[14px] font-bold text-red-navy leading-none">${selectedYear}</span>
                 </div>
                 <div class="flex flex-col items-center">
                   <span class="text-[14px] font-bold text-red-navy px-2">${parcel.days} dias</span>
