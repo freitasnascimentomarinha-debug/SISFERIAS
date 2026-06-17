@@ -300,7 +300,7 @@ const PrintVacation: React.FC = () => {
               </div>
 
               <div class="border-b border-black mb-0.5">
-                <span class="text-red-navy font-bold uppercase text-[12px]">${employee.name}</span>
+                <span class="text-red-navy font-bold uppercase text-[12px] w-full inline-block text-center">${employee.name}</span>
               </div>
               <p class="text-[8px] text-red-navy uppercase mt-0.5 mb-4 font-bold">Nome Completo</p>
 
@@ -343,7 +343,7 @@ const PrintVacation: React.FC = () => {
               </div>
 
               <div class="mb-3">
-                <span class="border-b border-black w-full inline-block font-bold uppercase text-[11px] py-0.5">${address.street}${address.number ? ', ' + address.number : ''}</span>
+                <span class="border-b border-black w-full inline-block font-bold uppercase text-[11px] py-0.5 text-center">${address.street}${address.number ? ', ' + address.number : ''}</span>
                 <p class="text-[8px] text-red-navy uppercase mt-0.5 font-bold text-center">Permanência</p>
               </div>
 
@@ -360,7 +360,7 @@ const PrintVacation: React.FC = () => {
 
                 <div class="flex items-center gap-4 mb-4">
                   <span class="text-[10px] font-bold text-red-navy uppercase">Contato:</span>
-                  <span class="border-b border-black flex-1 font-bold text-[11px]">${phone}</span>
+                    <span class="border-b border-black flex-1 font-bold text-[11px] text-center">${phone}</span>
                   <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
                   <span class="border-b border-black min-w-[72px] text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
               </div>
