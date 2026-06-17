@@ -302,7 +302,7 @@ const PrintVacation: React.FC = () => {
               <div class="border-b border-black mb-0.5">
                 <span class="text-red-navy font-bold uppercase text-[12px] w-full inline-block text-center">${employee.name}</span>
               </div>
-              <p class="text-[8px] text-red-navy uppercase mt-0.5 mb-4 font-bold">Nome Completo</p>
+              <p class="text-[8px] text-red-navy uppercase mt-0.5 mb-4 font-bold text-center">Nome Completo</p>
 
               <div class="grid grid-cols-3 border-y border-black py-1.5 mb-6 text-center">
                 <div class="border-r border-black">
