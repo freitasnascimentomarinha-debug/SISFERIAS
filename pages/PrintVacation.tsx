@@ -275,105 +275,105 @@ const PrintVacation: React.FC = () => {
               <div class="flex justify-between items-end mt-2 px-4">
                 <div class="flex items-end gap-2">
                   <span class="uppercase text-[8px] font-bold">Autorização de Férias Referente ao Ano</span>
-                  <span class="text-[14px] font-bold text-red-navy leading-none border-b border-black px-0.5">${selectedYear}</span>
+                  <span class="text-[14px] font-bold text-black leading-none border-b border-black px-0.5">${selectedYear}</span>
                 </div>
                 <div class="flex flex-col items-center">
-                  <span class="text-[14px] font-bold text-red-navy px-2">${parcel.days} dias</span>
-                  <span class="text-[7px] text-red-navy uppercase font-bold">Duração</span>
+                  <span class="text-[14px] font-bold text-black px-2">${parcel.days} dias</span>
+                  <span class="text-[7px] text-black uppercase font-bold">Duração</span>
                 </div>
               </div>
 
               <div class="text-center mt-2 mb-3">
                 <span class="text-[9px] font-bold uppercase">NUP do Processo: </span>
-                <span class="text-[12px] font-bold text-red-navy border-b border-black px-2">${nup.trim()}</span>
+                <span class="text-[12px] font-bold text-black border-b border-black px-2">${nup.trim()}</span>
               </div>
 
               <div class="text-center my-4">
                 <h2 class="text-[14px] font-bold border-b border-black inline-block px-8 py-0.5 uppercase">${ship}</h2>
-                <p class="text-[8px] text-red-navy uppercase mt-0.5 font-bold">Órgão</p>
+                <p class="text-[8px] text-black uppercase mt-0.5 font-bold">Órgão</p>
               </div>
 
               <div class="text-right mb-4">
                 <span class="border-b border-black min-w-[120px] inline-block text-center font-bold text-[11px]">${safeParse(docDate)}</span>
-                <p class="text-[8px] text-red-navy uppercase mr-10 mt-0.5 font-bold">Data</p>
+                <p class="text-[8px] text-black uppercase mr-10 mt-0.5 font-bold">Data</p>
               </div>
 
               <div class="border-b border-black mb-0.5">
-                <span class="text-red-navy font-bold uppercase text-[12px] w-full inline-block text-center">${employee.name}</span>
+                <span class="text-black font-bold uppercase text-[12px] w-full inline-block text-center">${employee.name}</span>
               </div>
-              <p class="text-[8px] text-red-navy uppercase mt-0.5 mb-4 font-bold text-center">Nome Completo</p>
+              <p class="text-[8px] text-black uppercase mt-0.5 mb-4 font-bold text-center">Nome Completo</p>
 
               <div class="grid grid-cols-3 border-y border-black py-1.5 mb-6 text-center">
                 <div class="border-r border-black">
                   <span class="text-[13px] font-bold">${employee.rank}</span>
-                  <p class="text-[9px] text-red-navy uppercase mt-0.5 font-bold">Grad.</p>
+                  <p class="text-[9px] text-black uppercase mt-0.5 font-bold">Grad.</p>
                 </div>
                 <div class="border-r border-black">
                   <span class="text-[13px] font-bold">${specialization}</span>
-                  <p class="text-[9px] text-red-navy uppercase mt-0.5 font-bold">Esp.</p>
+                  <p class="text-[9px] text-black uppercase mt-0.5 font-bold">Esp.</p>
                 </div>
                 <div>
                   <span class="text-[13px] font-bold">${employee.nip}</span>
-                  <p class="text-[9px] text-red-navy uppercase mt-0.5 font-bold">Nip</p>
+                  <p class="text-[9px] text-black uppercase mt-0.5 font-bold">Nip</p>
                 </div>
               </div>
 
               <div class="space-y-3 mb-6 text-[11px]">
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Licenciamento</span>
-                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(addDays(new Date(parcel.startDate + 'T00:00:00'), -1).toISOString().split('T')[0])}</span>
+                  <span class="flex-1 text-center font-bold text-black border-b-dotted-custom">${safeParse(addDays(new Date(parcel.startDate + 'T00:00:00'), -1).toISOString().split('T')[0])}</span>
                   <span class="w-20 text-right font-bold">às ${licTime} hs</span>
                 </div>
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Início</span>
-                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(parcel.startDate)}</span>
+                  <span class="flex-1 text-center font-bold text-black border-b-dotted-custom">${safeParse(parcel.startDate)}</span>
                   <span class="w-20"></span>
                 </div>
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Fim</span>
-                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(parcel.endDate)}</span>
+                  <span class="flex-1 text-center font-bold text-black border-b-dotted-custom">${safeParse(parcel.endDate)}</span>
                   <span class="w-20"></span>
                 </div>
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Apresentação</span>
-                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(addDays(new Date(parcel.endDate + 'T00:00:00'), 1).toISOString().split('T')[0])}</span>
+                  <span class="flex-1 text-center font-bold text-black border-b-dotted-custom">${safeParse(addDays(new Date(parcel.endDate + 'T00:00:00'), 1).toISOString().split('T')[0])}</span>
                   <span class="w-20 text-right font-bold">às ${aprTime} hs</span>
                 </div>
               </div>
 
               <div class="mb-3">
                 <span class="border-b border-black w-full inline-block font-bold uppercase text-[11px] py-0.5 text-center">${address.street}${address.number ? ', ' + address.number : ''}</span>
-                <p class="text-[8px] text-red-navy uppercase mt-0.5 font-bold text-center">Permanência</p>
+                <p class="text-[8px] text-black uppercase mt-0.5 font-bold text-center">Permanência</p>
               </div>
 
               <div class="grid grid-cols-2 gap-6 mb-4 text-center">
                 <div>
                   <span class="border-b border-black w-full inline-block font-bold uppercase py-0.5 text-[11px]">${address.city}</span>
-                  <p class="text-[8px] text-red-navy uppercase mt-0.5 font-bold">Cidade</p>
+                  <p class="text-[8px] text-black uppercase mt-0.5 font-bold">Cidade</p>
                 </div>
                 <div>
                   <span class="border-b border-black w-full inline-block font-bold uppercase py-0.5 text-[11px]">${address.state}</span>
-                  <p class="text-[8px] text-red-navy uppercase mt-0.5 font-bold">Estado</p>
+                  <p class="text-[8px] text-black uppercase mt-0.5 font-bold">Estado</p>
                 </div>
               </div>
 
                 <div class="flex items-center gap-4 mb-4">
-                  <span class="text-[10px] font-bold text-red-navy uppercase">Contato:</span>
+                  <span class="text-[10px] font-bold text-black uppercase">Contato:</span>
                     <span class="border-b border-black flex-1 font-bold text-[11px] text-center">${phone}</span>
                   <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
-                  <span class="border-b border-black min-w-[72px] text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
+                  <span class="border-b border-black min-w-[72px] text-center font-bold text-black uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
               </div>
 
               <div class="grid grid-cols-2 gap-6 mt-auto text-center">
                 <div class="flex-1 text-center">
                   <div class="border-t border-black pt-1">
-                    <p class="text-[9px] font-bold text-red-navy uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
+                    <p class="text-[9px] font-bold text-black uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
                     <p class="text-[7px] uppercase">${viceDiretor.function}</p>
                   </div>
                 </div>
                 <div class="flex-1 text-center">
                   <div class="border-t border-black pt-1">
-                    <p class="text-[9px] font-bold text-red-navy uppercase">${encarregado.rank} ${encarregado.name}</p>
+                    <p class="text-[9px] font-bold text-black uppercase">${encarregado.rank} ${encarregado.name}</p>
                     <p class="text-[7px] uppercase">${encarregado.function}</p>
                   </div>
                 </div>
