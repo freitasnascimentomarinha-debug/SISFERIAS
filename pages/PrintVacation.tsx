@@ -322,8 +322,8 @@ const PrintVacation: React.FC = () => {
               <div class="space-y-3 mb-6 text-[11px]">
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Licenciamento</span>
-                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(parcel.startDate)}</span>
-                  <span class="w-20 text-right font-bold uppercase">às ${licTime} hs</span>
+                  <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(addDays(new Date(parcel.startDate + 'T00:00:00'), -1).toISOString().split('T')[0])}</span>
+                  <span class="w-20 text-right font-bold">às ${licTime} hs</span>
                 </div>
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Início</span>
@@ -338,7 +338,7 @@ const PrintVacation: React.FC = () => {
                 <div class="flex items-center">
                   <span class="w-28 font-bold uppercase">Apresentação</span>
                   <span class="flex-1 text-center font-bold text-red-navy border-b-dotted-custom">${safeParse(addDays(new Date(parcel.endDate + 'T00:00:00'), 1).toISOString().split('T')[0])}</span>
-                  <span class="w-20 text-right font-bold uppercase">às ${aprTime} hs</span>
+                  <span class="w-20 text-right font-bold">às ${aprTime} hs</span>
                 </div>
               </div>
 
@@ -358,14 +358,11 @@ const PrintVacation: React.FC = () => {
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 mb-4">
-                 <span class="text-[10px] font-bold text-red-navy uppercase">Contato:</span>
-                 <span class="border-b border-black flex-1 font-bold text-[11px]">${phone}</span>
-              </div>
-
-              <div class="flex items-center gap-2 mb-4">
-                <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
-                <span class="border-b border-black flex-1 text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
+                <div class="flex items-center gap-4 mb-4">
+                  <span class="text-[10px] font-bold text-red-navy uppercase">Contato:</span>
+                  <span class="border-b border-black flex-1 font-bold text-[11px]">${phone}</span>
+                  <span class="font-bold uppercase text-[10px]">Desmuniciado:</span>
+                  <span class="border-b border-black min-w-[72px] text-center font-bold text-red-navy uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
               </div>
 
               <div class="grid grid-cols-2 gap-6 mt-auto text-center">
