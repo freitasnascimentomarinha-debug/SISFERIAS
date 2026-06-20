@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
 import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, Employee, VacationParcel } from '../types';
-import { User, Shield, Calendar, ArrowLeft, Save, Info, Ban, AlertTriangle, MessageSquare, Clock, Camera, Trash2 } from 'lucide-react';
+import { User, Shield, Calendar, ArrowLeft, Save, Info, Ban, AlertTriangle, MessageSquare, Clock, Camera, Trash2, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { differenceInDays, format, isValid, isAfter } from 'date-fns';
 
@@ -31,6 +31,7 @@ const VacationForm: React.FC = () => {
   const [footerErrorMsg, setFooterErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [parcelToDelete, setParcelToDelete] = useState<string | null>(null);
+  const [showNext, setShowNext] = useState(false);
 
   const existing = useMemo(() => {
     if (id) return employees.find(e => e.id === id);
@@ -411,10 +412,20 @@ const VacationForm: React.FC = () => {
               const start = new Date(p.startDate + 'T00:00:00');
               if (!isValid(start)) return null;
               const daysUntil = differenceInDays(start, today);
-              return { idx: idx + 1, daysUntil };
+              let status: 'upcoming' | 'today' | 'ongoing' | 'done' =
+                daysUntil > 0 ? 'upcoming' : daysUntil === 0 ? 'today' : 'ongoing';
+              let displayValue = daysUntil > 0 ? `${daysUntil}d` : daysUntil === 0 ? 'Hoje' : 'Em andamento';
+              if (p.endDate) {
+                const end = new Date(p.endDate + 'T00:00:00');
+                if (isValid(end) && today > end) {
+                  status = 'done';
+                  displayValue = `Concluído ${p.days}d`;
+                }
+              }
+              return { idx: idx + 1, daysUntil, status, displayValue };
             })
-            .filter((x): x is { idx: number; daysUntil: number } => x !== null);
-          const alertParcels = parcelCountdowns.filter(c => c.daysUntil >= 0 && c.daysUntil <= 15);
+            .filter((x): x is { idx: number; daysUntil: number; status: 'upcoming' | 'today' | 'ongoing' | 'done'; displayValue: string } => x !== null);
+          const alertParcels = parcelCountdowns.filter(c => c.status !== 'done' && c.daysUntil >= 0 && c.daysUntil <= 15);
           return (
             <>
               <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-6 py-4 text-white relative flex items-center gap-3 flex-wrap">
@@ -439,11 +450,16 @@ const VacationForm: React.FC = () => {
                       <p className="text-sm font-black leading-none mt-0.5">{item.value}</p>
                     </div>
                   ))}
-                  {parcelCountdowns.map(({ idx, daysUntil }) => (
+                  {parcelCountdowns.map(({ idx, status, displayValue }) => (
                     <div key={`countdown-${idx}`} className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-center">
-                      <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">P{idx} inicia em</p>
-                      <p className="text-sm font-black leading-none mt-0.5">
-                        {daysUntil < 0 ? 'Em andamento' : daysUntil === 0 ? 'Hoje' : `${daysUntil}d`}
+                      <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">
+                        {status === 'done' ? `P${idx} concluída` : `P${idx} inicia em`}
+                      </p>
+                      <p className={`text-sm font-black leading-none mt-0.5 ${
+                        status === 'ongoing' ? 'text-yellow-300' :
+                        status === 'done'    ? 'text-sky-300'    : 'text-white'
+                      }`}>
+                        {displayValue}
                       </p>
                     </div>
                   ))}
@@ -468,7 +484,8 @@ const VacationForm: React.FC = () => {
         })()}
 
         <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
-          <fieldset disabled={isBlocked} className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <fieldset disabled={isBlocked} className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <section className="xl:col-span-7 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
               <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
                 <User size={18} className="text-orange-500" /> Dados do Militar e Janela
@@ -621,7 +638,22 @@ const VacationForm: React.FC = () => {
               </div>
             </section>
 
-            <section className="xl:col-span-12 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+            </div>
+
+            {!showNext && (
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNext(true)}
+                  className="flex items-center gap-2 px-7 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-md transition-all"
+                >
+                  Próximo <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {showNext && (
+            <section className="bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
               <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold border-b border-slate-200 pb-2">
                 <MessageSquare size={18} className="text-orange-500" /> Justificativa
               </div>
@@ -631,16 +663,19 @@ const VacationForm: React.FC = () => {
                 <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
               </div>
             </section>
+            )}
           </fieldset>
 
+          {showNext && (
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="button" onClick={() => navigate(-1)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Voltar</button>
+            <button type="button" onClick={() => setShowNext(false)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Etapa Anterior</button>
             {!isBlocked ? (
               <button type="submit" className="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
             ) : (
               <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
             )}
           </div>
+          )}
 
           {footerErrorMsg && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 text-red-600 animate-in fade-in slide-in-from-bottom-2">
