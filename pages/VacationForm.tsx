@@ -484,200 +484,191 @@ const VacationForm: React.FC = () => {
         })()}
 
         <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
-          <fieldset disabled={isBlocked} className="space-y-6">
-            {!showNext && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <section className="xl:col-span-7 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
-              <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
-                <User size={18} className="text-orange-500" /> Dados do Militar e Janela
-              </div>
+          <fieldset disabled={isBlocked}>
+            {!showNext ? (
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <section className="xl:col-span-7 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+                  <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
+                    <User size={18} className="text-orange-500" /> Dados do Militar e Janela
+                  </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-[160px,1fr] gap-5 items-start">
-                <div className="relative group w-fit mx-auto lg:mx-0">
-                  <div className="w-36 h-36 rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center relative shadow-inner">
-                    {photoUrl ? (
-                      <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="text-slate-400 text-center flex flex-col items-center">
-                        <Camera size={24} className="mb-1" />
-                        <span className="text-[10px] font-bold uppercase">Foto</span>
-                      </div>
-                    )}
-                    {!isBlocked && (
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 bg-white text-orange-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
-                        {photoUrl && <button type="button" onClick={removePhoto} className="p-2 bg-white text-red-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Trash2 size={18} /></button>}
-                      </div>
-                    )}
-                  </div>
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
-                  <div className="space-y-1.5 bg-orange-50 p-3 rounded-2xl border border-orange-100">
-                    <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Férias referente ao ano</label>
-                    <select
-                      className="w-full bg-white border border-orange-200 rounded-xl px-4 py-2 text-sm font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
-                      value={planningYear}
-                      onChange={e => setPlanningYear(parseInt(e.target.value))}
-                    >
-                      {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Quantidade de dias de direito</label>
-                    <input
-                      type="number"
-                      className={`w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 font-bold ${fieldErrors.totalVacationDays ? 'bg-red-50 border-red-400 focus:ring-red-200' : 'bg-slate-50 border-slate-200 focus:ring-orange-500'}`}
-                      value={totalVacationDays}
-                      onChange={e => {
-                        setTotalVacationDays(parseInt(e.target.value) || 0);
-                        clearFieldError('totalVacationDays');
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
-                    <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Nome de Guerra</label>
-                    <input required className={getInputClass(!!fieldErrors.warName)} value={warName} onChange={e => { setWarName(e.target.value); clearFieldError('warName'); }} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">NIP</label>
-                    <input required className={getInputClass(!!fieldErrors.nip)} value={nip} onChange={e => { setNip(e.target.value); clearFieldError('nip'); }} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
-                    {isCustomSector ? (
-                      <div className="flex gap-2">
-                        <input className={getInputClass(!!fieldErrors.sector, 'input-field flex-1')} value={sector} onChange={e => { setSector(e.target.value); clearFieldError('sector'); }} placeholder="Nome do novo setor" autoFocus />
-                        <button type="button" onClick={() => { setIsCustomSector(false); setSector(allSectors[0] || ''); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-                      </div>
-                    ) : (
-                      <select className={getInputClass(!!fieldErrors.sector)} value={sector} onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); clearFieldError('sector'); } }}>
-                        {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
-                        <option value="__new__">+ Cadastrar novo setor...</option>
-                      </select>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
-                    <select
-                      className="input-field"
-                      value={category}
-                      onChange={e => {
-                        const newCat = e.target.value;
-                        setCategory(newCat);
-                        const newRanks = newCat === 'praca' ? PRACA_RANKS : newCat === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
-                        setRank(newRanks[0]);
-                      }}
-                    >
-                      <option value="praca">Praça</option>
-                      <option value="oficial">Oficial</option>
-                      <option value="civil">Servidor Civil</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Posto/Graduação</label>
-                    <select className={getInputClass(!!fieldErrors.rank)} value={rank} onChange={e => { setRank(e.target.value); clearFieldError('rank'); }}>
-                      {ranks.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="xl:col-span-5 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6 flex flex-col">
-              <div className="flex items-center justify-between mb-5 border-b border-slate-200 pb-2">
-                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                  <Calendar size={18} className="text-orange-500" /> Períodos de Férias ({planningYear})
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Saldo Restante</span>
-                    <span className={`text-sm font-black ${remainingDays < 0 ? 'text-red-500' : 'text-green-600'}`}>{remainingDays} dias</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Dividir em quantas parcelas?</label>
-                <select className={getInputClass(!!fieldErrors.parcelCount, 'input-field mt-1.5')} value={parcelCount} onChange={e => { handleParcelCountChange(e.target.value); clearFieldError('parcelCount'); }}>
-                  <option value="1">1 parcela</option>
-                  <option value="2">2 parcelas</option>
-                  <option value="3">3 parcelas</option>
-                  <option value="4">4 parcelas</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {parcels.map((p, idx) => (
-                  <div key={p.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                    <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
-                      <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
-                      <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
-                        {parcelToDelete === p.id ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-red-600 mr-1">Tem certeza?</span>
-                            <button type="button" onClick={() => handleDeleteParcel(p.id)} className="px-2 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">Sim</button>
-                            <button type="button" onClick={() => setParcelToDelete(null)} className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">Não</button>
-                          </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-[160px,1fr] gap-5 items-start">
+                    <div className="relative group w-fit mx-auto lg:mx-0">
+                      <div className="w-36 h-36 rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center relative shadow-inner">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
                         ) : (
-                          <button type="button" onClick={() => setParcelToDelete(p.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Apagar parcela"><Trash2 size={14} /></button>
+                          <div className="text-slate-400 text-center flex flex-col items-center">
+                            <Camera size={24} className="mb-1" />
+                            <span className="text-[10px] font-bold uppercase">Foto</span>
+                          </div>
+                        )}
+                        {!isBlocked && (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 bg-white text-orange-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
+                            {photoUrl && <button type="button" onClick={removePhoto} className="p-2 bg-white text-red-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Trash2 size={18} /></button>}
+                          </div>
                         )}
                       </div>
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                     </div>
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                      <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2 min-w-0')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
-                      <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2 min-w-0')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+                      <div className="space-y-1.5 bg-orange-50 p-3 rounded-2xl border border-orange-100">
+                        <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Férias referente ao ano</label>
+                        <select
+                          className="w-full bg-white border border-orange-200 rounded-xl px-4 py-2 text-sm font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                          value={planningYear}
+                          onChange={e => setPlanningYear(parseInt(e.target.value))}
+                        >
+                          {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Quantidade de dias de direito</label>
+                        <input
+                          type="number"
+                          className={`w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 font-bold ${fieldErrors.totalVacationDays ? 'bg-red-50 border-red-400 focus:ring-red-200' : 'bg-slate-50 border-slate-200 focus:ring-orange-500'}`}
+                          value={totalVacationDays}
+                          onChange={e => { setTotalVacationDays(parseInt(e.target.value) || 0); clearFieldError('totalVacationDays'); }}
+                        />
+                      </div>
+                      <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
+                        <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Nome de Guerra</label>
+                        <input required className={getInputClass(!!fieldErrors.warName)} value={warName} onChange={e => { setWarName(e.target.value); clearFieldError('warName'); }} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">NIP</label>
+                        <input required className={getInputClass(!!fieldErrors.nip)} value={nip} onChange={e => { setNip(e.target.value); clearFieldError('nip'); }} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
+                        {isCustomSector ? (
+                          <div className="flex gap-2">
+                            <input className={getInputClass(!!fieldErrors.sector, 'input-field flex-1')} value={sector} onChange={e => { setSector(e.target.value); clearFieldError('sector'); }} placeholder="Nome do novo setor" autoFocus />
+                            <button type="button" onClick={() => { setIsCustomSector(false); setSector(allSectors[0] || ''); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                          </div>
+                        ) : (
+                          <select className={getInputClass(!!fieldErrors.sector)} value={sector} onChange={e => { if (e.target.value === '__new__') { setIsCustomSector(true); setSector(''); } else { setSector(e.target.value); clearFieldError('sector'); } }}>
+                            {allSectors.map(s => <option key={s} value={s}>{s}</option>)}
+                            <option value="__new__">+ Cadastrar novo setor...</option>
+                          </select>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
+                        <select
+                          className="input-field"
+                          value={category}
+                          onChange={e => {
+                            const newCat = e.target.value;
+                            setCategory(newCat);
+                            const newRanks = newCat === 'praca' ? PRACA_RANKS : newCat === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
+                            setRank(newRanks[0]);
+                          }}
+                        >
+                          <option value="praca">Praça</option>
+                          <option value="oficial">Oficial</option>
+                          <option value="civil">Servidor Civil</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Posto/Graduação</label>
+                        <select className={getInputClass(!!fieldErrors.rank)} value={rank} onChange={e => { setRank(e.target.value); clearFieldError('rank'); }}>
+                          {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
+                </section>
 
-            </div>
-            )}
+                <section className="xl:col-span-5 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6 flex flex-col">
+                  <div className="flex items-center justify-between mb-5 border-b border-slate-200 pb-2">
+                    <div className="flex items-center gap-2 text-slate-900 font-bold">
+                      <Calendar size={18} className="text-orange-500" /> Períodos de Férias ({planningYear})
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Saldo Restante</span>
+                      <span className={`text-sm font-black ${remainingDays < 0 ? 'text-red-500' : 'text-green-600'}`}>{remainingDays} dias</span>
+                    </div>
+                  </div>
 
-            {!showNext && (
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNext(true)}
-                  className="flex items-center gap-2 px-7 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-md transition-all"
-                >
-                  Próximo <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
+                  <div className="mb-5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Dividir em quantas parcelas?</label>
+                    <select className={getInputClass(!!fieldErrors.parcelCount, 'input-field mt-1.5')} value={parcelCount} onChange={e => { handleParcelCountChange(e.target.value); clearFieldError('parcelCount'); }}>
+                      <option value="1">1 parcela</option>
+                      <option value="2">2 parcelas</option>
+                      <option value="3">3 parcelas</option>
+                      <option value="4">4 parcelas</option>
+                    </select>
+                  </div>
 
-            {showNext && (
-            <section className="bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
-              <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold border-b border-slate-200 pb-2">
-                <MessageSquare size={18} className="text-orange-500" /> Justificativa
+                  <div className="grid grid-cols-1 gap-4">
+                    {parcels.map((p, idx) => (
+                      <div key={p.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
+                          <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
+                          <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
+                            {parcelToDelete === p.id ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-bold text-red-600 mr-1">Tem certeza?</span>
+                                <button type="button" onClick={() => handleDeleteParcel(p.id)} className="px-2 py-1 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors">Sim</button>
+                                <button type="button" onClick={() => setParcelToDelete(null)} className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors">Não</button>
+                              </div>
+                            ) : (
+                              <button type="button" onClick={() => setParcelToDelete(p.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Apagar parcela"><Trash2 size={14} /></button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2 min-w-0')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
+                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2 min-w-0')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
-                <textarea className="w-full p-4 bg-white border border-slate-200 rounded-2xl min-h-[100px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
-                <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
-              </div>
-            </section>
+            ) : (
+              <section className="bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+                <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold border-b border-slate-200 pb-2">
+                  <MessageSquare size={18} className="text-orange-500" /> Justificativa
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
+                  <textarea className="w-full p-4 bg-white border border-slate-200 rounded-2xl min-h-[140px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
+                  <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
+                </div>
+              </section>
             )}
           </fieldset>
 
-          {showNext && (
+          {/* Botões de navegação — fora do fieldset para nunca serem desabilitados por ele */}
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="button" onClick={() => setShowNext(false)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Etapa Anterior</button>
-            {!isBlocked ? (
-              <button type="submit" className="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
+            {!showNext ? (
+              <button
+                type="button"
+                onClick={() => setShowNext(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-md transition-all"
+              >
+                Próximo <ChevronRight size={18} />
+              </button>
             ) : (
-              <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
+              <>
+                <button type="button" onClick={() => setShowNext(false)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Etapa Anterior</button>
+                {!isBlocked ? (
+                  <button type="submit" className="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
+                )}
+              </>
             )}
           </div>
-          )}
 
           {footerErrorMsg && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 text-red-600 animate-in fade-in slide-in-from-bottom-2">
