@@ -402,33 +402,29 @@ const VacationForm: React.FC = () => {
       )}
 
       <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 p-6 lg:p-7 text-white relative">
-          <button type="button" onClick={() => navigate(-1)} className="absolute top-6 left-6 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
-            <ArrowLeft size={18} />
+        <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-6 py-4 text-white relative flex items-center gap-4 flex-wrap">
+          <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
+            <ArrowLeft size={16} />
           </button>
-          <div className="text-center lg:text-left lg:pl-16">
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto lg:mx-0 mb-2"><Calendar size={24} /></div>
-            <h2 className="text-2xl lg:text-3xl font-black tracking-tight">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
-            <p className="text-xs text-orange-100 mt-0.5">Janela de Planejamento Selecionada: {planningYear}</p>
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center shrink-0"><Calendar size={18} /></div>
+            <div className="min-w-0">
+              <h2 className="text-lg font-black tracking-tight leading-none">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
+              <p className="text-[11px] text-orange-100 mt-0.5 leading-none">Janela de Planejamento: {planningYear}</p>
+            </div>
           </div>
-
-          <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
-              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Direito</p>
-              <p className="text-lg font-black leading-none mt-1">{totalVacationDays} dias</p>
-            </div>
-            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
-              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Programados</p>
-              <p className="text-lg font-black leading-none mt-1">{scheduledTotal} dias</p>
-            </div>
-            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
-              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Saldo</p>
-              <p className="text-lg font-black leading-none mt-1">{remainingDays} dias</p>
-            </div>
-            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
-              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Parcelas</p>
-              <p className="text-lg font-black leading-none mt-1">{parcelCount}</p>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { label: 'Direito', value: `${totalVacationDays}d` },
+              { label: 'Programados', value: `${scheduledTotal}d` },
+              { label: 'Saldo', value: `${remainingDays}d` },
+              { label: 'Parcelas', value: parcelCount },
+            ].map(item => (
+              <div key={item.label} className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-center">
+                <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">{item.label}</p>
+                <p className="text-sm font-black leading-none mt-0.5">{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
