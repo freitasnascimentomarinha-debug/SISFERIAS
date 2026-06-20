@@ -372,7 +372,7 @@ const VacationForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-4 lg:px-6 py-8">
       {isBlocked && (
         <div className="mb-6 p-6 bg-red-100 border border-red-200 rounded-3xl flex items-center gap-4 text-red-700 animate-pulse">
           <div className="bg-red-500 text-white p-3 rounded-2xl"><Ban size={24} /></div>
@@ -402,27 +402,46 @@ const VacationForm: React.FC = () => {
       )}
 
       <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-        <div className="bg-orange-500 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 p-6 lg:p-7 text-white relative">
           <button type="button" onClick={() => navigate(-1)} className="absolute top-6 left-6 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2"><Calendar size={24} /></div>
-            <h2 className="text-2xl font-bold">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
-            <p className="text-[11px] text-orange-100 mt-0.5">Janela de Planejamento Selecionada: {planningYear}</p>
+          <div className="text-center lg:text-left lg:pl-16">
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto lg:mx-0 mb-2"><Calendar size={24} /></div>
+            <h2 className="text-2xl lg:text-3xl font-black tracking-tight">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
+            <p className="text-xs text-orange-100 mt-0.5">Janela de Planejamento Selecionada: {planningYear}</p>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Direito</p>
+              <p className="text-lg font-black leading-none mt-1">{totalVacationDays} dias</p>
+            </div>
+            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Programados</p>
+              <p className="text-lg font-black leading-none mt-1">{scheduledTotal} dias</p>
+            </div>
+            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Saldo</p>
+              <p className="text-lg font-black leading-none mt-1">{remainingDays} dias</p>
+            </div>
+            <div className="bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-orange-100 font-bold">Parcelas</p>
+              <p className="text-lg font-black leading-none mt-1">{parcelCount}</p>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-10">
-          <fieldset disabled={isBlocked} className="space-y-10">
-            <section>
-              <div className="flex items-center gap-2 mb-6 text-slate-900 font-bold border-b border-slate-100 pb-2">
+        <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
+          <fieldset disabled={isBlocked} className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <section className="xl:col-span-8 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+              <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
                 <User size={18} className="text-orange-500" /> Dados do Militar e Janela
               </div>
 
-              <div className="flex flex-col md:flex-row gap-8 mb-8 items-center md:items-start">
-                <div className="relative group">
-                  <div className="w-32 h-32 rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center relative shadow-inner">
+              <div className="grid grid-cols-1 lg:grid-cols-[160px,1fr] gap-5 items-start">
+                <div className="relative group w-fit mx-auto lg:mx-0">
+                  <div className="w-36 h-36 rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 overflow-hidden flex items-center justify-center relative shadow-inner">
                     {photoUrl ? (
                       <img src={photoUrl} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -441,7 +460,7 @@ const VacationForm: React.FC = () => {
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 flex-1 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
                   <div className="space-y-1.5 bg-orange-50 p-3 rounded-2xl border border-orange-100">
                     <label className="text-[10px] font-black text-orange-600 uppercase tracking-widest block mb-1">Férias referente ao ano</label>
                     <select
@@ -464,7 +483,7 @@ const VacationForm: React.FC = () => {
                       }}
                     />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
                     <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
                   </div>
@@ -517,8 +536,8 @@ const VacationForm: React.FC = () => {
               </div>
             </section>
 
-            <section>
-              <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-2">
+            <section className="xl:col-span-4 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-5 border-b border-slate-200 pb-2">
                 <div className="flex items-center gap-2 text-slate-900 font-bold">
                   <Calendar size={18} className="text-orange-500" /> Períodos de Férias ({planningYear})
                 </div>
@@ -530,7 +549,7 @@ const VacationForm: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="text-xs font-bold text-slate-500 uppercase">Dividir em quantas parcelas?</label>
                 <select className={getInputClass(!!fieldErrors.parcelCount, 'input-field mt-1.5')} value={parcelCount} onChange={e => { handleParcelCountChange(e.target.value); clearFieldError('parcelCount'); }}>
                   <option value="1">1 parcela</option>
@@ -540,10 +559,10 @@ const VacationForm: React.FC = () => {
                 </select>
               </div>
 
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
                 {parcels.map((p, idx) => (
-                  <div key={p.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-4">
+                  <div key={p.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div className="flex justify-between items-center mb-3">
                       <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
@@ -558,7 +577,7 @@ const VacationForm: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
                       <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
                     </div>
@@ -567,26 +586,24 @@ const VacationForm: React.FC = () => {
               </div>
             </section>
 
-            <section>
-              <div className="flex items-center gap-2 mb-6 text-slate-900 font-bold border-b border-slate-100 pb-2">
+            <section className="xl:col-span-12 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+              <div className="flex items-center gap-2 mb-4 text-slate-900 font-bold border-b border-slate-200 pb-2">
                 <MessageSquare size={18} className="text-orange-500" /> Justificativa
               </div>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
-                  <textarea className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[120px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
-                  <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
+                <textarea className="w-full p-4 bg-white border border-slate-200 rounded-2xl min-h-[100px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
+                <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
               </div>
             </section>
           </fieldset>
 
-          <div className="flex gap-4 pt-6 border-t border-slate-100">
-            <button type="button" onClick={() => navigate(-1)} className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center gap-2 transition-all"><ArrowLeft size={18} /> Voltar</button>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="button" onClick={() => navigate(-1)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Voltar</button>
             {!isBlocked ? (
-              <button type="submit" className="flex-1 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
+              <button type="submit" className="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
             ) : (
-              <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
+              <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
             )}
           </div>
 
