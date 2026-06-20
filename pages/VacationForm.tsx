@@ -649,24 +649,24 @@ const VacationForm: React.FC = () => {
           </fieldset>
 
           {/* Botões de navegação — fora do fieldset para nunca serem desabilitados por ele */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex justify-end pt-2">
             {!showNext ? (
               <button
                 type="button"
                 onClick={() => setShowNext(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-md transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-md transition-all"
               >
-                Próximo <ChevronRight size={18} />
+                Próximo <ChevronRight size={16} />
               </button>
             ) : (
-              <>
-                <button type="button" onClick={() => setShowNext(false)} className="sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all"><ArrowLeft size={18} /> Etapa Anterior</button>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => setShowNext(false)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all"><ArrowLeft size={16} /> Etapa Anterior</button>
                 {!isBlocked ? (
-                  <button type="submit" className="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-all"><Save size={20} /> Salvar Férias de {planningYear}</button>
+                  <button type="submit" className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-md transition-all"><Save size={16} /> Salvar Férias de {planningYear}</button>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-3 rounded-2xl border border-amber-100"><AlertTriangle size={18} /> Somente Leitura</div>
+                  <div className="flex items-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-2.5 rounded-xl border border-amber-100 text-sm"><AlertTriangle size={16} /> Somente Leitura</div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
