@@ -485,6 +485,7 @@ const VacationForm: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
           <fieldset disabled={isBlocked} className="space-y-6">
+            {!showNext && (
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <section className="xl:col-span-7 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
               <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
@@ -639,6 +640,7 @@ const VacationForm: React.FC = () => {
             </section>
 
             </div>
+            )}
 
             {!showNext && (
               <div className="flex justify-end pt-2">
