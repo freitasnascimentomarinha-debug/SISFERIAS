@@ -402,31 +402,70 @@ const VacationForm: React.FC = () => {
       )}
 
       <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-6 py-4 text-white relative flex items-center gap-4 flex-wrap">
-          <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
-            <ArrowLeft size={16} />
-          </button>
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center shrink-0"><Calendar size={18} /></div>
-            <div className="min-w-0">
-              <h2 className="text-lg font-black tracking-tight leading-none">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
-              <p className="text-[11px] text-orange-100 mt-0.5 leading-none">Janela de Planejamento: {planningYear}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {[
-              { label: 'Direito', value: `${totalVacationDays}d` },
-              { label: 'Programados', value: `${scheduledTotal}d` },
-              { label: 'Saldo', value: `${remainingDays}d` },
-              { label: 'Parcelas', value: parcelCount },
-            ].map(item => (
-              <div key={item.label} className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-center">
-                <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">{item.label}</p>
-                <p className="text-sm font-black leading-none mt-0.5">{item.value}</p>
+        {(() => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const parcelCountdowns = parcels
+            .map((p, idx) => {
+              if (!p.startDate) return null;
+              const start = new Date(p.startDate + 'T00:00:00');
+              if (!isValid(start)) return null;
+              const daysUntil = differenceInDays(start, today);
+              return { idx: idx + 1, daysUntil };
+            })
+            .filter((x): x is { idx: number; daysUntil: number } => x !== null);
+          const alertParcels = parcelCountdowns.filter(c => c.daysUntil >= 0 && c.daysUntil <= 15);
+          return (
+            <>
+              <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-6 py-4 text-white relative flex items-center gap-3 flex-wrap">
+                <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
+                  <ArrowLeft size={16} />
+                </button>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center shrink-0"><Calendar size={18} /></div>
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-black tracking-tight leading-none">{existing ? 'Editar Férias' : 'Lançar Férias'}</h2>
+                    <p className="text-[11px] text-orange-100 mt-0.5 leading-none">Janela de Planejamento: {planningYear}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[
+                    { label: 'Direito', value: `${totalVacationDays}d` },
+                    { label: 'Programados', value: `${scheduledTotal}d` },
+                    { label: 'Parcelas', value: parcelCount },
+                  ].map(item => (
+                    <div key={item.label} className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-center">
+                      <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">{item.label}</p>
+                      <p className="text-sm font-black leading-none mt-0.5">{item.value}</p>
+                    </div>
+                  ))}
+                  {parcelCountdowns.map(({ idx, daysUntil }) => (
+                    <div key={`countdown-${idx}`} className="bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-center">
+                      <p className="text-[9px] uppercase tracking-widest text-orange-100 font-bold leading-none">P{idx} inicia em</p>
+                      <p className="text-sm font-black leading-none mt-0.5">
+                        {daysUntil < 0 ? 'Em andamento' : daysUntil === 0 ? 'Hoje' : `${daysUntil}d`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+              {alertParcels.length > 0 && (
+                <div className="flex justify-center bg-white px-4 py-2 border-b border-green-100">
+                  <div className="animate-pulse flex items-center gap-2 bg-green-500 text-white font-bold text-sm px-5 py-2 rounded-2xl shadow-md">
+                    <AlertTriangle size={15} className="shrink-0" />
+                    <span>
+                      {alertParcels.map((c, i) => (
+                        <span key={c.idx}>
+                          {i > 0 && ' · '}Insira papeleta {c.idx} no SIGAD para assinatura
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
           <fieldset disabled={isBlocked} className="grid grid-cols-1 xl:grid-cols-12 gap-6">
