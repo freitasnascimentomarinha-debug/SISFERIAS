@@ -434,7 +434,7 @@ const VacationForm: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
           <fieldset disabled={isBlocked} className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            <section className="xl:col-span-8 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
+            <section className="xl:col-span-7 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6">
               <div className="flex items-center gap-2 mb-5 text-slate-900 font-bold border-b border-slate-200 pb-2">
                 <User size={18} className="text-orange-500" /> Dados do Militar e Janela
               </div>
@@ -483,7 +483,7 @@ const VacationForm: React.FC = () => {
                       }}
                     />
                   </div>
-                  <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
+                  <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
                     <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
                   </div>
@@ -536,7 +536,7 @@ const VacationForm: React.FC = () => {
               </div>
             </section>
 
-            <section className="xl:col-span-4 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6 flex flex-col">
+            <section className="xl:col-span-5 bg-slate-50/70 rounded-3xl border border-slate-200 p-5 lg:p-6 flex flex-col">
               <div className="flex items-center justify-between mb-5 border-b border-slate-200 pb-2">
                 <div className="flex items-center gap-2 text-slate-900 font-bold">
                   <Calendar size={18} className="text-orange-500" /> Períodos de Férias ({planningYear})
@@ -562,9 +562,9 @@ const VacationForm: React.FC = () => {
               <div className="grid grid-cols-1 gap-4">
                 {parcels.map((p, idx) => (
                   <div key={p.id} className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
                       <h5 className="font-bold text-slate-700">Parcela {idx + 1}</h5>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100"><Clock size={12} /> {p.days} dias</div>
                         {parcelToDelete === p.id ? (
                           <div className="flex items-center gap-1">
@@ -577,9 +577,9 @@ const VacationForm: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                      <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2 min-w-0')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
+                      <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2 min-w-0')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
                     </div>
                   </div>
                 ))}
