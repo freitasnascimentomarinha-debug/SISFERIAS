@@ -483,7 +483,7 @@ const VacationForm: React.FC = () => {
                       }}
                     />
                   </div>
-                  <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
+                  <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
                     <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
                     <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
                   </div>
@@ -577,7 +577,7 @@ const VacationForm: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3">
                       <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
                       <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
                     </div>
