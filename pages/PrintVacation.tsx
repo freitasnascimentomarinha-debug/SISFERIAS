@@ -90,6 +90,17 @@ const PrintVacation: React.FC = () => {
     return `vacation_print_u_${uid}_v15`;
   }, [targetId, employees]);
 
+  const targetedEmployee = useMemo(() => {
+    if (!targetId) return undefined;
+    return employees.find(e => e.id === targetId || e.userId === targetId);
+  }, [targetId, employees]);
+
+  useEffect(() => {
+    if (targetedEmployee?.planningYear) {
+      setSelectedYear(targetedEmployee.planningYear);
+    }
+  }, [targetedEmployee?.id, targetedEmployee?.planningYear]);
+
   // Carrega os dados específicos deste militar quando a chave de armazenamento muda
   useEffect(() => {
     if (!storageKey) return;
@@ -159,13 +170,16 @@ const PrintVacation: React.FC = () => {
     if (oldDataRaw) {
       const oldData = parseStoredData(oldDataRaw);
       const actor = user?.name || 'Sistema';
+      const oldAddress = oldData.address && typeof oldData.address === 'object'
+        ? oldData.address
+        : { street: '', number: '', complement: '', zip: '', city: '', state: '' };
 
-      if (JSON.stringify(oldData.address) !== JSON.stringify(address)) {
+      if (JSON.stringify(oldAddress) !== JSON.stringify(address)) {
         addAuditLog({
           userName: actor,
           action: 'Alteração',
           field: 'Endereço de Permanência (Config)',
-          oldValue: `${oldData.address.street}, ${oldData.address.number}`,
+          oldValue: `${oldAddress.street}, ${oldAddress.number}`,
           newValue: `${address.street}, ${address.number}`
         });
       }
