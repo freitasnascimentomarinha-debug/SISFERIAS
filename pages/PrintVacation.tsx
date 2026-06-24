@@ -71,6 +71,16 @@ const PrintVacation: React.FC = () => {
   const [viceDiretor, setViceDiretor] = useState<StaffMember>(settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
   const [diretor, setDiretor] = useState<StaffMember>(settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
 
+  const parseStoredData = (raw: string | null): Record<string, any> => {
+    if (!raw) return {};
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  };
+
   // Identifica o ID do militar para criar uma chave única no LocalStorage
   const targetId = id || user?.id;
   const storageKey = useMemo(() => {
@@ -92,22 +102,21 @@ const PrintVacation: React.FC = () => {
     setSpecialization('PL');
     setIsDesmuniciado('sim');
 
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.phone) setPhone(data.phone);
-      if (data.address) setAddress(data.address);
-      if (data.encarregado) setEncarregado(data.encarregado);
+    const data = parseStoredData(localStorage.getItem(storageKey));
+    if (Object.keys(data).length > 0) {
+      if ('phone' in data) setPhone((data.phone ?? '').toString());
+      if ('address' in data && data.address) setAddress(data.address);
+      if ('encarregado' in data && data.encarregado) setEncarregado(data.encarregado);
       // For shared staff, prefer local override but fall back to global settings
       setEncarregadoDep(data.encarregadoDep || settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
       setViceDiretor(data.viceDiretor || settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
       setDiretor(data.diretor || settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
-      if (data.observations) setObservations(data.observations);
-      if (data.ship) setShip(data.ship);
-      if (data.specialization) setSpecialization(data.specialization);
-      if (data.licTime) setLicTime(data.licTime);
-      if (data.aprTime) setAprTime(data.aprTime);
-      if (data.isDesmuniciado) setIsDesmuniciado(data.isDesmuniciado);
+      if ('observations' in data) setObservations((data.observations ?? '').toString());
+      if ('ship' in data) setShip((data.ship ?? '').toString());
+      if ('specialization' in data) setSpecialization((data.specialization ?? '').toString());
+      if ('licTime' in data) setLicTime((data.licTime ?? '').toString());
+      if ('aprTime' in data) setAprTime((data.aprTime ?? '').toString());
+      if ('isDesmuniciado' in data) setIsDesmuniciado((data.isDesmuniciado ?? '').toString());
     } else {
       // No per-user data: use global settings defaults
       if (settings.encPessoal) setEncarregadoDep(settings.encPessoal);
@@ -148,7 +157,7 @@ const PrintVacation: React.FC = () => {
     const newData = { phone, address, encarregado, encarregadoDep, viceDiretor, diretor, observations, ship, specialization, licTime, aprTime, isDesmuniciado };
     
     if (oldDataRaw) {
-      const oldData = JSON.parse(oldDataRaw);
+      const oldData = parseStoredData(oldDataRaw);
       const actor = user?.name || 'Sistema';
 
       if (JSON.stringify(oldData.address) !== JSON.stringify(address)) {

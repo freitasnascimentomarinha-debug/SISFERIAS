@@ -47,7 +47,15 @@ const Register: React.FC = () => {
       if (result.userId) {
         const storageKey = `vacation_print_u_${result.userId}_v15`;
         const savedRaw = localStorage.getItem(storageKey);
-        const savedData = savedRaw ? JSON.parse(savedRaw) : {};
+        let savedData: Record<string, any> = {};
+        if (savedRaw) {
+          try {
+            const parsed = JSON.parse(savedRaw);
+            savedData = parsed && typeof parsed === 'object' ? parsed : {};
+          } catch {
+            savedData = {};
+          }
+        }
         localStorage.setItem(storageKey, JSON.stringify({
           ...savedData,
           specialization: specialization.trim()
