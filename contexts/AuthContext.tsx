@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   users: User[]; // Kept for interface compatibility, but might be empty or restricted
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<{ success: boolean; errorCode?: string; errorMessage?: string }>;
+  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   getRegisteredUsers: () => User[]; // Might need to be async or removed/deprecated
@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; errorCode?: string; errorMessage?: string }> => {
+  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -252,7 +252,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      return { success: true };
+      return { success: true, userId: authData.user.id };
     } catch (e) {
       console.error("Registration failed:", e);
       const errorMessage = e instanceof Error ? e.message : 'Erro inesperado ao cadastrar usuario.';

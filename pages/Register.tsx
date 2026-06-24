@@ -13,6 +13,7 @@ const Register: React.FC = () => {
   const [sector, setSector] = useState('01');
   const [isCustomSector, setIsCustomSector] = useState(false);
   const [rank, setRank] = useState(PRACA_RANKS[0]);
+  const [specialization, setSpecialization] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -43,6 +44,15 @@ const Register: React.FC = () => {
     });
     
     if (result.success) {
+      if (result.userId) {
+        const storageKey = `vacation_print_u_${result.userId}_v15`;
+        const savedRaw = localStorage.getItem(storageKey);
+        const savedData = savedRaw ? JSON.parse(savedRaw) : {};
+        localStorage.setItem(storageKey, JSON.stringify({
+          ...savedData,
+          specialization: specialization.trim()
+        }));
+      }
       setSuccess('Cadastro realizado com sucesso! Redirecionando para o login...');
       setTimeout(() => {
         navigate('/login');
@@ -180,6 +190,18 @@ const Register: React.FC = () => {
                 {ranks.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Esp.</label>
+            <input
+              value={specialization}
+              onChange={e => setSpecialization(e.target.value.toUpperCase())}
+              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
+              placeholder="PL"
+              maxLength={6}
+              disabled={loading || !!success}
+            />
           </div>
 
           <div className="space-y-1.5">

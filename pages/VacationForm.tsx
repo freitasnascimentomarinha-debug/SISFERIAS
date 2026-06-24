@@ -45,6 +45,7 @@ const VacationForm: React.FC = () => {
   const [isCustomSector, setIsCustomSector] = useState(false);
   const [category, setCategory] = useState<any>('praca');
   const [rank, setRank] = useState('');
+  const [specialization, setSpecialization] = useState('PL');
   const [totalVacationDays, setTotalVacationDays] = useState(30);
   const [parcelCount, setParcelCount] = useState('1');
   const [parcels, setParcels] = useState<VacationParcel[]>([]);
@@ -205,6 +206,37 @@ const VacationForm: React.FC = () => {
 
   const scheduledTotal = parcels.reduce((acc, p) => acc + p.days, 0);
   const remainingDays = totalVacationDays - scheduledTotal;
+
+  useEffect(() => {
+    if (!targetUserId) return;
+    const storageKey = `vacation_print_u_${targetUserId}_v15`;
+    const savedRaw = localStorage.getItem(storageKey);
+    if (!savedRaw) {
+      setSpecialization('PL');
+      return;
+    }
+
+    try {
+      const savedData = JSON.parse(savedRaw);
+      setSpecialization((savedData?.specialization || 'PL').toString());
+    } catch {
+      setSpecialization('PL');
+    }
+  }, [targetUserId]);
+
+  const handleSpecializationChange = (value: string) => {
+    const normalized = value.toUpperCase();
+    setSpecialization(normalized);
+
+    if (!targetUserId) return;
+    const storageKey = `vacation_print_u_${targetUserId}_v15`;
+    const savedRaw = localStorage.getItem(storageKey);
+    const savedData = savedRaw ? JSON.parse(savedRaw) : {};
+    localStorage.setItem(storageKey, JSON.stringify({
+      ...savedData,
+      specialization: normalized || 'PL'
+    }));
+  };
 
   const clearFieldError = (field: string) => {
     setFieldErrors(prev => {
@@ -581,6 +613,16 @@ const VacationForm: React.FC = () => {
                         <select className={getInputClass(!!fieldErrors.rank)} value={rank} onChange={e => { setRank(e.target.value); clearFieldError('rank'); }}>
                           {ranks.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Esp.</label>
+                        <input
+                          className="input-field"
+                          value={specialization}
+                          onChange={e => handleSpecializationChange(e.target.value)}
+                          placeholder="PL"
+                          maxLength={6}
+                        />
                       </div>
                     </div>
                   </div>
