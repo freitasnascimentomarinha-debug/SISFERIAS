@@ -18,17 +18,11 @@ const Tramite: React.FC = () => {
 
     const getPriority = (row: {
       shouldHighlight: boolean;
-      isInProgress: boolean;
-      shouldInsertInSigad: boolean;
-      isPlanned: boolean;
       isCompleted: boolean;
     }) => {
       if (row.shouldHighlight) return 0;
-      if (row.isInProgress) return 1;
-      if (row.shouldInsertInSigad) return 2;
-      if (row.isPlanned) return 3;
-      if (row.isCompleted) return 4;
-      return 5;
+      if (!row.isCompleted) return 1;
+      return 2;
     };
 
     return employees.flatMap(employee => {
@@ -39,9 +33,7 @@ const Tramite: React.FC = () => {
         const shouldHighlight = !!start && today.getTime() >= start.getTime() && missingNup;
         const shouldInsertInSigad = !!start && missingNup && today.getTime() < start.getTime() && today.getTime() >= subDays(start, 15).getTime();
         const isPlanned = missingNup && !shouldHighlight && !shouldInsertInSigad;
-        const hasNup = !missingNup;
-        const isInProgress = hasNup && !!start && !!end && today.getTime() >= start.getTime() && today.getTime() <= end.getTime();
-        const isCompleted = hasNup && !!end && today.getTime() > end.getTime();
+        const isCompleted = !!end && today.getTime() > end.getTime();
 
         return {
           key: `${employee.id}-${parcel.id}`,
@@ -60,7 +52,6 @@ const Tramite: React.FC = () => {
           shouldHighlight,
           shouldInsertInSigad,
           isPlanned,
-          isInProgress,
           isCompleted,
         };
       });
@@ -97,7 +88,6 @@ const Tramite: React.FC = () => {
         statusFilter === 'all' ||
         (statusFilter === 'regular' && !row.shouldHighlight) ||
         (statusFilter === 'pending' && row.shouldHighlight) ||
-        (statusFilter === 'in-progress' && row.isInProgress) ||
         (statusFilter === 'completed' && row.isCompleted);
       if (!matchStatus) return false;
 
@@ -149,7 +139,6 @@ const Tramite: React.FC = () => {
 
   const getStatusPresentation = (row: {
     shouldHighlight: boolean;
-    isInProgress: boolean;
     isCompleted: boolean;
   }) => {
     if (row.shouldHighlight) {
@@ -158,15 +147,6 @@ const Tramite: React.FC = () => {
         badgeClass: 'text-red-600',
         icon: <AlertCircle size={13} />,
         label: 'Discrepante',
-      };
-    }
-
-    if (row.isInProgress) {
-      return {
-        rowClass: 'bg-orange-50/70 hover:bg-orange-50',
-        badgeClass: 'text-orange-600',
-        icon: <AlertCircle size={13} />,
-        label: 'Andamento',
       };
     }
 
@@ -252,7 +232,6 @@ const Tramite: React.FC = () => {
               <option value="all">Todos os Status</option>
               <option value="regular">Regular</option>
               <option value="pending">Discrepante</option>
-              <option value="in-progress">Andamento</option>
               <option value="completed">Concluído</option>
             </select>
           </div>
