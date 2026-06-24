@@ -57,7 +57,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchAllUsers = async () => {
     const [{ data: profiles }, { data: employeeSectors }] = await Promise.all([
       supabase.from('profiles').select('*'),
-      supabase.from('employees').select('user_id, sector')
+      supabase
+        .from('employees')
+        .select('user_id, sector, planning_year')
+        .order('planning_year', { ascending: false })
     ]);
 
     if (profiles) {
@@ -74,7 +77,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         warName: p.war_name || '',
         nip: p.nip || '',
         category: p.category || '',
-        sector: p.sector || sectorByUserId.get(p.id) || '',
+        // Prioriza o setor mais recente dos lançamentos de férias para refletir atualização pós-cadastro.
+        sector: sectorByUserId.get(p.id) || p.sector || '',
         rank: p.rank || '',
         email: p.email || '',
         role: p.role as 'admin' | 'user',
@@ -95,16 +99,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (data && !error) {
-        let resolvedSector = data.sector || '';
-        if (!resolvedSector) {
-          const { data: employeeData } = await supabase
-            .from('employees')
-            .select('sector')
-            .eq('user_id', userId)
-            .limit(1)
-            .maybeSingle();
-          resolvedSector = employeeData?.sector || '';
-        }
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('sector, planning_year')
+          .eq('user_id', userId)
+          .order('planning_year', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const resolvedSector = employeeData?.sector || data.sector || '';
 
         const profileData: User = {
           id: data.id,
