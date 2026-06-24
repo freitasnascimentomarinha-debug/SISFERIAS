@@ -712,7 +712,7 @@ const VacationForm: React.FC = () => {
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setShowNext(false)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all"><ArrowLeft size={16} /> Etapa Anterior</button>
                 {!isBlocked ? (
-                  <button type="submit" className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-md transition-all"><Save size={16} /> Salvar Férias de {planningYear}</button>
+                  <button type="submit" className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-md transition-all"><Save size={16} /> Salvar</button>
                 ) : (
                   <div className="flex items-center gap-2 text-amber-600 font-bold bg-amber-50 px-4 py-2.5 rounded-xl border border-amber-100 text-sm"><AlertTriangle size={16} /> Somente Leitura</div>
                 )}
