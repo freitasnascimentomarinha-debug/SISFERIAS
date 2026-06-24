@@ -16,6 +16,21 @@ const Tramite: React.FC = () => {
   const trackingRows = useMemo(() => {
     const today = startOfDay(new Date());
 
+    const getPriority = (row: {
+      shouldHighlight: boolean;
+      isInProgress: boolean;
+      shouldInsertInSigad: boolean;
+      isPlanned: boolean;
+      isCompleted: boolean;
+    }) => {
+      if (row.shouldHighlight) return 0;
+      if (row.isInProgress) return 1;
+      if (row.shouldInsertInSigad) return 2;
+      if (row.isPlanned) return 3;
+      if (row.isCompleted) return 4;
+      return 5;
+    };
+
     return employees.flatMap(employee => {
       return employee.vacationParcels.map((parcel, index) => {
         const start = parcel.startDate ? startOfDay(new Date(parcel.startDate + 'T00:00:00')) : null;
@@ -50,9 +65,19 @@ const Tramite: React.FC = () => {
         };
       });
     }).sort((a, b) => {
-      if (a.shouldHighlight !== b.shouldHighlight) return a.shouldHighlight ? -1 : 1;
+      const priorityDiff = getPriority(a) - getPriority(b);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      const aStart = a.startDate ? new Date(a.startDate + 'T00:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+      const bStart = b.startDate ? new Date(b.startDate + 'T00:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+      if (aStart !== bStart) return aStart - bStart;
+
+      const aEnd = a.endDate ? new Date(a.endDate + 'T00:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+      const bEnd = b.endDate ? new Date(b.endDate + 'T00:00:00').getTime() : Number.MAX_SAFE_INTEGER;
+      if (aEnd !== bEnd) return aEnd - bEnd;
+
       if (a.employeeName !== b.employeeName) return a.employeeName.localeCompare(b.employeeName);
-      if (a.planningYear !== b.planningYear) return b.planningYear - a.planningYear;
+      if (a.planningYear !== b.planningYear) return a.planningYear - b.planningYear;
       return a.parcelLabel.localeCompare(b.parcelLabel);
     });
   }, [employees]);
@@ -227,6 +252,8 @@ const Tramite: React.FC = () => {
               <option value="all">Todos os Status</option>
               <option value="regular">Regular</option>
               <option value="pending">Discrepante</option>
+              <option value="in-progress">Andamento</option>
+              <option value="completed">Concluído</option>
             </select>
           </div>
         </div>
