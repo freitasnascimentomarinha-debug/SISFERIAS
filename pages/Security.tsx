@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save, Lightbulb } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
@@ -12,7 +12,7 @@ const Security: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking' | 'suggestions'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -21,6 +21,7 @@ const Security: React.FC = () => {
 
   // Filtro para Gestão de Contas
   const [accountSearch, setAccountSearch] = useState('');
+  const [suggestionSearch, setSuggestionSearch] = useState('');
 
   // Estados para Modais Customizados
   const [targetUser, setTargetUser] = useState<User | null>(null);
@@ -46,7 +47,7 @@ const Security: React.FC = () => {
 
   const navigate = useNavigate();
   const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
-  const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice } = useVacation();
+  const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice, suggestions } = useVacation();
 
   const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
 
@@ -195,6 +196,16 @@ const Security: React.FC = () => {
       return matchText && matchDate;
     });
   }, [logSearch, auditLogs, logStart, logEnd]);
+
+  const filteredSuggestions = useMemo(() => {
+    const term = suggestionSearch.trim().toLowerCase();
+    if (!term) return suggestions;
+    return suggestions.filter(item =>
+      item.title.toLowerCase().includes(term) ||
+      item.description.toLowerCase().includes(term) ||
+      item.userName.toLowerCase().includes(term)
+    );
+  }, [suggestions, suggestionSearch]);
 
   const handleToggleBlock = (userId: string, name: string) => {
     const u = users.find(u => u.id === userId);
@@ -619,6 +630,7 @@ const Security: React.FC = () => {
         />
         <TabButton icon={<Eye size={18} />} label="Visibilidade" active={activeTab === 'visibility'} onClick={() => setActiveTab('visibility')} />
         <TabButton icon={<Users size={18} />} label="Usuários" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
+        <TabButton icon={<Lightbulb size={18} />} label="Sugestões" active={activeTab === 'suggestions'} onClick={() => setActiveTab('suggestions')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
       </div>
@@ -1269,6 +1281,58 @@ const Security: React.FC = () => {
                         <td className="py-5 px-4 font-bold text-slate-600 text-[11px] uppercase align-top">{log.field}</td>
                         <td className="py-5 px-4 text-slate-400 text-[11px] align-top whitespace-pre-wrap leading-relaxed italic">{formatAuditValue(log.oldValue || '-')}</td>
                         <td className="py-5 px-4 text-slate-900 font-bold text-[11px] align-top whitespace-pre-wrap leading-relaxed">{formatAuditValue(log.newValue || '-')}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'suggestions' && (
+          <div className="p-8 animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Lightbulb className="text-orange-500" size={24} /> Sugestões dos Usuários
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">Acompanhe ideias enviadas pelos usuários para melhorias do sistema.</p>
+              </div>
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar por título, descrição ou usuário..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                  value={suggestionSearch}
+                  onChange={e => setSuggestionSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="text-slate-400 border-b border-slate-100">
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Título</th>
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Descrição</th>
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Usuário</th>
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Horário</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredSuggestions.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-16 text-center text-slate-400 font-medium">Nenhuma sugestão enviada até o momento.</td>
+                    </tr>
+                  ) : (
+                    filteredSuggestions.map(item => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors align-top">
+                        <td className="py-5 px-4 font-bold text-slate-900">{item.title}</td>
+                        <td className="py-5 px-4 text-slate-600 whitespace-pre-wrap leading-relaxed">{item.description}</td>
+                        <td className="py-5 px-4 font-semibold text-slate-700">{item.userName}</td>
+                        <td className="py-5 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{format(new Date(item.createdAt), 'dd/MM/yyyy HH:mm')}</td>
                       </tr>
                     ))
                   )}

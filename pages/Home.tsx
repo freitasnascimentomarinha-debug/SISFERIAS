@@ -4,11 +4,14 @@ import { useVacation } from '../contexts/VacationContext';
 import { Megaphone, Users, UserCheck, Info, Clock, BarChart as ChartIcon, Pin, HelpCircle, X } from 'lucide-react';
 import { startOfDay, isBefore, isAfter, isValid, format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const { employees, settings } = useVacation();
   const now = startOfDay(new Date());
   const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const [showLearningModal, setShowLearningModal] = useState(false);
+  const navigate = useNavigate();
 
   // Lógica para verificar se um registro de férias específico está ativo hoje
   const isRecordOnVacation = (emp: any) => {
@@ -247,6 +250,36 @@ const Home: React.FC = () => {
         </div>
       </div>
 
+      {showLearningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-[32px] bg-white shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-5 bg-orange-500 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black uppercase tracking-widest">Aprendendo a usar</h3>
+                <p className="text-[11px] text-orange-100 font-semibold uppercase tracking-wide">Resumo rápido do sistema</p>
+              </div>
+              <button type="button" onClick={() => setShowLearningModal(false)} className="p-2 rounded-full hover:bg-white/15 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-sm text-slate-600 leading-relaxed">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <p className="font-black text-slate-900 mb-1">1. Lançar Férias</p>
+                <p>Preencha ou revise as parcelas do militar na tela de lançamento, ajustando datas, setor, foto e demais dados cadastrais.</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <p className="font-black text-slate-900 mb-1">2. Emitir Papeleta</p>
+                <p>Na página de impressão, informe o NUP, revise os dados da papeleta e gere o documento final para tramitação.</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <p className="font-black text-slate-900 mb-1">3. Acompanhar Trâmite</p>
+                <p>Administradores podem acompanhar pendências, parcelas regulares e concluídas na página Trâmite.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="fixed right-5 bottom-6 z-40 flex flex-col items-end gap-3">
         {showHelpMenu && (
           <div className="w-[280px] rounded-[28px] border border-orange-100 bg-white shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -267,6 +300,10 @@ const Home: React.FC = () => {
             <div className="p-4 space-y-3 bg-gradient-to-b from-orange-50/40 to-white">
               <button
                 type="button"
+                onClick={() => {
+                  setShowHelpMenu(false);
+                  setShowLearningModal(true);
+                }}
                 className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/40 transition-all shadow-sm"
               >
                 <p className="text-sm font-black text-slate-900">Aprendendo a usar</p>
@@ -274,6 +311,10 @@ const Home: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  setShowHelpMenu(false);
+                  navigate('/suggestions');
+                }}
                 className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/40 transition-all shadow-sm"
               >
                 <p className="text-sm font-black text-slate-900">Sugestões</p>

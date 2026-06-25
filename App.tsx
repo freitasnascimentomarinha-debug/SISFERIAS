@@ -14,6 +14,7 @@ import Security from './pages/Security';
 import PrintVacation from './pages/PrintVacation';
 import Justifications from './pages/Justifications';
 import Tramite from './pages/Tramite';
+import Suggestions from './pages/Suggestions';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -44,6 +45,7 @@ const AppContent: React.FC = () => {
         <Route path="/calendar" element={<AdminRoute><CalendarView /></AdminRoute>} />
         <Route path="/print" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/print/:id" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
+        <Route path="/suggestions" element={<PrivateRoute><Suggestions /></PrivateRoute>} />
         <Route path="/security" element={<PrivateRoute><Security /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/home" />} />
       </Routes>

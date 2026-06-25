@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Employee, AuditLog, VacationParcel, SystemSettings, Notice, StaffMember } from '../types';
+import { Employee, AuditLog, VacationParcel, SystemSettings, Notice, StaffMember, Suggestion } from '../types';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -8,6 +8,7 @@ interface VacationContextType {
   employees: Employee[];
   auditLogs: AuditLog[];
   settings: SystemSettings;
+  suggestions: Suggestion[];
   saveVacation: (data: Employee) => Promise<void>;
   updateParcelNup: (employeeId: string, parcelId: string, nup: string) => Promise<void>;
   deleteVacation: (id: string) => Promise<void>;
@@ -17,6 +18,7 @@ interface VacationContextType {
   addNotice: (notice: Omit<Notice, 'id' | 'date'>) => Promise<void>;
   deleteNotice: (id: string) => Promise<void>;
   togglePinNotice: (id: string, currentPinStatus: boolean) => Promise<void>;
+  addSuggestion: (suggestion: { title: string; description: string; userId: string; userName: string }) => Promise<void>;
 }
 
 const defaultStaffMember = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
@@ -38,6 +40,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -132,6 +135,22 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         field: l.field,
         oldValue: l.old_value,
         newValue: l.new_value
+      })));
+    }
+
+    const { data: suggestionsData } = await supabase
+      .from('suggestions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (suggestionsData) {
+      setSuggestions(suggestionsData.map(s => ({
+        id: s.id,
+        userId: s.user_id || '',
+        userName: s.user_name || '',
+        title: s.title || '',
+        description: s.description || '',
+        createdAt: s.created_at || new Date().toISOString()
       })));
     }
   };
@@ -268,6 +287,38 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
+  const addSuggestion = async (suggestion: { title: string; description: string; userId: string; userName: string }) => {
+    const payload = {
+      user_id: suggestion.userId,
+      user_name: suggestion.userName,
+      title: suggestion.title,
+      description: suggestion.description
+    };
+
+    const { data, error } = await supabase
+      .from('suggestions')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding suggestion:', error);
+      throw new Error(error.message || 'Nao foi possivel enviar a sugestao.');
+    }
+
+    if (data) {
+      const newSuggestion: Suggestion = {
+        id: data.id,
+        userId: data.user_id || '',
+        userName: data.user_name || '',
+        title: data.title || '',
+        description: data.description || '',
+        createdAt: data.created_at || new Date().toISOString()
+      };
+      setSuggestions(prev => [newSuggestion, ...prev]);
+    }
+  };
+
   const getEmployeeByUserId = (userId: string) => {
     return employees.find(e => e.userId === userId);
   };
@@ -300,10 +351,10 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   return (
     <VacationContext.Provider value={{
-      employees, auditLogs, settings,
+      employees, auditLogs, settings, suggestions,
       saveVacation, updateParcelNup, deleteVacation,
       getEmployeeByUserId, addAuditLog, updateSettings,
-      addNotice, deleteNotice, togglePinNotice
+      addNotice, deleteNotice, togglePinNotice, addSuggestion
     }}>
       {children}
     </VacationContext.Provider>

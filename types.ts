@@ -60,6 +60,15 @@ export interface Notice {
   isPinned?: boolean;
 }
 
+export interface Suggestion {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
 export interface StaffMember {
   name: string;
   nip: string;
