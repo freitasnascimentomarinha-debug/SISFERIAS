@@ -1,13 +1,14 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useVacation } from '../contexts/VacationContext';
-import { Megaphone, Users, UserCheck, Info, Clock, BarChart as ChartIcon, Pin } from 'lucide-react';
+import { Megaphone, Users, UserCheck, Info, Clock, BarChart as ChartIcon, Pin, HelpCircle, X } from 'lucide-react';
 import { startOfDay, isBefore, isAfter, isValid, format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const Home: React.FC = () => {
   const { employees, settings } = useVacation();
   const now = startOfDay(new Date());
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
 
   // Lógica para verificar se um registro de férias específico está ativo hoje
   const isRecordOnVacation = (emp: any) => {
@@ -87,7 +88,7 @@ const Home: React.FC = () => {
   }, [settings.notices]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 relative">
       {/* Cabeçalho Institucional */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16 items-center animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="lg:col-span-1 flex justify-center">
@@ -244,6 +245,52 @@ const Home: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="fixed right-5 bottom-6 z-40 flex flex-col items-end gap-3">
+        {showHelpMenu && (
+          <div className="w-[280px] rounded-[28px] border border-orange-100 bg-white shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-orange-500 text-white">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest">Ajuda Rápida</h3>
+                <p className="text-[10px] text-orange-100 font-semibold uppercase tracking-wide">Escolha uma opção</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHelpMenu(false)}
+                className="p-1.5 rounded-full hover:bg-white/15 transition-colors"
+                aria-label="Fechar ajuda"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 bg-gradient-to-b from-orange-50/40 to-white">
+              <button
+                type="button"
+                className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/40 transition-all shadow-sm"
+              >
+                <p className="text-sm font-black text-slate-900">Aprendendo a usar</p>
+                <p className="text-[11px] font-medium text-slate-500 mt-1">Veja orientações rápidas para navegar e usar o sistema.</p>
+              </button>
+              <button
+                type="button"
+                className="w-full text-left p-4 rounded-2xl border border-slate-100 bg-white hover:border-orange-200 hover:bg-orange-50/40 transition-all shadow-sm"
+              >
+                <p className="text-sm font-black text-slate-900">Sugestões</p>
+                <p className="text-[11px] font-medium text-slate-500 mt-1">Acesse um espaço para ideias e melhorias do sistema.</p>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowHelpMenu(prev => !prev)}
+          className="w-12 h-12 rounded-full bg-orange-500 text-white shadow-xl shadow-orange-500/25 hover:bg-orange-600 transition-all flex items-center justify-center"
+          aria-label="Abrir ajuda"
+        >
+          <HelpCircle size={20} />
+        </button>
       </div>
     </div>
   );
