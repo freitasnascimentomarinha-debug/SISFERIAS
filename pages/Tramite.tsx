@@ -86,7 +86,7 @@ const Tramite: React.FC = () => {
 
       const matchStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'regular' && !row.shouldHighlight) ||
+        (statusFilter === 'regular' && !row.shouldHighlight && !row.isCompleted) ||
         (statusFilter === 'pending' && row.shouldHighlight) ||
         (statusFilter === 'completed' && row.isCompleted);
       if (!matchStatus) return false;
