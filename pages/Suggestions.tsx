@@ -31,6 +31,7 @@ const Suggestions: React.FC = () => {
         description: description.trim(),
         userId: user.id,
         userName: user.name,
+        warName: user.warName || '',
       });
       setSuccess(true);
       setTimeout(() => navigate('/home'), 1500);

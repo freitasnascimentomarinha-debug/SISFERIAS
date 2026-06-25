@@ -64,6 +64,7 @@ export interface Suggestion {
   id: string;
   userId: string;
   userName: string;
+  warName: string;
   title: string;
   description: string;
   createdAt: string;

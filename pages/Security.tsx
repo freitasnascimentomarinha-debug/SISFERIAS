@@ -47,7 +47,7 @@ const Security: React.FC = () => {
 
   const navigate = useNavigate();
   const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
-  const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice, suggestions } = useVacation();
+  const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice, suggestions, deleteSuggestion } = useVacation();
 
   const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
 
@@ -201,11 +201,73 @@ const Security: React.FC = () => {
     const term = suggestionSearch.trim().toLowerCase();
     if (!term) return suggestions;
     return suggestions.filter(item =>
+      item.warName.toLowerCase().includes(term) ||
       item.title.toLowerCase().includes(term) ||
       item.description.toLowerCase().includes(term) ||
       item.userName.toLowerCase().includes(term)
     );
   }, [suggestions, suggestionSearch]);
+
+  const handleDeleteSuggestion = async (suggestionId: string, suggestionTitle: string) => {
+    try {
+      await deleteSuggestion(suggestionId);
+      addAuditLog({ userName: 'Admin', action: 'Exclusão', field: 'Sugestão', oldValue: suggestionTitle, newValue: '-' });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Nao foi possivel excluir a sugestao.');
+    }
+  };
+
+  const handleExportSuggestionsPdf = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Permita pop-ups para exportar o PDF.');
+      return;
+    }
+
+    const rowsHtml = filteredSuggestions.map(item => `
+      <tr>
+        <td>${item.warName || '-'}</td>
+        <td>${item.title}</td>
+        <td>${item.description.replace(/\n/g, '<br/>')}</td>
+        <td>${format(new Date(item.createdAt), 'dd/MM/yyyy HH:mm')}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Sugestoes - SISFERIAS</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
+            h1 { margin: 0 0 6px; font-size: 22px; }
+            p { margin: 0 0 18px; color: #475569; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; vertical-align: top; font-size: 12px; }
+            th { background: #f97316; color: white; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+            tr:nth-child(even) td { background: #f8fafc; }
+          </style>
+        </head>
+        <body onload="window.print()">
+          <h1>Sugestoes Enviadas</h1>
+          <p>Relatorio gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} | Total: ${filteredSuggestions.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Nome de Guerra</th>
+                <th>Titulo</th>
+                <th>Descricao</th>
+                <th>Horario</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml || '<tr><td colspan="4">Nenhuma sugestao encontrada.</td></tr>'}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const handleToggleBlock = (userId: string, name: string) => {
     const u = users.find(u => u.id === userId);
@@ -1299,15 +1361,24 @@ const Security: React.FC = () => {
                 </h3>
                 <p className="text-sm text-slate-500 mt-1">Acompanhe ideias enviadas pelos usuários para melhorias do sistema.</p>
               </div>
-              <div className="relative w-full md:w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="Pesquisar por título, descrição ou usuário..."
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
-                  value={suggestionSearch}
-                  onChange={e => setSuggestionSearch(e.target.value)}
-                />
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="relative w-full md:w-96">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar por nome de guerra, título, descrição ou usuário..."
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+                    value={suggestionSearch}
+                    onChange={e => setSuggestionSearch(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportSuggestionsPdf}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-black rounded-xl transition-all shadow-sm"
+                >
+                  <Download size={16} /> Extrair PDF
+                </button>
               </div>
             </div>
 
@@ -1315,24 +1386,35 @@ const Security: React.FC = () => {
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="text-slate-400 border-b border-slate-100">
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Nome de Guerra</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Título</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Descrição</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Usuário</th>
                     <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Horário</th>
+                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredSuggestions.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-16 text-center text-slate-400 font-medium">Nenhuma sugestão enviada até o momento.</td>
+                      <td colSpan={5} className="py-16 text-center text-slate-400 font-medium">Nenhuma sugestão enviada até o momento.</td>
                     </tr>
                   ) : (
                     filteredSuggestions.map(item => (
                       <tr key={item.id} className="hover:bg-slate-50/50 transition-colors align-top">
+                        <td className="py-5 px-4 font-bold text-orange-600 uppercase">{item.warName || '-'}</td>
                         <td className="py-5 px-4 font-bold text-slate-900">{item.title}</td>
                         <td className="py-5 px-4 text-slate-600 whitespace-pre-wrap leading-relaxed">{item.description}</td>
-                        <td className="py-5 px-4 font-semibold text-slate-700">{item.userName}</td>
                         <td className="py-5 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{format(new Date(item.createdAt), 'dd/MM/yyyy HH:mm')}</td>
+                        <td className="py-5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSuggestion(item.id, item.title)}
+                            className="inline-flex items-center justify-center p-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            title={`Excluir sugestão de ${item.userName}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}

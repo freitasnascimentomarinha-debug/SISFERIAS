@@ -18,7 +18,8 @@ interface VacationContextType {
   addNotice: (notice: Omit<Notice, 'id' | 'date'>) => Promise<void>;
   deleteNotice: (id: string) => Promise<void>;
   togglePinNotice: (id: string, currentPinStatus: boolean) => Promise<void>;
-  addSuggestion: (suggestion: { title: string; description: string; userId: string; userName: string }) => Promise<void>;
+  addSuggestion: (suggestion: { title: string; description: string; userId: string; userName: string; warName: string }) => Promise<void>;
+  deleteSuggestion: (id: string) => Promise<void>;
 }
 
 const defaultStaffMember = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
@@ -148,6 +149,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         id: s.id,
         userId: s.user_id || '',
         userName: s.user_name || '',
+        warName: s.war_name || '',
         title: s.title || '',
         description: s.description || '',
         createdAt: s.created_at || new Date().toISOString()
@@ -287,10 +289,11 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
-  const addSuggestion = async (suggestion: { title: string; description: string; userId: string; userName: string }) => {
+  const addSuggestion = async (suggestion: { title: string; description: string; userId: string; userName: string; warName: string }) => {
     const payload = {
       user_id: suggestion.userId,
       user_name: suggestion.userName,
+      war_name: suggestion.warName,
       title: suggestion.title,
       description: suggestion.description
     };
@@ -311,12 +314,24 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         id: data.id,
         userId: data.user_id || '',
         userName: data.user_name || '',
+        warName: data.war_name || '',
         title: data.title || '',
         description: data.description || '',
         createdAt: data.created_at || new Date().toISOString()
       };
       setSuggestions(prev => [newSuggestion, ...prev]);
     }
+  };
+
+  const deleteSuggestion = async (id: string) => {
+    const { error } = await supabase.from('suggestions').delete().eq('id', id);
+
+    if (error) {
+      console.error('Error deleting suggestion:', error);
+      throw new Error(error.message || 'Nao foi possivel excluir a sugestao.');
+    }
+
+    setSuggestions(prev => prev.filter(item => item.id !== id));
   };
 
   const getEmployeeByUserId = (userId: string) => {
@@ -354,7 +369,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       employees, auditLogs, settings, suggestions,
       saveVacation, updateParcelNup, deleteVacation,
       getEmployeeByUserId, addAuditLog, updateSettings,
-      addNotice, deleteNotice, togglePinNotice, addSuggestion
+      addNotice, deleteNotice, togglePinNotice, addSuggestion, deleteSuggestion
     }}>
       {children}
     </VacationContext.Provider>
