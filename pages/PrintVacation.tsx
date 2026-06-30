@@ -316,9 +316,17 @@ const PrintVacation: React.FC = () => {
                 <p class="text-[8px] text-black uppercase mt-0.5 font-bold">Órgão</p>
               </div>
 
-              <div class="text-right mb-4">
-                <span class="border-b border-black min-w-[120px] inline-block text-center font-bold text-[11px]">${safeParse(docDate)}</span>
-                <p class="text-[8px] text-black uppercase mr-10 mt-0.5 font-bold">Data</p>
+              <div class="flex items-end justify-between mb-4 gap-6">
+                <div class="flex-1 text-center">
+                  <div class="border-t border-black pt-1 inline-block min-w-[240px]">
+                    <p class="text-[9px] font-bold text-black uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
+                    <p class="text-[7px] uppercase">${viceDiretor.function}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="border-b border-black min-w-[120px] inline-block text-center font-bold text-[11px]">${safeParse(docDate)}</span>
+                  <p class="text-[8px] text-black uppercase mr-10 mt-0.5 font-bold">Data</p>
+                </div>
               </div>
 
               <div class="border-b border-black mb-0.5">
@@ -390,8 +398,8 @@ const PrintVacation: React.FC = () => {
               <div class="grid grid-cols-2 gap-6 mt-auto text-center">
                 <div class="flex-1 text-center">
                   <div class="border-t border-black pt-1">
-                    <p class="text-[9px] font-bold text-black uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
-                    <p class="text-[7px] uppercase">${viceDiretor.function}</p>
+                    <p class="text-[9px] font-bold text-black uppercase">${encarregadoDep.rank} ${encarregadoDep.name}</p>
+                    <p class="text-[7px] uppercase">${encarregadoDep.function}</p>
                   </div>
                 </div>
                 <div class="flex-1 text-center">
