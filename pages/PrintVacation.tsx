@@ -317,9 +317,10 @@ const PrintVacation: React.FC = () => {
               </div>
 
               <div class="flex items-end justify-between mb-4 gap-6">
-                <div class="flex-1 text-center">
-                  <div class="border-t border-black pt-1 inline-block min-w-[240px]">
-                    <p class="text-[9px] font-bold text-black uppercase">${viceDiretor.rank} ${viceDiretor.name}</p>
+                <div class="w-1/2 text-left pl-2">
+                  <div class="inline-block min-w-[240px] text-center">
+                    <span class="border-b border-black w-full inline-block h-[16px]"></span>
+                    <p class="text-[9px] font-bold text-black uppercase mt-1">${viceDiretor.rank} ${viceDiretor.name}</p>
                     <p class="text-[7px] uppercase">${viceDiretor.function}</p>
                   </div>
                 </div>
