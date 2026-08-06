@@ -6,8 +6,16 @@ import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid, addDays, startOfDay, isAfter } from 'date-fns';
 import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, StaffMember } from '../types';
+import { supabase } from '../lib/supabase';
 
 const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all";
+
+const defaultAddress = { street: '', number: '', complement: '', zip: '', city: '', state: '' };
+const defaultShip = 'CENTRO DE OPERAÇÕES DO ABASTECIMENTO';
+const defaultSpecialization = 'PL';
+const defaultLicTime = '16:10';
+const defaultAprTime = '07:30';
+const defaultIsDesmuniciado = 'sim';
 
 const StaffInputGroup = ({ label, member, onChange }: { label: string, member: StaffMember, onChange: (m: StaffMember) => void }) => {
   const ranks = member.category === 'oficial' ? OFICIAL_RANKS : member.category === 'praca' ? PRACA_RANKS : CIVIL_RANKS;
@@ -56,15 +64,15 @@ const PrintVacation: React.FC = () => {
   const [printError, setPrintError] = useState<string | null>(null);
 
   // Estados dos campos de preenchimento
-  const [ship, setShip] = useState('CENTRO DE OPERAÇÕES DO ABASTECIMENTO');
-  const [specialization, setSpecialization] = useState('PL');
+  const [ship, setShip] = useState(defaultShip);
+  const [specialization, setSpecialization] = useState(defaultSpecialization);
   const [docDate, setDocDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [licTime, setLicTime] = useState('16:10');
-  const [aprTime, setAprTime] = useState('07:30');
-  const [isDesmuniciado, setIsDesmuniciado] = useState('sim');
+  const [licTime, setLicTime] = useState(defaultLicTime);
+  const [aprTime, setAprTime] = useState(defaultAprTime);
+  const [isDesmuniciado, setIsDesmuniciado] = useState(defaultIsDesmuniciado);
   const [phone, setPhone] = useState('');
   const [observations, setObservations] = useState('');
-  const [address, setAddress] = useState({ street: '', number: '', complement: '', zip: '', city: '', state: '' });
+  const [address, setAddress] = useState(defaultAddress);
 
   const [encarregado, setEncarregado] = useState<StaffMember>({ name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado' });
   const [encarregadoDep, setEncarregadoDep] = useState<StaffMember>(settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
@@ -79,6 +87,52 @@ const PrintVacation: React.FC = () => {
     } catch {
       return {};
     }
+  };
+
+  const normalizeAddress = (value: any) => {
+    const src = value && typeof value === 'object' ? value : {};
+    return {
+      street: (src.street ?? '').toString(),
+      number: (src.number ?? '').toString(),
+      complement: (src.complement ?? '').toString(),
+      zip: (src.zip ?? '').toString(),
+      city: (src.city ?? '').toString(),
+      state: (src.state ?? '').toString()
+    };
+  };
+
+  const normalizeStaffMember = (value: any, fallback: StaffMember): StaffMember => {
+    if (!value || typeof value !== 'object') return fallback;
+    const category = value.category === 'oficial' || value.category === 'praca' || value.category === 'civil'
+      ? value.category
+      : fallback.category;
+
+    return {
+      name: (value.name ?? fallback.name ?? '').toString(),
+      nip: (value.nip ?? fallback.nip ?? '').toString(),
+      rank: (value.rank ?? fallback.rank ?? '').toString(),
+      category,
+      function: (value.function ?? fallback.function ?? '').toString()
+    };
+  };
+
+  const applyFormData = (data: Record<string, any>) => {
+    if ('phone' in data) setPhone((data.phone ?? '').toString());
+    if ('address' in data) setAddress(normalizeAddress(data.address));
+    if ('encarregado' in data) {
+      setEncarregado(normalizeStaffMember(data.encarregado, { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado' }));
+    }
+
+    setEncarregadoDep(normalizeStaffMember(data.encarregadoDep, settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' }));
+    setViceDiretor(normalizeStaffMember(data.viceDiretor, settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' }));
+    setDiretor(normalizeStaffMember(data.diretor, settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' }));
+
+    if ('observations' in data) setObservations((data.observations ?? '').toString());
+    if ('ship' in data) setShip((data.ship ?? '').toString());
+    if ('specialization' in data) setSpecialization((data.specialization ?? '').toString());
+    if ('licTime' in data) setLicTime((data.licTime ?? '').toString());
+    if ('aprTime' in data) setAprTime((data.aprTime ?? '').toString());
+    if ('isDesmuniciado' in data) setIsDesmuniciado((data.isDesmuniciado ?? '').toString());
   };
 
   // Identifica o ID do militar para criar uma chave única no LocalStorage
@@ -103,38 +157,68 @@ const PrintVacation: React.FC = () => {
 
   // Carrega os dados específicos deste militar quando a chave de armazenamento muda
   useEffect(() => {
-    if (!storageKey) return;
+    if (!storageKey || !targetId) return;
+
+    let cancelled = false;
 
     // Reset para valores padrão antes de carregar o novo (evita que dados de um usuário apareçam em outro)
     setPhone('');
-    setAddress({ street: '', number: '', complement: '', zip: '', city: '', state: '' });
+    setAddress(defaultAddress);
     setObservations('');
-    setShip('CENTRO DE OPERAÇÕES DO ABASTECIMENTO');
-    setSpecialization('PL');
-    setIsDesmuniciado('sim');
+    setShip(defaultShip);
+    setSpecialization(defaultSpecialization);
+    setLicTime(defaultLicTime);
+    setAprTime(defaultAprTime);
+    setIsDesmuniciado(defaultIsDesmuniciado);
 
-    const data = parseStoredData(localStorage.getItem(storageKey));
-    if (Object.keys(data).length > 0) {
-      if ('phone' in data) setPhone((data.phone ?? '').toString());
-      if ('address' in data && data.address) setAddress(data.address);
-      if ('encarregado' in data && data.encarregado) setEncarregado(data.encarregado);
-      // For shared staff, prefer local override but fall back to global settings
-      setEncarregadoDep(data.encarregadoDep || settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
-      setViceDiretor(data.viceDiretor || settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
-      setDiretor(data.diretor || settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
-      if ('observations' in data) setObservations((data.observations ?? '').toString());
-      if ('ship' in data) setShip((data.ship ?? '').toString());
-      if ('specialization' in data) setSpecialization((data.specialization ?? '').toString());
-      if ('licTime' in data) setLicTime((data.licTime ?? '').toString());
-      if ('aprTime' in data) setAprTime((data.aprTime ?? '').toString());
-      if ('isDesmuniciado' in data) setIsDesmuniciado((data.isDesmuniciado ?? '').toString());
-    } else {
-      // No per-user data: use global settings defaults
-      if (settings.encPessoal) setEncarregadoDep(settings.encPessoal);
-      if (settings.viceDiretor) setViceDiretor(settings.viceDiretor);
-      if (settings.diretor) setDiretor(settings.diretor);
-    }
-  }, [storageKey]);
+    const fallbackData = parseStoredData(localStorage.getItem(storageKey));
+    const targetUserId = targetedEmployee?.userId || targetId;
+
+    const loadPreferences = async () => {
+      const { data: dbData } = await supabase
+        .from('print_preferences')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (dbData) {
+        const persistedData = {
+          ...fallbackData,
+          phone: dbData.phone ?? fallbackData.phone ?? '',
+          address: dbData.address ?? fallbackData.address ?? defaultAddress,
+          encarregado: dbData.encarregado ?? fallbackData.encarregado,
+          encarregadoDep: dbData.encarregado_dep ?? fallbackData.encarregadoDep,
+          viceDiretor: dbData.vice_diretor ?? fallbackData.viceDiretor,
+          diretor: dbData.diretor ?? fallbackData.diretor,
+          observations: dbData.observations ?? fallbackData.observations ?? '',
+          ship: dbData.ship ?? fallbackData.ship ?? defaultShip,
+          specialization: dbData.specialization ?? fallbackData.specialization ?? defaultSpecialization,
+          licTime: dbData.lic_time ?? fallbackData.licTime ?? defaultLicTime,
+          aprTime: dbData.apr_time ?? fallbackData.aprTime ?? defaultAprTime,
+          isDesmuniciado: dbData.is_desmuniciado ?? fallbackData.isDesmuniciado ?? defaultIsDesmuniciado
+        };
+        localStorage.setItem(storageKey, JSON.stringify(persistedData));
+        applyFormData(persistedData);
+        return;
+      }
+
+      if (Object.keys(fallbackData).length > 0) {
+        applyFormData(fallbackData);
+      } else {
+        if (settings.encPessoal) setEncarregadoDep(settings.encPessoal);
+        if (settings.viceDiretor) setViceDiretor(settings.viceDiretor);
+        if (settings.diretor) setDiretor(settings.diretor);
+      }
+    };
+
+    void loadPreferences();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storageKey, targetId, targetedEmployee?.userId, settings.encPessoal, settings.viceDiretor, settings.diretor]);
 
   const employee = useMemo(() => {
     return employees.find(e => (e.id === targetId || e.userId === targetId) && (e.planningYear === selectedYear));
@@ -162,7 +246,7 @@ const PrintVacation: React.FC = () => {
   };
 
   const handleSave = async (): Promise<boolean> => {
-    if (!storageKey) return false;
+    if (!storageKey || !targetId) return false;
 
     const oldDataRaw = localStorage.getItem(storageKey);
     const newData = { phone, address, encarregado, encarregadoDep, viceDiretor, diretor, observations, ship, specialization, licTime, aprTime, isDesmuniciado };
@@ -172,7 +256,7 @@ const PrintVacation: React.FC = () => {
       const actor = user?.name || 'Sistema';
       const oldAddress = oldData.address && typeof oldData.address === 'object'
         ? oldData.address
-        : { street: '', number: '', complement: '', zip: '', city: '', state: '' };
+        : defaultAddress;
 
       if (JSON.stringify(oldAddress) !== JSON.stringify(address)) {
         addAuditLog({
@@ -196,6 +280,31 @@ const PrintVacation: React.FC = () => {
     }
 
     localStorage.setItem(storageKey, JSON.stringify(newData));
+
+    const targetUserId = targetedEmployee?.userId || targetId;
+    const { error: savePreferencesError } = await supabase
+      .from('print_preferences')
+      .upsert({
+        user_id: targetUserId,
+        phone,
+        address,
+        encarregado,
+        encarregado_dep: encarregadoDep,
+        vice_diretor: viceDiretor,
+        diretor,
+        observations,
+        ship,
+        specialization,
+        lic_time: licTime,
+        apr_time: aprTime,
+        is_desmuniciado: isDesmuniciado
+      }, { onConflict: 'user_id' });
+
+    if (savePreferencesError) {
+      const message = savePreferencesError.message || 'Falha ao salvar dados da impressão.';
+      setPrintError(message);
+      return false;
+    }
 
     if (employee && parcel) {
       try {
