@@ -53,8 +53,9 @@ const Home: React.FC = () => {
 
   const totalRegisteredCount = uniquePersonnel.length;
 
-  const workforcePercentage = settings.totalManpower > 0
-    ? Math.round((onVacationCount / settings.totalManpower) * 100)
+  // Percentual calculado sobre o efetivo realmente cadastrado, não sobre o "Efetivo Total" configurado em Segurança
+  const workforcePercentage = totalRegisteredCount > 0
+    ? Math.round((onVacationCount / totalRegisteredCount) * 100)
     : 0;
 
   // Dados para o Gráfico de Colunas Empilhadas por Categoria (Deduplicados)
