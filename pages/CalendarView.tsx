@@ -109,6 +109,62 @@ const CalendarView: React.FC = () => {
     }));
   };
 
+  // Quantidade de militares (do grupo filtrado) de férias em um dia específico
+  const getDayVacationCount = (day: Date) => {
+    const dayStart = startOfDay(day);
+    return filteredEmployees.filter(emp => emp.vacationParcels.some(p => {
+      if (!p.startDate || !p.endDate) return false;
+      const pStart = startOfDay(new Date(p.startDate + 'T00:00:00'));
+      const pEnd = startOfDay(new Date(p.endDate + 'T00:00:00'));
+      return isWithinInterval(dayStart, { start: pStart, end: pEnd });
+    })).length;
+  };
+
+  // Estatísticas de um mês: total de pessoas de férias, % do grupo, e picos semanais (semana com mais e com menos gente junto)
+  const getMonthStats = (monthDate: Date) => {
+    const mStart = startOfMonth(monthDate);
+    const mEnd = endOfMonth(monthDate);
+    const monthDays = eachDayOfInterval({ start: mStart, end: mEnd });
+    const totalGroup = filteredEmployees.length;
+
+    const peopleSet = new Set<string>();
+    filteredEmployees.forEach(emp => {
+      const hasVacationThisMonth = emp.vacationParcels.some(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStart = new Date(p.startDate + 'T00:00:00');
+        const pEnd = new Date(p.endDate + 'T00:00:00');
+        return pStart <= mEnd && pEnd >= mStart;
+      });
+      if (hasVacationThisMonth) peopleSet.add(emp.userId);
+    });
+
+    const weeksMap = new Map<string, Date[]>();
+    monthDays.forEach(day => {
+      const weekKey = startOfWeek(day, { weekStartsOn: 0 }).toISOString();
+      if (!weeksMap.has(weekKey)) weeksMap.set(weekKey, []);
+      weeksMap.get(weekKey)!.push(day);
+    });
+
+    let maxWeek = { count: -1, weekStart: null as Date | null };
+    let minWeek = { count: Infinity, weekStart: null as Date | null };
+
+    weeksMap.forEach((daysInWeek, key) => {
+      const weekPeak = Math.max(...daysInWeek.map(d => getDayVacationCount(d)));
+      if (weekPeak > maxWeek.count) maxWeek = { count: weekPeak, weekStart: new Date(key) };
+      if (weekPeak < minWeek.count) minWeek = { count: weekPeak, weekStart: new Date(key) };
+    });
+
+    const toPercent = (count: number) => totalGroup > 0 ? Math.round((count / totalGroup) * 100) : 0;
+
+    return {
+      totalGroup,
+      peopleCount: peopleSet.size,
+      peoplePercent: toPercent(peopleSet.size),
+      maxWeek: { count: Math.max(0, maxWeek.count), percent: toPercent(Math.max(0, maxWeek.count)), weekStart: maxWeek.weekStart },
+      minWeek: { count: minWeek.count === Infinity ? 0 : minWeek.count, percent: toPercent(minWeek.count === Infinity ? 0 : minWeek.count), weekStart: minWeek.weekStart }
+    };
+  };
+
   const handleSelectMonth = (monthDate: Date) => {
     setCurrentDate(monthDate);
     setViewMode('month');
@@ -119,9 +175,14 @@ const CalendarView: React.FC = () => {
     return Array.from({ length: 12 }, (_, i) => addMonths(yearStart, i));
   }, [currentDate]);
 
+  // Estatísticas pré-calculadas de cada mês do ano, usadas no tooltip da visão anual
+  const yearMonthStats = useMemo(() => {
+    return yearMonths.map(monthDate => ({ monthDate, stats: getMonthStats(monthDate) }));
+  }, [yearMonths, filteredEmployees]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+      <div className={`bg-white rounded-3xl shadow-xl border border-slate-100 ${viewMode === 'year' ? 'overflow-visible' : 'overflow-hidden'}`}>
         {/* HEADER DO CALENDÁRIO */}
         <div className="p-6 border-b border-slate-100">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -209,12 +270,13 @@ const CalendarView: React.FC = () => {
           <>
             {/* VISÃO ANUAL */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6 bg-slate-50/30">
-              {yearMonths.map(monthDate => (
+              {yearMonthStats.map(({ monthDate, stats }) => (
                 <MiniMonth
                   key={monthDate.toISOString()}
                   monthDate={monthDate}
                   hasVacationOnDay={hasVacationOnDay}
                   onSelect={handleSelectMonth}
+                  stats={stats}
                 />
               ))}
             </div>
@@ -292,13 +354,22 @@ const CalendarView: React.FC = () => {
   );
 };
 
+interface MonthStats {
+  totalGroup: number;
+  peopleCount: number;
+  peoplePercent: number;
+  maxWeek: { count: number; percent: number; weekStart: Date | null };
+  minWeek: { count: number; percent: number; weekStart: Date | null };
+}
+
 interface MiniMonthProps {
   monthDate: Date;
   hasVacationOnDay: (day: Date) => boolean;
   onSelect: (monthDate: Date) => void;
+  stats: MonthStats;
 }
 
-const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSelect }) => {
+const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSelect, stats }) => {
   const monthStart = startOfMonth(monthDate);
   const monthEnd = endOfMonth(monthDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
@@ -306,30 +377,54 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(monthDate)}
-      className="text-left bg-white rounded-2xl border border-slate-200 shadow-sm p-4 hover:border-orange-300 hover:shadow-md transition-all"
-    >
-      <p className="text-sm font-bold text-slate-800 capitalize mb-3">{format(monthDate, 'MMMM', { locale: ptBR })}</p>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map(day => {
-          const isCurrentMonth = isSameMonth(day, monthStart);
-          const hasVacation = isCurrentMonth && hasVacationOnDay(day);
-          return (
-            <div
-              key={day.toISOString()}
-              className={`aspect-square rounded-[3px] flex items-center justify-center text-[8px] font-bold ${
-                !isCurrentMonth ? 'text-slate-200' :
-                hasVacation ? 'bg-[#b44116] text-white' : 'text-slate-400'
-              }`}
-            >
-              {format(day, 'd')}
-            </div>
-          );
-        })}
+    <div className="relative group">
+      <button
+        type="button"
+        onClick={() => onSelect(monthDate)}
+        className="w-full text-left bg-white rounded-2xl border border-slate-200 shadow-sm p-4 hover:border-orange-300 hover:shadow-md transition-all"
+      >
+        <p className="text-sm font-bold text-slate-800 capitalize mb-3">{format(monthDate, 'MMMM', { locale: ptBR })}</p>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map(day => {
+            const isCurrentMonth = isSameMonth(day, monthStart);
+            const hasVacation = isCurrentMonth && hasVacationOnDay(day);
+            return (
+              <div
+                key={day.toISOString()}
+                className={`aspect-square rounded-[3px] flex items-center justify-center text-[8px] font-bold ${
+                  !isCurrentMonth ? 'text-slate-200' :
+                  hasVacation ? 'bg-[#b44116] text-white' : 'text-slate-400'
+                }`}
+              >
+                {format(day, 'd')}
+              </div>
+            );
+          })}
+        </div>
+      </button>
+
+      {/* TOOLTIP COM ESTATÍSTICAS DO MÊS */}
+      <div className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-2 w-64 -translate-x-1/2 opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100">
+        <div className="bg-slate-900 text-white text-xs rounded-xl shadow-xl p-4 space-y-2">
+          <p className="font-black uppercase tracking-widest text-[10px] text-orange-400 capitalize">{format(monthDate, 'MMMM yyyy', { locale: ptBR })}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-300">De férias no mês</span>
+            <span className="font-bold">{stats.peopleCount} ({stats.peoplePercent}%)</span>
+          </div>
+          <div className="h-px bg-slate-700 my-1" />
+          <div className="flex items-center justify-between">
+            <span className="text-slate-300">Semana c/ mais gente</span>
+            <span className="font-bold text-red-300">{stats.maxWeek.count} ({stats.maxWeek.percent}%)</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-300">Semana c/ menos gente</span>
+            <span className="font-bold text-emerald-300">{stats.minWeek.count} ({stats.minWeek.percent}%)</span>
+          </div>
+          <p className="text-[9px] text-slate-400 pt-1">Base: {stats.totalGroup} militar(es) no filtro atual</p>
+        </div>
+        <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto -mt-1.5"></div>
       </div>
-    </button>
+    </div>
   );
 };
 
