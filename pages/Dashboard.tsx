@@ -169,7 +169,6 @@ const Dashboard: React.FC = () => {
     const normalizedSearch = normalizeText(search);
 
     const visibleUsers = users
-      .filter(u => u.role === 'user')
       .filter(u => {
         if (user?.role === 'admin' && !user.viewAllSectors) {
           return (u.sector || '') === (user.sector || '');
