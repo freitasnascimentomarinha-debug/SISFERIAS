@@ -393,26 +393,41 @@ const CalendarView: React.FC = () => {
             {activeVacationers.length === 0 ? (
               <p className="text-sm text-slate-400 italic">Nenhuma reserva para este período.</p>
             ) : (
-              activeVacationers.map(person => (
-                <div
-                  key={person.id}
-                  className="relative group/legend flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
-                >
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: person.color }}></div>
-                  <span className="text-xs font-bold text-slate-700">{person.name}</span>
+              activeVacationers.map((person, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === activeVacationers.length - 1;
+                const tooltipPosClass = isFirst
+                  ? 'left-0 translate-x-0'
+                  : isLast
+                    ? 'right-0 left-auto translate-x-0'
+                    : 'left-1/2 -translate-x-1/2';
+                const arrowPosClass = isFirst
+                  ? 'ml-4'
+                  : isLast
+                    ? 'mr-4 ml-auto'
+                    : 'mx-auto';
 
-                  <div className="pointer-events-none absolute left-1/2 bottom-full z-30 mb-2 w-72 -translate-x-1/2 opacity-0 scale-95 transition-all duration-150 group-hover/legend:opacity-100 group-hover/legend:scale-100">
-                    <div className="bg-slate-900 text-white text-[11px] rounded-xl shadow-xl p-3 space-y-1.5">
-                      <p className="font-black uppercase tracking-widest text-[10px] text-slate-300">{person.name}</p>
-                      <p className="text-slate-200 font-bold">Total no periodo: {person.totalDays} dias</p>
-                      {person.periodDetails.map((detail, idx) => (
-                        <p key={`${person.id}-detail-${idx}`} className="text-slate-100 leading-snug">{detail}</p>
-                      ))}
+                return (
+                  <div
+                    key={person.id}
+                    className="relative group/legend flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
+                  >
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: person.color }}></div>
+                    <span className="text-xs font-bold text-slate-700">{person.name}</span>
+
+                    <div className={`pointer-events-none absolute bottom-full z-30 mb-2 w-[calc(100vw-2rem)] max-w-72 opacity-0 scale-95 transition-all duration-150 group-hover/legend:opacity-100 group-hover/legend:scale-100 ${tooltipPosClass}`}>
+                      <div className="bg-slate-900 text-white text-[11px] rounded-xl shadow-xl p-3 space-y-1.5">
+                        <p className="font-black uppercase tracking-widest text-[10px] text-slate-300">{person.name}</p>
+                        <p className="text-slate-200 font-bold">Total no periodo: {person.totalDays} dias</p>
+                        {person.periodDetails.map((detail, detailIdx) => (
+                          <p key={`${person.id}-detail-${detailIdx}`} className="text-slate-100 leading-snug">{detail}</p>
+                        ))}
+                      </div>
+                      <div className={`w-3 h-3 bg-slate-900 rotate-45 -mt-1.5 ${arrowPosClass}`}></div>
                     </div>
-                    <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto -mt-1.5"></div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
