@@ -280,22 +280,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const changeUserPassword = async (email: string, newPass: string): Promise<boolean> => {
     try {
-      // First try normal update (works if self-update)
-      const { error } = await supabase.auth.updateUser({ password: newPass });
-
-      if (!error) return true;
-
-      // If failed (likely because trying to update another user), try Admin RPC
-      if (user?.role === 'admin') {
-        const { data, error: rpcError } = await supabase.rpc('admin_reset_password', {
-          target_email: email,
-          new_password: newPass
-        });
-
-        if (!rpcError && data) return true;
-        console.error("Admin reset failed:", rpcError);
+      // Alterando a própria senha (mesmo e-mail do usuário logado): usa updateUser normal.
+      if (user && user.email.toLowerCase() === email.toLowerCase()) {
+        const { error } = await supabase.auth.updateUser({ password: newPass });
+        if (error) {
+          console.error("Self password update failed:", error);
+          return false;
+        }
+        return true;
       }
 
+      // Alterando a senha de OUTRO usuário: nunca usar auth.updateUser aqui,
+      // pois isso alteraria a senha da sessão atual (do admin), não a do usuário-alvo.
+      // É preciso passar exclusivamente pela RPC SECURITY DEFINER, restrita a admins.
+      if (user?.role !== 'admin') return false;
+
+      const { data, error: rpcError } = await supabase.rpc('admin_reset_password', {
+        target_email: email,
+        new_password: newPass
+      });
+
+      if (!rpcError && data) return true;
+      console.error("Admin reset failed:", rpcError);
       return false;
     } catch (e) {
       console.error("Password change error:", e);
