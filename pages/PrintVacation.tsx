@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
 import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock, User, Camera } from 'lucide-react';
@@ -78,6 +78,7 @@ const PrintVacation: React.FC = () => {
   const [encarregadoDep, setEncarregadoDep] = useState<StaffMember>(settings.encPessoal || { name: '', nip: '', rank: '', category: 'praca', function: 'Encarregado do Dep. Pessoal' });
   const [viceDiretor, setViceDiretor] = useState<StaffMember>(settings.viceDiretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Vice-Diretor' });
   const [diretor, setDiretor] = useState<StaffMember>(settings.diretor || { name: '', nip: '', rank: '', category: 'oficial', function: 'Diretor' });
+  const lastLoadedUserRef = useRef<string | null>(null);
 
   const parseStoredData = (raw: string | null): Record<string, any> => {
     if (!raw) return {};
@@ -149,6 +150,11 @@ const PrintVacation: React.FC = () => {
     return employees.find(e => e.id === targetId || e.userId === targetId);
   }, [targetId, employees]);
 
+  const targetUserId = useMemo(() => {
+    if (!targetId) return null;
+    return targetedEmployee?.userId || targetId;
+  }, [targetId, targetedEmployee?.userId]);
+
   useEffect(() => {
     if (targetedEmployee?.planningYear) {
       setSelectedYear(targetedEmployee.planningYear);
@@ -157,22 +163,24 @@ const PrintVacation: React.FC = () => {
 
   // Carrega os dados específicos deste militar quando a chave de armazenamento muda
   useEffect(() => {
-    if (!storageKey || !targetId) return;
+    if (!storageKey || !targetId || !targetUserId) return;
 
     let cancelled = false;
+    const switchedUser = lastLoadedUserRef.current !== targetUserId;
 
-    // Reset para valores padrão antes de carregar o novo (evita que dados de um usuário apareçam em outro)
-    setPhone('');
-    setAddress(defaultAddress);
-    setObservations('');
-    setShip(defaultShip);
-    setSpecialization(defaultSpecialization);
-    setLicTime(defaultLicTime);
-    setAprTime(defaultAprTime);
-    setIsDesmuniciado(defaultIsDesmuniciado);
+    // Reseta apenas quando realmente troca o militar-alvo, evitando piscada dos campos.
+    if (switchedUser) {
+      setPhone('');
+      setAddress(defaultAddress);
+      setObservations('');
+      setShip(defaultShip);
+      setSpecialization(defaultSpecialization);
+      setLicTime(defaultLicTime);
+      setAprTime(defaultAprTime);
+      setIsDesmuniciado(defaultIsDesmuniciado);
+    }
 
     const fallbackData = parseStoredData(localStorage.getItem(storageKey));
-    const targetUserId = targetedEmployee?.userId || targetId;
 
     const loadPreferences = async () => {
       const { data: dbData } = await supabase
@@ -211,6 +219,8 @@ const PrintVacation: React.FC = () => {
         if (settings.viceDiretor) setViceDiretor(settings.viceDiretor);
         if (settings.diretor) setDiretor(settings.diretor);
       }
+
+      lastLoadedUserRef.current = targetUserId;
     };
 
     void loadPreferences();
@@ -218,7 +228,7 @@ const PrintVacation: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [storageKey, targetId, targetedEmployee?.userId, settings.encPessoal, settings.viceDiretor, settings.diretor]);
+  }, [storageKey, targetId, targetUserId]);
 
   const employee = useMemo(() => {
     return employees.find(e => (e.id === targetId || e.userId === targetId) && (e.planningYear === selectedYear));
