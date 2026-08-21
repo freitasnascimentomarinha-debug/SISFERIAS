@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useVacation } from '../contexts/VacationContext';
-import { Users, CalendarCheck, CalendarDays, TrendingUp, Search, Filter, User as UserIcon, Shield, ChevronRight, ChevronDown, Calendar, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Users, CalendarCheck, CalendarDays, TrendingUp, Search, Filter, User as UserIcon, Shield, ChevronRight, ChevronDown, Calendar, AlertTriangle, ClipboardList, X, TriangleAlert, CircleDashed, CalendarClock } from 'lucide-react';
 import VacationChart from '../components/VacationChart';
 import EmployeeList from '../components/EmployeeList';
 import ExportButtons from '../components/ExportButtons';
@@ -9,11 +10,13 @@ import { format, differenceInDays, startOfDay, isBefore, isAfter, isValid, endOf
 import { normalizeText } from '../lib/textUtils';
 
 const Dashboard: React.FC = () => {
+  const { users, user } = useAuth();
   const { employees } = useVacation();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   const allSectors = useMemo(() => {
     const fromEmployees = employees.map(e => e.sector).filter(Boolean);
@@ -158,6 +161,106 @@ const Dashboard: React.FC = () => {
     planejamento: planningFilter === 'all' ? 'Todos' : planningFilter === 'pending' ? 'Tem dias a planejar' : 'Tudo planejado'
   };
 
+  const diagnostics = useMemo(() => {
+    const rightYear = planningYear - 1;
+    const windowStart = new Date(planningYear - 1, 11, 1);
+    const windowEnd = endOfDay(new Date(planningYear, 10, 30));
+
+    const normalizedSearch = normalizeText(search);
+
+    const visibleUsers = users
+      .filter(u => u.role === 'user')
+      .filter(u => {
+        if (user?.role === 'admin' && !user.viewAllSectors) {
+          return (u.sector || '') === (user.sector || '');
+        }
+        return true;
+      })
+      .filter(u => {
+        const matchSearch = !normalizedSearch ||
+          normalizeText(u.warName || '').includes(normalizedSearch) ||
+          normalizeText(u.name || '').includes(normalizedSearch) ||
+          (u.nip || '').includes(search);
+
+        const matchCat = catFilter === 'all' || (u.category || '') === catFilter;
+        const matchSector = sectorFilter === 'all' || (u.sector || '') === sectorFilter;
+
+        return matchSearch && matchCat && matchSector;
+      });
+
+    const toDisplayName = (u: typeof visibleUsers[number]) => {
+      const base = (u.warName || u.name || 'Sem nome').trim();
+      const rank = (u.rank || '').trim();
+      return rank ? `${rank} ${base}` : base;
+    };
+
+    const rows = visibleUsers.map(u => {
+      const emp = employees.find(e => e.userId === u.id && (e.planningYear || rightYear) === rightYear);
+      if (!emp) {
+        return {
+          id: u.id,
+          displayName: toDisplayName(u),
+          nip: u.nip || '---',
+          sector: u.sector || '---',
+          status: 'sem-lancamento' as const,
+          details: 'Sem registro de férias no ano de direito selecionado.'
+        };
+      }
+
+      const plannedTotal = emp.vacationParcels.reduce((acc, p) => acc + (p.days || 0), 0);
+      const hasAnyParcel = emp.vacationParcels.length > 0;
+      const outOfWindowParcels = emp.vacationParcels.filter(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStart = safeParseDate(p.startDate);
+        const pEnd = safeParseDate(p.endDate);
+        if (!isValid(pStart) || !isValid(pEnd)) return false;
+        return isBefore(pStart, windowStart) || isAfter(pEnd, windowEnd);
+      });
+
+      if (outOfWindowParcels.length > 0) {
+        return {
+          id: u.id,
+          displayName: toDisplayName(u),
+          nip: emp.nip || u.nip || '---',
+          sector: emp.sector || u.sector || '---',
+          status: 'fora-periodo' as const,
+          details: `${outOfWindowParcels.length} parcela(s) fora da janela ${format(windowStart, 'dd/MM/yy')} a ${format(windowEnd, 'dd/MM/yy')}.`
+        };
+      }
+
+      if (!hasAnyParcel) {
+        return {
+          id: u.id,
+          displayName: toDisplayName(u),
+          nip: emp.nip || u.nip || '---',
+          sector: emp.sector || u.sector || '---',
+          status: 'falta-planejar' as const,
+          details: `Nenhuma parcela lançada. Direito: ${emp.totalVacationDays}d.`
+        };
+      }
+
+      if (plannedTotal < emp.totalVacationDays) {
+        return {
+          id: u.id,
+          displayName: toDisplayName(u),
+          nip: emp.nip || u.nip || '---',
+          sector: emp.sector || u.sector || '---',
+          status: 'falta-planejar' as const,
+          details: `Planejado: ${plannedTotal}d de ${emp.totalVacationDays}d.`
+        };
+      }
+
+      return null;
+    }).filter((row): row is NonNullable<typeof row> => row !== null);
+
+    return {
+      baseCount: visibleUsers.length,
+      semLancamento: rows.filter(r => r.status === 'sem-lancamento'),
+      faltaPlanejar: rows.filter(r => r.status === 'falta-planejar'),
+      foraPeriodo: rows.filter(r => r.status === 'fora-periodo')
+    };
+  }, [users, user, employees, planningYear, search, catFilter, sectorFilter]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print mb-10">
@@ -166,9 +269,61 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-500">Visão geral das Férias da Tripulação</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsDiagnosticsOpen(true)}
+            className="px-3 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-orange-100 transition-all"
+          >
+            <ClipboardList size={16} /> Diagnóstico
+          </button>
           <ExportButtons employees={filteredEmployees} filters={reportFilters} planningYear={planningYear} />
         </div>
       </div>
+
+      {isDiagnosticsOpen && (
+        <div className="fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-sm p-4 md:p-8 overflow-y-auto no-print">
+          <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 px-6 py-5 text-white flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-orange-100">Diagnóstico de Lançamentos</p>
+                <h3 className="text-2xl font-black leading-tight">Situação dos usuários na janela {planningYear}</h3>
+                <p className="text-sm text-orange-100 mt-1">Base visível: {diagnostics.baseCount} usuário(s) • Ano de direito: {planningYear - 1}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDiagnosticsOpen(false)}
+                className="p-2 rounded-xl bg-white/15 hover:bg-white/25 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <DiagnosticColumn
+                title="Sem Lançamento"
+                subtitle="Nenhum registro de férias"
+                icon={<CircleDashed size={16} />}
+                accent="orange"
+                rows={diagnostics.semLancamento}
+              />
+              <DiagnosticColumn
+                title="Falta Planejar"
+                subtitle="Dias pendentes de planejamento"
+                icon={<CalendarClock size={16} />}
+                accent="blue"
+                rows={diagnostics.faltaPlanejar}
+              />
+              <DiagnosticColumn
+                title="Fora do Período"
+                subtitle="Parcela fora da janela do ano"
+                icon={<TriangleAlert size={16} />}
+                accent="red"
+                rows={diagnostics.foraPeriodo}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-8 no-print">
         <button
@@ -318,5 +473,64 @@ const StatCard = ({ title, value, icon, color }: { title: string; value: string 
     <div><p className="text-sm font-medium text-slate-500">{title}</p><p className="text-2xl font-bold text-slate-900">{value}</p></div>
   </div>
 );
+
+type DiagnosticRow = {
+  id: string;
+  displayName: string;
+  nip: string;
+  sector: string;
+  details: string;
+};
+
+const DiagnosticColumn = ({ title, subtitle, icon, rows, accent }: { title: string; subtitle: string; icon: React.ReactNode; rows: DiagnosticRow[]; accent: 'orange' | 'blue' | 'red' }) => {
+  const accentMap = {
+    orange: {
+      chip: 'bg-orange-100 text-orange-700 border-orange-200',
+      card: 'border-orange-200 bg-orange-50/40',
+      icon: 'text-orange-600 bg-orange-100'
+    },
+    blue: {
+      chip: 'bg-blue-100 text-blue-700 border-blue-200',
+      card: 'border-blue-200 bg-blue-50/40',
+      icon: 'text-blue-600 bg-blue-100'
+    },
+    red: {
+      chip: 'bg-red-100 text-red-700 border-red-200',
+      card: 'border-red-200 bg-red-50/40',
+      icon: 'text-red-600 bg-red-100'
+    }
+  }[accent];
+
+  return (
+    <section className={`rounded-2xl border p-4 ${accentMap.card}`}>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accentMap.icon}`}>{icon}</div>
+          <div>
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wide">{title}</h4>
+            <p className="text-[11px] text-slate-500 font-semibold">{subtitle}</p>
+          </div>
+        </div>
+        <span className={`px-2.5 py-1 rounded-full border text-xs font-black ${accentMap.chip}`}>{rows.length}</span>
+      </div>
+
+      <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+        {rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-4 text-xs text-slate-500 font-semibold text-center">
+            Nenhum usuário neste grupo.
+          </div>
+        ) : (
+          rows.map(row => (
+            <article key={row.id} className="rounded-xl bg-white border border-slate-200 p-3 shadow-sm">
+              <p className="text-sm font-bold text-slate-900 leading-tight">{row.displayName}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">NIP: {row.nip} • Setor: {row.sector}</p>
+              <p className="text-[11px] text-slate-700 mt-2 font-semibold">{row.details}</p>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
+};
 
 export default Dashboard;
