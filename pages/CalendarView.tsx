@@ -412,13 +412,27 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
             <span className="font-bold">{stats.peopleCount} ({stats.peoplePercent}%)</span>
           </div>
           <div className="h-px bg-slate-700 my-1" />
-          <div className="flex items-center justify-between">
-            <span className="text-slate-300">Semana c/ mais gente</span>
-            <span className="font-bold text-red-300">{stats.maxWeek.count} ({stats.maxWeek.percent}%)</span>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Semana c/ mais gente</span>
+              <span className="font-bold text-red-300">{stats.maxWeek.count} ({stats.maxWeek.percent}%)</span>
+            </div>
+            {stats.maxWeek.weekStart && (
+              <p className="text-[9px] text-slate-400 mt-0.5">
+                {format(stats.maxWeek.weekStart, 'dd/MM')} a {format(endOfWeek(stats.maxWeek.weekStart, { weekStartsOn: 0 }), 'dd/MM')}
+              </p>
+            )}
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-300">Semana c/ menos gente</span>
-            <span className="font-bold text-emerald-300">{stats.minWeek.count} ({stats.minWeek.percent}%)</span>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Semana c/ menos gente</span>
+              <span className="font-bold text-emerald-300">{stats.minWeek.count} ({stats.minWeek.percent}%)</span>
+            </div>
+            {stats.minWeek.weekStart && (
+              <p className="text-[9px] text-slate-400 mt-0.5">
+                {format(stats.minWeek.weekStart, 'dd/MM')} a {format(endOfWeek(stats.minWeek.weekStart, { weekStartsOn: 0 }), 'dd/MM')}
+              </p>
+            )}
           </div>
           <p className="text-[9px] text-slate-400 pt-1">Base: {stats.totalGroup} militar(es) no filtro atual</p>
         </div>
