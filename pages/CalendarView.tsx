@@ -444,7 +444,7 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
               </p>
             )}
           </div>
-          <p className="text-[9px] text-slate-400 pt-1">Base: {stats.totalGroup} militar(es) no filtro atual</p>
+          <p className="text-[9px] text-slate-400 pt-1">Base: {stats.totalGroup} pessoas no filtro atual</p>
         </div>
         <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto -mt-1.5"></div>
       </div>

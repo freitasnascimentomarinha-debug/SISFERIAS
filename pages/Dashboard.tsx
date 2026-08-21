@@ -264,7 +264,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 no-print">
-        <StatCard title="Militares (Filtrados)" value={stats.total} icon={<Users size={24} />} color="bg-orange-50 text-orange-600" />
+        <StatCard title="Pessoal (Filtrados)" value={stats.total} icon={<Users size={24} />} color="bg-orange-50 text-orange-600" />
         <StatCard title="Dias Cumpridos" value={`${stats.gozados} dias`} icon={<CalendarCheck size={24} />} color="bg-green-50 text-green-600" />
         <StatCard title="Dias Restantes" value={`${stats.restantes} dias`} icon={<CalendarDays size={24} />} color="bg-amber-50 text-amber-600" />
         <StatCard title="Taxa de Conclusão" value={`${stats.completion}%`} icon={<TrendingUp size={24} />} color="bg-blue-50 text-blue-600" />

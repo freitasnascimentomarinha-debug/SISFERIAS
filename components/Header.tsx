@@ -41,7 +41,7 @@ const Header: React.FC = () => {
               <Sun size={24} />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-slate-900 leading-tight">SISFÉRIAS</h1>
+              <h1 className="font-bold text-lg text-slate-900 leading-tight">SISFERIAS</h1>
               <p className="text-[10px] font-bold text-orange-600 tracking-widest">MARINHA DO BRASIL</p>
             </div>
           </div>
@@ -94,7 +94,7 @@ const Header: React.FC = () => {
               <div className="flex items-center gap-2 text-white">
                 <Sun size={24} className="text-white" />
                 <div>
-                  <h2 className="font-bold text-lg leading-tight">SISFÉRIAS</h2>
+                  <h2 className="font-bold text-lg leading-tight">SISFERIAS</h2>
                   <p className="text-[10px] font-bold opacity-75 tracking-widest">MARINHA DO BRASIL</p>
                 </div>
               </div>
