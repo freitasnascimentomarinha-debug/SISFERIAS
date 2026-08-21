@@ -29,11 +29,14 @@ const CalendarView: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('year');
   const selectedWindowYear = currentDate.getFullYear();
 
-  const userColorPalette = ['#f97316', '#ea580c', '#fb923c', '#f59e0b', '#0ea5e9', '#14b8a6', '#22c55e', '#ef4444'];
-
-  const getUserColor = (userId: string) => {
-    const hash = userId.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-    return userColorPalette[hash % userColorPalette.length];
+  const getDistinctUserColor = (index: number) => {
+    // Paleta fria: evita verde/amarelo/laranja/vermelho.
+    const allowedHues = [198, 214, 228, 244, 262, 278, 294, 312];
+    const hue = allowedHues[index % allowedHues.length];
+    const band = Math.floor(index / allowedHues.length);
+    const lightnessBands = [44, 52, 36, 60];
+    const lightness = lightnessBands[band % lightnessBands.length];
+    return `hsl(${hue} 76% ${lightness}%)`;
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -66,6 +69,24 @@ const CalendarView: React.FC = () => {
     });
   }, [employees, filterUserId, sectorFilter, selectedWindowYear]);
 
+  const monthVacationUsers = useMemo(() => {
+    const users = filteredEmployees
+      .filter(emp => emp.vacationParcels.some(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStart = new Date(p.startDate + 'T00:00:00');
+        const pEnd = new Date(p.endDate + 'T00:00:00');
+        return (pStart <= monthEnd && pEnd >= monthStart);
+      }))
+      .map(emp => ({ id: emp.userId, name: `${emp.rank} ${emp.warName}` }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    return users.map((u, index) => ({ ...u, color: getDistinctUserColor(index) }));
+  }, [filteredEmployees, monthStart, monthEnd]);
+
+  const monthUserColorMap = useMemo(() => {
+    return new Map(monthVacationUsers.map(u => [u.id, u.color]));
+  }, [monthVacationUsers]);
+
   // Função para pegar férias de um dia específico
   const getDayVacations = (day: Date) => {
     const dayStart = startOfDay(day);
@@ -82,7 +103,7 @@ const CalendarView: React.FC = () => {
           list.push({ 
             name: emp.warName, 
             rank: emp.rank, 
-            color: getUserColor(emp.userId),
+            color: monthUserColorMap.get(emp.userId) || 'hsl(24 95% 53%)',
             userId: emp.userId 
           });
         }
@@ -92,22 +113,7 @@ const CalendarView: React.FC = () => {
   };
 
   // Legenda dinâmica: Quem aparece neste mês?
-  const activeVacationers = useMemo(() => {
-    const people = new Map<string, { name: string; color: string }>();
-    filteredEmployees.forEach(emp => {
-      const hasVacationThisMonth = emp.vacationParcels.some(p => {
-        if (!p.startDate || !p.endDate) return false;
-        const pStart = new Date(p.startDate + 'T00:00:00');
-        const pEnd = new Date(p.endDate + 'T00:00:00');
-        return (pStart <= monthEnd && pEnd >= monthStart);
-      });
-
-      if (hasVacationThisMonth) {
-        people.set(emp.userId, { name: `${emp.rank} ${emp.warName}`, color: getUserColor(emp.userId) });
-      }
-    });
-    return Array.from(people.entries());
-  }, [filteredEmployees, monthStart, monthEnd]);
+  const activeVacationers = monthVacationUsers;
 
   // Verifica se existe alguma parcela de férias em um dia, usado na visão anual
   const hasVacationOnDay = (day: Date) => {
@@ -302,7 +308,7 @@ const CalendarView: React.FC = () => {
             <div className="p-6 bg-slate-50/50 border-t border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Legenda</p>
               <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm w-fit">
-                <div className="w-3 h-3 bg-orange-500 rounded-sm"></div>
+                <div className="w-3 h-3 bg-sky-600 rounded-sm"></div>
                 <span className="text-xs font-bold text-slate-700">Dia com férias planejadas • Clique em um mês para detalhar</span>
               </div>
             </div>
@@ -356,10 +362,10 @@ const CalendarView: React.FC = () => {
             {activeVacationers.length === 0 ? (
               <p className="text-sm text-slate-400 italic">Nenhuma reserva para este período.</p>
             ) : (
-              activeVacationers.map(([id, data]) => (
-                <div key={id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: data.color }}></div>
-                  <span className="text-xs font-bold text-slate-700">{data.name}</span>
+              activeVacationers.map(person => (
+                <div key={person.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: person.color }}></div>
+                  <span className="text-xs font-bold text-slate-700">{person.name}</span>
                 </div>
               ))
             )}
@@ -411,7 +417,7 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
                 key={day.toISOString()}
                 className={`aspect-square rounded-[3px] flex items-center justify-center text-[8px] font-bold ${
                   !isCurrentMonth ? 'text-slate-200' :
-                  hasVacation ? 'bg-orange-500 text-white' : 'text-slate-400'
+                  hasVacation ? 'bg-sky-600 text-white' : 'text-slate-400'
                 }`}
               >
                 {format(day, 'd')}
