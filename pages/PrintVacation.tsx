@@ -719,10 +719,10 @@ const PrintVacation: React.FC = () => {
             </section>
 
             <section className="space-y-4">
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText size={14}/> Texto do Anexo (Pág 2)</h3>
+               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText size={14}/> Observações</h3>
                <textarea 
                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[160px] outline-none focus:ring-2 focus:ring-orange-500 text-sm leading-relaxed"
-                 placeholder="Digite aqui as operacoes administrativas..."
+                 placeholder="Ex: Vou para fora de SEDE, ficarei na cidade..."
                  value={observations}
                  onChange={e => setObservations(e.target.value)}
                />
