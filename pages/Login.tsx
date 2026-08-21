@@ -32,7 +32,7 @@ const Login: React.FC = () => {
         <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-orange-400 mx-auto mb-4">
           <Sun size={32} />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">SISFÉRIAS</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">SISFERIAS</h1>
         <p className="text-slate-500">Gerencie suas férias de forma simples</p>
       </div>
 
