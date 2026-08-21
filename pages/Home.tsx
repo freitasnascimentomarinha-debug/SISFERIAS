@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useVacation } from '../contexts/VacationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Megaphone, Users, UserCheck, Info, Clock, BarChart as ChartIcon, Pin, HelpCircle, X } from 'lucide-react';
 import { startOfDay, isBefore, isAfter, isValid, format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -8,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const { employees, settings } = useVacation();
+  const { users } = useAuth();
   const now = startOfDay(new Date());
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [showLearningModal, setShowLearningModal] = useState(false);
@@ -51,7 +53,8 @@ const Home: React.FC = () => {
     return uniquePersonnel.filter(p => p.isOnVacation).length;
   }, [uniquePersonnel]);
 
-  const totalRegisteredCount = uniquePersonnel.length;
+  // Conta todos os usuários cadastrados no sistema (não só os que já lançaram férias)
+  const totalRegisteredCount = users.length;
 
   // Percentual calculado sobre o efetivo realmente cadastrado, não sobre o "Efetivo Total" configurado em Segurança
   const workforcePercentage = totalRegisteredCount > 0
