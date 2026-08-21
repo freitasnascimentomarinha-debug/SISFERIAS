@@ -30,13 +30,17 @@ const CalendarView: React.FC = () => {
   const selectedWindowYear = currentDate.getFullYear();
 
   const getDistinctUserColor = (index: number) => {
-    // Paleta fria: evita verde/amarelo/laranja/vermelho.
-    const allowedHues = [198, 214, 228, 244, 262, 278, 294, 312];
-    const hue = allowedHues[index % allowedHues.length];
-    const band = Math.floor(index / allowedHues.length);
-    const lightnessBands = [44, 52, 36, 60];
-    const lightness = lightnessBands[band % lightnessBands.length];
-    return `hsl(${hue} 76% ${lightness}%)`;
+    // Cor única por usuário no mês, excluindo a faixa de laranja.
+    let hue = (index * 137.508) % 360;
+    if (hue >= 20 && hue <= 48) {
+      hue = (hue + 90) % 360;
+    }
+    return `hsl(${hue.toFixed(2)} 76% 46%)`;
+  };
+
+  const formatWeekdayDate = (date: Date) => {
+    const raw = format(date, 'EEEE, dd/MM/yyyy', { locale: ptBR });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
   };
 
   const monthStart = startOfMonth(currentDate);
@@ -71,13 +75,35 @@ const CalendarView: React.FC = () => {
 
   const monthVacationUsers = useMemo(() => {
     const users = filteredEmployees
-      .filter(emp => emp.vacationParcels.some(p => {
-        if (!p.startDate || !p.endDate) return false;
-        const pStart = new Date(p.startDate + 'T00:00:00');
-        const pEnd = new Date(p.endDate + 'T00:00:00');
-        return (pStart <= monthEnd && pEnd >= monthStart);
-      }))
-      .map(emp => ({ id: emp.userId, name: `${emp.rank} ${emp.warName}` }))
+      .map(emp => {
+        const overlappingParcels = emp.vacationParcels
+          .filter(p => {
+            if (!p.startDate || !p.endDate) return false;
+            const pStart = new Date(p.startDate + 'T00:00:00');
+            const pEnd = new Date(p.endDate + 'T00:00:00');
+            return pStart <= monthEnd && pEnd >= monthStart;
+          })
+          .map(p => ({
+            start: new Date(p.startDate + 'T00:00:00'),
+            end: new Date(p.endDate + 'T00:00:00')
+          }))
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+        if (overlappingParcels.length === 0) return null;
+
+        const periodDetails = overlappingParcels
+          .map((parcel, idx) => {
+            return `Parcela ${idx + 1}: ${formatWeekdayDate(parcel.start)} ate ${formatWeekdayDate(parcel.end)}`;
+          })
+          .join(' | ');
+
+        return {
+          id: emp.userId,
+          name: `${emp.rank} ${emp.warName}`,
+          periodDetails
+        };
+      })
+      .filter((user): user is { id: string; name: string; periodDetails: string } => user !== null)
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
     return users.map((u, index) => ({ ...u, color: getDistinctUserColor(index) }));
@@ -103,7 +129,7 @@ const CalendarView: React.FC = () => {
           list.push({ 
             name: emp.warName, 
             rank: emp.rank, 
-            color: monthUserColorMap.get(emp.userId) || 'hsl(24 95% 53%)',
+            color: monthUserColorMap.get(emp.userId) || 'hsl(215 25% 40%)',
             userId: emp.userId 
           });
         }
@@ -308,7 +334,7 @@ const CalendarView: React.FC = () => {
             <div className="p-6 bg-slate-50/50 border-t border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Legenda</p>
               <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm w-fit">
-                <div className="w-3 h-3 bg-sky-600 rounded-sm"></div>
+                <div className="w-3 h-3 bg-orange-500 rounded-sm"></div>
                 <span className="text-xs font-bold text-slate-700">Dia com férias planejadas • Clique em um mês para detalhar</span>
               </div>
             </div>
@@ -363,7 +389,11 @@ const CalendarView: React.FC = () => {
               <p className="text-sm text-slate-400 italic">Nenhuma reserva para este período.</p>
             ) : (
               activeVacationers.map(person => (
-                <div key={person.id} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                <div
+                  key={person.id}
+                  className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm"
+                  title={person.periodDetails}
+                >
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: person.color }}></div>
                   <span className="text-xs font-bold text-slate-700">{person.name}</span>
                 </div>
@@ -417,7 +447,7 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
                 key={day.toISOString()}
                 className={`aspect-square rounded-[3px] flex items-center justify-center text-[8px] font-bold ${
                   !isCurrentMonth ? 'text-slate-200' :
-                  hasVacation ? 'bg-sky-600 text-white' : 'text-slate-400'
+                  hasVacation ? 'bg-orange-500 text-white' : 'text-slate-400'
                 }`}
               >
                 {format(day, 'd')}
