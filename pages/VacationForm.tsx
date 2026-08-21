@@ -45,7 +45,7 @@ const VacationForm: React.FC = () => {
   const [isCustomSector, setIsCustomSector] = useState(false);
   const [category, setCategory] = useState<any>('praca');
   const [rank, setRank] = useState('');
-  const [specialization, setSpecialization] = useState('PL');
+  const [specialization, setSpecialization] = useState('');
   const [totalVacationDays, setTotalVacationDays] = useState(30);
   const [parcelCount, setParcelCount] = useState('1');
   const [parcels, setParcels] = useState<VacationParcel[]>([]);
@@ -212,15 +212,15 @@ const VacationForm: React.FC = () => {
     const storageKey = `vacation_print_u_${targetUserId}_v15`;
     const savedRaw = localStorage.getItem(storageKey);
     if (!savedRaw) {
-      setSpecialization('PL');
+      setSpecialization('');
       return;
     }
 
     try {
       const savedData = JSON.parse(savedRaw);
-      setSpecialization((savedData?.specialization || 'PL').toString());
+      setSpecialization((savedData?.specialization ?? '').toString());
     } catch {
-      setSpecialization('PL');
+      setSpecialization('');
     }
   }, [targetUserId]);
 
@@ -623,12 +623,12 @@ const VacationForm: React.FC = () => {
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase">Esp.</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase">Quadro / Esp.</label>
                         <input
                           className="input-field"
                           value={specialization}
                           onChange={e => handleSpecializationChange(e.target.value)}
-                          placeholder="PL"
+                          placeholder="Opcional"
                           maxLength={6}
                         />
                       </div>

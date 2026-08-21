@@ -12,7 +12,7 @@ const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded
 
 const defaultAddress = { street: '', number: '', complement: '', zip: '', city: '', state: '' };
 const defaultShip = 'CENTRO DE OPERAÇÕES DO ABASTECIMENTO';
-const defaultSpecialization = 'PL';
+const defaultSpecialization = '';
 const defaultLicTime = '16:10';
 const defaultAprTime = '07:30';
 const defaultIsDesmuniciado = 'sim';
@@ -735,11 +735,17 @@ const PrintVacation: React.FC = () => {
                 <div className="space-y-3">
                   <input className={inputClass} placeholder="Navio ou Órgão" value={ship} onChange={e => setShip(e.target.value)} />
                   <div className="grid grid-cols-2 gap-4">
-                    <input className={inputClass} placeholder="Especialidade" value={specialization} onChange={e => setSpecialization(e.target.value)} />
-                    <select className={inputClass} value={isDesmuniciado} onChange={e => setIsDesmuniciado(e.target.value)}>
-                      <option value="sim">Desmuniciado: Sim</option>
-                      <option value="não">Desmuniciado: Não</option>
-                    </select>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-orange-600 uppercase">Quadro / Esp.</label>
+                      <input className={inputClass} placeholder="Opcional" value={specialization} onChange={e => setSpecialization(e.target.value.toUpperCase())} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-orange-600 uppercase">Desmuniciado</label>
+                      <select className={inputClass} value={isDesmuniciado} onChange={e => setIsDesmuniciado(e.target.value)}>
+                        <option value="sim">Sim</option>
+                        <option value="não">Não</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">

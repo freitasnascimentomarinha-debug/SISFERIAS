@@ -201,12 +201,12 @@ const Register: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Esp.</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Quadro / Esp.</label>
             <input
               value={specialization}
               onChange={e => setSpecialization(e.target.value.toUpperCase())}
               className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
-              placeholder="PL"
+              placeholder="Opcional"
               maxLength={6}
               disabled={loading || !!success}
             />
