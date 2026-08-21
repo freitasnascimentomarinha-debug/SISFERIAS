@@ -109,15 +109,20 @@ const CalendarView: React.FC = () => {
     }));
   };
 
-  // Quantidade de militares (do grupo filtrado) de férias em um dia específico
+  // Quantidade de militares únicos (do grupo filtrado) de férias em um dia específico
   const getDayVacationCount = (day: Date) => {
     const dayStart = startOfDay(day);
-    return filteredEmployees.filter(emp => emp.vacationParcels.some(p => {
-      if (!p.startDate || !p.endDate) return false;
-      const pStart = startOfDay(new Date(p.startDate + 'T00:00:00'));
-      const pEnd = startOfDay(new Date(p.endDate + 'T00:00:00'));
-      return isWithinInterval(dayStart, { start: pStart, end: pEnd });
-    })).length;
+    const userIds = new Set<string>();
+    filteredEmployees.forEach(emp => {
+      const onVacation = emp.vacationParcels.some(p => {
+        if (!p.startDate || !p.endDate) return false;
+        const pStart = startOfDay(new Date(p.startDate + 'T00:00:00'));
+        const pEnd = startOfDay(new Date(p.endDate + 'T00:00:00'));
+        return isWithinInterval(dayStart, { start: pStart, end: pEnd });
+      });
+      if (onVacation) userIds.add(emp.userId);
+    });
+    return userIds.size;
   };
 
   // Estatísticas de um mês: total de pessoas de férias, % do grupo, e picos semanais (semana com mais e com menos gente junto)
@@ -125,7 +130,8 @@ const CalendarView: React.FC = () => {
     const mStart = startOfMonth(monthDate);
     const mEnd = endOfMonth(monthDate);
     const monthDays = eachDayOfInterval({ start: mStart, end: mEnd });
-    const totalGroup = filteredEmployees.length;
+    // Conta pessoas únicas (por userId), pois um mesmo militar pode ter múltiplos registros por ano de planejamento
+    const totalGroup = new Set(filteredEmployees.map(emp => emp.userId)).size;
 
     const peopleSet = new Set<string>();
     filteredEmployees.forEach(emp => {
