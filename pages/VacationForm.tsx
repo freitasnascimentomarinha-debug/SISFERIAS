@@ -497,7 +497,7 @@ const VacationForm: React.FC = () => {
                       </p>
                       <p className={`text-sm font-black leading-none mt-0.5 ${
                         status === 'ongoing' ? 'text-yellow-300' :
-                        status === 'done'    ? 'text-sky-300'    : 'text-white'
+                        status === 'done'    ? 'text-green-300'  : 'text-white'
                       }`}>
                         {displayValue}
                       </p>
@@ -507,7 +507,7 @@ const VacationForm: React.FC = () => {
               </div>
               {alertParcels.length > 0 && (
                 <div className="flex justify-center bg-white px-4 py-2 border-b border-green-100">
-                  <div className="animate-pulse flex items-center gap-2 bg-green-500 text-white font-bold text-sm px-5 py-2 rounded-2xl shadow-md">
+                  <div className="animate-pulse flex items-center gap-2 bg-blue-900 text-white font-bold text-sm px-5 py-2 rounded-2xl shadow-md">
                     <AlertTriangle size={15} className="shrink-0" />
                     <span>
                       {alertParcels.map((c, i) => (
