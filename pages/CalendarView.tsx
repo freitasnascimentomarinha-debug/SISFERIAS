@@ -6,6 +6,7 @@ import {
   startOfMonth, 
   endOfMonth, 
   eachDayOfInterval, 
+  differenceInCalendarDays,
   isSameDay, 
   isSameMonth,
   addMonths, 
@@ -92,16 +93,22 @@ const CalendarView: React.FC = () => {
         if (overlappingParcels.length === 0) return null;
 
         const periodDetails = overlappingParcels.map((parcel, idx) => {
-          return `Parcela ${idx + 1}: ${formatWeekdayDate(parcel.start)} ate ${formatWeekdayDate(parcel.end)}`;
+          const days = differenceInCalendarDays(parcel.end, parcel.start) + 1;
+          return `Parcela ${idx + 1} (${days} dias): ${formatWeekdayDate(parcel.start)} ate ${formatWeekdayDate(parcel.end)}`;
         });
+
+        const totalDays = overlappingParcels.reduce((acc, parcel) => {
+          return acc + (differenceInCalendarDays(parcel.end, parcel.start) + 1);
+        }, 0);
 
         return {
           id: emp.userId,
           name: `${emp.rank} ${emp.warName}`,
-          periodDetails
+          periodDetails,
+          totalDays
         };
       })
-      .filter((user): user is { id: string; name: string; periodDetails: string[] } => user !== null)
+      .filter((user): user is { id: string; name: string; periodDetails: string[]; totalDays: number } => user !== null)
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
     return users.map((u, index) => ({ ...u, color: getDistinctUserColor(index) }));
@@ -397,6 +404,7 @@ const CalendarView: React.FC = () => {
                   <div className="pointer-events-none absolute left-1/2 bottom-full z-30 mb-2 w-72 -translate-x-1/2 opacity-0 scale-95 transition-all duration-150 group-hover/legend:opacity-100 group-hover/legend:scale-100">
                     <div className="bg-slate-900 text-white text-[11px] rounded-xl shadow-xl p-3 space-y-1.5">
                       <p className="font-black uppercase tracking-widest text-[10px] text-slate-300">{person.name}</p>
+                      <p className="text-slate-200 font-bold">Total no periodo: {person.totalDays} dias</p>
                       {person.periodDetails.map((detail, idx) => (
                         <p key={`${person.id}-detail-${idx}`} className="text-slate-100 leading-snug">{detail}</p>
                       ))}
@@ -431,6 +439,7 @@ interface MiniMonthProps {
 }
 
 const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSelect, stats }) => {
+  const opensUp = monthDate.getMonth() >= 4;
   const monthStart = startOfMonth(monthDate);
   const monthEnd = endOfMonth(monthDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
@@ -465,8 +474,8 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
       </button>
 
       {/* TOOLTIP COM ESTATÍSTICAS DO MÊS */}
-      <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-64 -translate-x-1/2 opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100">
-        <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto mb-[-6px]"></div>
+      <div className={`pointer-events-none absolute left-1/2 z-50 w-64 -translate-x-1/2 opacity-0 scale-95 transition-all duration-150 group-hover:opacity-100 group-hover:scale-100 ${opensUp ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+        {!opensUp && <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto mb-[-6px]"></div>}
         <div className="bg-slate-900 text-white text-xs rounded-xl shadow-xl p-4 space-y-2">
           <p className="font-black uppercase tracking-widest text-[10px] text-orange-400 capitalize">{format(monthDate, 'MMMM yyyy', { locale: ptBR })}</p>
           <div className="flex items-center justify-between">
@@ -498,6 +507,7 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ monthDate, hasVacationOnDay, onSe
           </div>
           <p className="text-[9px] text-slate-400 pt-1">Base: {stats.totalGroup} pessoas no filtro atual</p>
         </div>
+        {opensUp && <div className="w-3 h-3 bg-slate-900 rotate-45 mx-auto -mt-1.5"></div>}
       </div>
     </div>
   );
