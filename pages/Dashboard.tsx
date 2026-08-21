@@ -1,17 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
 import { useVacation } from '../contexts/VacationContext';
-import { Users, CalendarCheck, CalendarDays, TrendingUp, Search, Filter, User as UserIcon, Shield, ChevronRight, Calendar, AlertTriangle } from 'lucide-react';
+import { Users, CalendarCheck, CalendarDays, TrendingUp, Search, Filter, User as UserIcon, Shield, ChevronRight, ChevronDown, Calendar, AlertTriangle } from 'lucide-react';
 import VacationChart from '../components/VacationChart';
 import EmployeeList from '../components/EmployeeList';
 import ExportButtons from '../components/ExportButtons';
 import { format, differenceInDays, startOfDay, isBefore, isAfter, isValid, endOfDay } from 'date-fns';
+import { normalizeText } from '../lib/textUtils';
 
 const Dashboard: React.FC = () => {
   const { employees } = useVacation();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const allSectors = useMemo(() => {
     const fromEmployees = employees.map(e => e.sector).filter(Boolean);
@@ -44,7 +46,7 @@ const Dashboard: React.FC = () => {
       const matchYear = ((emp.planningYear || currentYear) + 1) === planningYear;
       if (!matchYear) return false;
 
-      const matchSearch = emp.warName.toLowerCase().includes(search.toLowerCase()) || emp.nip.includes(search);
+      const matchSearch = normalizeText(emp.warName).includes(normalizeText(search)) || emp.nip.includes(search);
       const matchCat = catFilter === 'all' || emp.category === catFilter;
       const matchSector = sectorFilter === 'all' || emp.sector === sectorFilter;
 
@@ -169,11 +171,19 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mb-8 no-print">
-        <div className="flex items-center gap-2 text-slate-800 font-bold mb-6">
-          <Filter size={18} className="text-orange-500" /> Filtros Avançados
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsFilterOpen(prev => !prev)}
+          className="w-full flex items-center justify-between gap-2 text-slate-800 font-bold select-none"
+        >
+          <span className="flex items-center gap-2">
+            <Filter size={18} className="text-orange-500" /> Filtros Avançados
+          </span>
+          {isFilterOpen ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+        </button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isFilterOpen && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase">Buscar por nome</label>
             <div className="relative">
@@ -250,11 +260,12 @@ const Dashboard: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 no-print">
         <StatCard title="Militares (Filtrados)" value={stats.total} icon={<Users size={24} />} color="bg-orange-50 text-orange-600" />
-        <StatCard title="Dias Gozados" value={`${stats.gozados} dias`} icon={<CalendarCheck size={24} />} color="bg-green-50 text-green-600" />
+        <StatCard title="Dias Cumpridos" value={`${stats.gozados} dias`} icon={<CalendarCheck size={24} />} color="bg-green-50 text-green-600" />
         <StatCard title="Dias Restantes" value={`${stats.restantes} dias`} icon={<CalendarDays size={24} />} color="bg-amber-50 text-amber-600" />
         <StatCard title="Taxa de Conclusão" value={`${stats.completion}%`} icon={<TrendingUp size={24} />} color="bg-blue-50 text-blue-600" />
       </div>

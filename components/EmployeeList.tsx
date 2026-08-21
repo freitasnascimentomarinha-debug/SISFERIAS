@@ -102,7 +102,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear }) 
             </div>
 
             <div className="flex flex-nowrap gap-1.5 mb-4 overflow-x-auto pb-1 scrollbar-hide">
-              <Badge icon={<BadgeCheck size={12}/>} label={`${gozadosTotal}d gozados`} color="text-green-600 bg-green-50 border-green-100" />
+              <Badge icon={<BadgeCheck size={12}/>} label={`${gozadosTotal}d cumpridos`} color="text-green-600 bg-green-50 border-green-100" />
               <Badge icon={<Clock size={12}/>} label={`${restantesTotal}d restantes`} color="text-amber-600 bg-amber-50 border-amber-100" />
               <Badge icon={<CalendarCheck size={12}/>} label={`${planned}d planejados`} color="text-blue-600 bg-blue-50 border-blue-100" />
               <Badge icon={<CalendarX size={12}/>} label={`${toSchedule}d a planejar`} color="text-purple-600 bg-purple-50 border-purple-100" />
@@ -118,7 +118,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear }) 
 
                 let status = 'Pendente';
                 let statusColor = 'text-amber-500';
-                if (isAfter(now, pEnd)) { status = 'Gozado'; statusColor = 'text-green-500'; }
+                if (isAfter(now, pEnd)) { status = 'Cumprido'; statusColor = 'text-green-500'; }
                 else if (!isBefore(now, pStart) && !isAfter(now, pEnd)) { status = 'Em andamento'; statusColor = 'text-red-600'; }
 
                 return (

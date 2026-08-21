@@ -7,6 +7,7 @@ import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
 import { supabase } from '../lib/supabase';
+import { normalizeText } from '../lib/textUtils';
 
 const Security: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
@@ -168,14 +169,14 @@ const Security: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     return users.filter(u =>
-      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      normalizeText(u.name).includes(normalizeText(userSearch)) ||
       u.email.toLowerCase().includes(userSearch.toLowerCase())
     );
   }, [userSearch, users]);
 
   const filteredAccountUsers = useMemo(() => {
     return users.filter(u =>
-      u.name.toLowerCase().includes(accountSearch.toLowerCase()) ||
+      normalizeText(u.name).includes(normalizeText(accountSearch)) ||
       u.email.toLowerCase().includes(accountSearch.toLowerCase())
     );
   }, [accountSearch, users]);
@@ -198,13 +199,13 @@ const Security: React.FC = () => {
   }, [logSearch, auditLogs, logStart, logEnd]);
 
   const filteredSuggestions = useMemo(() => {
-    const term = suggestionSearch.trim().toLowerCase();
+    const term = normalizeText(suggestionSearch.trim());
     if (!term) return suggestions;
     return suggestions.filter(item =>
-      item.warName.toLowerCase().includes(term) ||
+      normalizeText(item.warName).includes(term) ||
       item.title.toLowerCase().includes(term) ||
       item.description.toLowerCase().includes(term) ||
-      item.userName.toLowerCase().includes(term)
+      normalizeText(item.userName).includes(term)
     );
   }, [suggestions, suggestionSearch]);
 
@@ -387,7 +388,7 @@ const Security: React.FC = () => {
 
   const adminUsers = useMemo(() => {
     return users.filter(u => u.role === 'admin').filter(u =>
-      u.name.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
+      normalizeText(u.name).includes(normalizeText(visibilitySearch)) ||
       u.email.toLowerCase().includes(visibilitySearch.toLowerCase()) ||
       getResolvedSector(u).toLowerCase().includes(visibilitySearch.toLowerCase())
     );
@@ -428,14 +429,14 @@ const Security: React.FC = () => {
   }, [employees, users]);
 
   const filteredTrackingRows = useMemo(() => {
-    const term = trackingSearch.trim().toLowerCase();
+    const term = normalizeText(trackingSearch.trim());
     return trackingRows.filter(row => {
       const matchYear = trackingYearFilter === 'all' || row.planningYear.toString() === trackingYearFilter;
       if (!matchYear) return false;
       if (!term) return true;
       return (
-        row.employeeName.toLowerCase().includes(term) ||
-        row.warName.toLowerCase().includes(term) ||
+        normalizeText(row.employeeName).includes(term) ||
+        normalizeText(row.warName).includes(term) ||
         row.rank.toLowerCase().includes(term) ||
         row.sector.toLowerCase().includes(term) ||
         row.ownerEmail.toLowerCase().includes(term) ||

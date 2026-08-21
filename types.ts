@@ -1,7 +1,7 @@
 
 export type MilitaryCategory = 'praca' | 'oficial' | 'civil';
 
-export type VacationStatus = 'Pendente' | 'Em andamento' | 'Gozado';
+export type VacationStatus = 'Pendente' | 'Em andamento' | 'Cumprido';
 
 export interface VacationParcel {
   id: string;

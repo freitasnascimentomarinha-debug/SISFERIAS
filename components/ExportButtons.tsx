@@ -45,7 +45,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
         const pStart = safeParseDate(p.startDate);
         const pEnd = safeParseDate(p.endDate);
         let status = 'Pendente';
-        if (isValid(pEnd) && isAfter(now, pEnd)) status = 'Gozado';
+        if (isValid(pEnd) && isAfter(now, pEnd)) status = 'Cumprido';
         else if (isValid(pStart) && isValid(pEnd) && !isBefore(now, pStart) && !isAfter(now, pEnd)) status = 'Em andamento';
         rows.push([
           emp.nip, emp.warName, emp.rank, emp.sector, (emp.planningYear || '---').toString(), (idx + 1).toString(),
@@ -165,7 +165,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
         let diasGozadosNestaParcela = 0;
 
         if (isValid(pEnd) && isAfter(now, pEnd)) {
-          status = 'Gozado';
+          status = 'Cumprido';
           diasGozadosNestaParcela = p.days;
         } else if (isValid(pStart) && isValid(pEnd) && !isBefore(now, pStart) && !isAfter(now, pEnd)) {
           status = 'Em andamento';
@@ -198,7 +198,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
         <tr class="summary-row">
           <td colspan="5" align="right"><b>TOTAL: ${emp.rank} ${emp.warName}</b></td>
           <td align="center"><b>Direito: ${emp.totalVacationDays}d</b></td>
-          <td align="center"><b>Gozado: ${totalGozadoMilitar}d</b></td>
+          <td align="center"><b>Cumprido: ${totalGozadoMilitar}d</b></td>
           <td align="center"><b>Restante: ${saldoRestante}d</b></td>
         </tr>
       `;
@@ -273,7 +273,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
               <div class="sub">registros</div>
             </div>
             <div class="card">
-              <div class="label">Dias Gozados</div>
+              <div class="label">Dias Cumpridos</div>
               <div class="value">${totalGozadosGlobal}</div>
               <div class="sub">dias computados</div>
             </div>
@@ -330,7 +330,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
                 <th width="5%">Parc.</th>
                 <th width="20%">Período</th>
                 <th width="8%">Duração</th>
-                <th width="8%">Gozados</th>
+                <th width="8%">Cumpridos</th>
                 <th width="15%">Status</th>
               </tr>
             </thead>

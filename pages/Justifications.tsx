@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Building2, Filter, MessageSquare, Search, ShieldCheck, User as UserIcon, Users } from 'lucide-react';
 import { useVacation } from '../contexts/VacationContext';
 import { SECTORS } from '../types';
+import { normalizeText } from '../lib/textUtils';
 
 const Justifications: React.FC = () => {
   const { employees } = useVacation();
@@ -25,8 +26,8 @@ const Justifications: React.FC = () => {
   const filteredJustifications = useMemo(() => {
     return employees.filter(e => {
       const hasJustif = e.justification && e.justification.trim().length > 0;
-      const matchText = e.warName.toLowerCase().includes(justifSearch.toLowerCase()) ||
-        e.name.toLowerCase().includes(justifSearch.toLowerCase());
+      const matchText = normalizeText(e.warName).includes(normalizeText(justifSearch)) ||
+        normalizeText(e.name).includes(normalizeText(justifSearch));
       const matchSector = justifSector === 'all' || e.sector === justifSector;
       const matchYear = justifYear === 'all' || (e.planningYear || 0).toString() === justifYear;
       return hasJustif && matchText && matchSector && matchYear;

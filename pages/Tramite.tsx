@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, FileText, Filter, Pencil, Save, Search, ShieldCheck, X } from 'lucide-react';
 import { format, startOfDay, subDays } from 'date-fns';
 import { useVacation } from '../contexts/VacationContext';
+import { normalizeText } from '../lib/textUtils';
 
 const Tramite: React.FC = () => {
   const { employees, updateParcelNup } = useVacation();
@@ -78,7 +79,7 @@ const Tramite: React.FC = () => {
   }, [trackingRows]);
 
   const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = normalizeText(search.trim());
 
     return trackingRows.filter(row => {
       const matchYear = yearFilter === 'all' || row.planningYear.toString() === yearFilter;
@@ -94,8 +95,8 @@ const Tramite: React.FC = () => {
       if (!term) return true;
 
       return (
-        row.employeeName.toLowerCase().includes(term) ||
-        row.warName.toLowerCase().includes(term) ||
+        normalizeText(row.employeeName).includes(term) ||
+        normalizeText(row.warName).includes(term) ||
         row.rank.toLowerCase().includes(term) ||
         row.sector.toLowerCase().includes(term) ||
         row.nup.toLowerCase().includes(term)
