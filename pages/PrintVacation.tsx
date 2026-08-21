@@ -167,20 +167,24 @@ const PrintVacation: React.FC = () => {
 
     let cancelled = false;
     const switchedUser = lastLoadedUserRef.current !== targetUserId;
-
-    // Reseta apenas quando realmente troca o militar-alvo, evitando piscada dos campos.
-    if (switchedUser) {
-      setPhone('');
-      setAddress(defaultAddress);
-      setObservations('');
-      setShip(defaultShip);
-      setSpecialization(defaultSpecialization);
-      setLicTime(defaultLicTime);
-      setAprTime(defaultAprTime);
-      setIsDesmuniciado(defaultIsDesmuniciado);
-    }
-
     const fallbackData = parseStoredData(localStorage.getItem(storageKey));
+
+    // Ao trocar de militar, aplica imediatamente o fallback local (quando existir)
+    // para evitar qualquer flash visual de campos vazios.
+    if (switchedUser) {
+      if (Object.keys(fallbackData).length > 0) {
+        applyFormData(fallbackData);
+      } else {
+        setPhone('');
+        setAddress(defaultAddress);
+        setObservations('');
+        setShip(defaultShip);
+        setSpecialization(defaultSpecialization);
+        setLicTime(defaultLicTime);
+        setAprTime(defaultAprTime);
+        setIsDesmuniciado(defaultIsDesmuniciado);
+      }
+    }
 
     const loadPreferences = async () => {
       const { data: dbData } = await supabase
@@ -212,7 +216,7 @@ const PrintVacation: React.FC = () => {
         return;
       }
 
-      if (Object.keys(fallbackData).length > 0) {
+      if (!switchedUser && Object.keys(fallbackData).length > 0) {
         applyFormData(fallbackData);
       } else {
         if (settings.encPessoal) setEncarregadoDep(settings.encPessoal);
