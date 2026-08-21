@@ -84,7 +84,8 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
           sector: e.sector || '',
           category: e.category || 'praca',
           rank: e.rank || '',
-          planningYear: e.planning_year || new Date().getFullYear(),
+          // Registros legados sem planning_year devem cair na janela corrente (direito do ano anterior)
+          planningYear: e.planning_year || (new Date().getFullYear() - 1),
           totalVacationDays: e.total_vacation_days || 30,
           vacationParcels: parcels,
           photoUrl: e.photo_url,

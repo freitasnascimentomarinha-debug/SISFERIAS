@@ -27,6 +27,7 @@ const CalendarView: React.FC = () => {
   const [filterUserId, setFilterUserId] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('year');
+  const selectedWindowYear = currentDate.getFullYear();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -46,14 +47,17 @@ const CalendarView: React.FC = () => {
     return [...new Set(fromEmployees)].sort();
   }, [employees]);
 
-  // Militares considerando os filtros ativos (usuário + setor)
+  // Militares considerando filtros ativos (usuário + setor + janela do ano exibido)
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       if (filterUserId !== 'all' && emp.userId !== filterUserId) return false;
       if (sectorFilter !== 'all' && emp.sector !== sectorFilter) return false;
+      const rightYear = emp.planningYear || (selectedWindowYear - 1);
+      const windowYear = rightYear + 1;
+      if (windowYear !== selectedWindowYear) return false;
       return true;
     });
-  }, [employees, filterUserId, sectorFilter]);
+  }, [employees, filterUserId, sectorFilter, selectedWindowYear]);
 
   // Função para pegar férias de um dia específico
   const getDayVacations = (day: Date) => {
