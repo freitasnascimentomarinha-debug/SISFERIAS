@@ -1,0 +1,35 @@
+# Gera o pacote pronto para uso (sem precisar de internet na instalação)
+# sempre que uma versão é publicada com uma tag "v*" (ex.: v2.0.0).
+# O arquivo sisferias-vX.Y.Z.zip fica disponível na página "Releases".
+name: Pacote de instalação
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pacote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run pacote
+      - name: Compactar
+        run: cd pacote && zip -rq "../sisferias-${GITHUB_REF_NAME}.zip" sisferias
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sisferias-${{ github.ref_name }}
+          path: sisferias-*.zip
+      - name: Publicar na página de Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sisferias-*.zip

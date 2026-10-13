@@ -40,6 +40,7 @@ export interface User {
   role: 'admin' | 'user';
   isBlocked?: boolean;
   viewAllSectors?: boolean;
+  hasPassword?: boolean;
 }
 
 export interface AuditLog {

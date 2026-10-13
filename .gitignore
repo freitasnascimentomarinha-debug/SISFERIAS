@@ -25,3 +25,11 @@ dist-ssr
 node_modules
 .env
 .env.local
+
+# Dados do SISFERIAS (banco, backups e senha inicial) - nunca enviar ao GitHub
+data/
+dados/
+*.db
+*.db-wal
+*.db-shm
+pacote/

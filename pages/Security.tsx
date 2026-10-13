@@ -2,18 +2,19 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save, Lightbulb } from 'lucide-react';
+import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save, Lightbulb, Database } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
+import DataManagement from '../components/DataManagement';
 import { normalizeText } from '../lib/textUtils';
 
 const Security: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const [authError, setAuthError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking' | 'suggestions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking' | 'suggestions' | 'data'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -74,10 +75,12 @@ const Security: React.FC = () => {
 
       if (isAfter(new Date(), deadlineDate)) {
         if (isAfter(new Date(), deadlineDate)) {
-          supabase.rpc('admin_update_block_status', { target_status: true }).then(() => {
-            // Update local state visuals efficiently
-            batchUpdateBlockStatus(true);
-          });
+          api.post('/profiles/block-all', { status: true })
+            .then(() => {
+              // Update local state visuals efficiently
+              batchUpdateBlockStatus(true);
+            })
+            .catch(error => console.error('Erro ao bloquear lançamentos:', error));
           lastProcessedDeadline.current = deadline;
         }
       }
@@ -696,9 +699,14 @@ const Security: React.FC = () => {
         <TabButton icon={<Lightbulb size={18} />} label="Sugestões" active={activeTab === 'suggestions'} onClick={() => setActiveTab('suggestions')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+        {user?.role === 'admin' && (
+          <TabButton icon={<Database size={18} />} label="Dados e Backup" active={activeTab === 'data'} onClick={() => setActiveTab('data')} />
+        )}
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        {activeTab === 'data' && user?.role === 'admin' && <DataManagement />}
+
         {activeTab === 'settings' && (
           <div className="p-8 animate-in fade-in duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -937,7 +945,12 @@ const Security: React.FC = () => {
                         onClick={async () => {
                           setDeadline('');
                           lastProcessedDeadline.current = null;
-                          await supabase.rpc('admin_update_block_status', { target_status: false });
+                          try {
+                            await api.post('/profiles/block-all', { status: false });
+                          } catch (error) {
+                            alert('Erro ao liberar lançamentos: ' + (error instanceof Error ? error.message : ''));
+                            return;
+                          }
                           // Update local state efficiently
                           batchUpdateBlockStatus(false);
                           addAuditLog({ userName: 'Admin', action: 'Bloqueio', field: 'Prazo Limpo', oldValue: 'Com Prazo', newValue: 'Liberado para Todos' });
@@ -1042,6 +1055,11 @@ const Security: React.FC = () => {
                           <span className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${u.role === 'admin' ? 'text-orange-500' : 'text-slate-400'}`}>
                             {u.role === 'admin' ? 'Acesso Administrativo' : 'Acesso Padrão'}
                           </span>
+                          {u.hasPassword === false && (
+                            <span className="text-[10px] font-black uppercase tracking-widest mt-0.5 text-red-500">
+                              Sem senha — defina uma para liberar o acesso
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-4 text-slate-500">

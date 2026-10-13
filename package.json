@@ -1,26 +1,39 @@
 {
-  "name": "sisférias---marinha-do-brasil",
+  "name": "sisferias",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "description": "SISFERIAS - sistema de planejamento e controle de férias para rede interna",
   "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
-    "dev": "vite",
+    "start": "node server/start.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite",
+    "dev:server": "node --watch server/start.js",
+    "preview": "vite build && node server/start.js",
+    "backup": "node server/start.js backup",
+    "admin": "node server/start.js admin",
+    "pacote": "node scripts/pacote.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.93.3",
+    "bcryptjs": "^3.0.3",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.6.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.3",
     "lucide-react": "^0.563.0",
+    "postcss": "^8.5.30",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.13.0",
-    "recharts": "^3.7.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "recharts": "^3.7.0",
+    "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

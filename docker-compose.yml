@@ -1,0 +1,12 @@
+services:
+  sisferias:
+    build: .
+    container_name: sisferias
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Banco de dados e backups ficam nesta pasta, fora do container.
+      - ./data:/app/data
+    environment:
+      - TZ=America/Sao_Paulo
