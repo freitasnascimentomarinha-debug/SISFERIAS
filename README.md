@@ -8,6 +8,8 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 - **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário.
 - **Importação e exportação** pela própria tela, incluindo a migração do Supabase com preservação das senhas.
 
+> **Vai instalar ou administrar o sistema?** Comece pelo guia passo a passo **[INSTALACAO.md](INSTALACAO.md)**: instalação, primeiro acesso, quem administra, recuperação de acesso e backups, em linguagem simples.
+
 ---
 
 ## 1. Instalação rápida (Windows)

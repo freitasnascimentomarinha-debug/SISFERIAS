@@ -169,7 +169,8 @@ function migrate() {
   }
 }
 
-function seed() {
+/** Dados iniciais e verificação do administrador (chamado ao iniciar o servidor). */
+export function seed() {
   const hasSettings = db.prepare('SELECT 1 FROM system_settings WHERE id = 1').get();
   if (!hasSettings) {
     upsertRow('system_settings', { id: 1, institution_name: 'MARINHA DO BRASIL', total_manpower: 100, staff_json: {} });
@@ -182,7 +183,26 @@ function seed() {
 
   const email = config.adminEmail;
   const existing = db.prepare('SELECT id FROM auth_users WHERE email = ?').get(email);
-  if (existing) return; // conta já existe (sem perfil admin); não sobrescrever
+  if (existing) {
+    // A conta inicial existe, mas não é admin ou está sem senha: não a
+    // sobrescrevemos, apenas avisamos como recuperar o acesso.
+    console.warn([
+      '',
+      '!'.repeat(60),
+      'ATENÇÃO: nenhuma conta de ADMINISTRADOR com senha foi encontrada.',
+      'Ninguém conseguirá acessar a área de Segurança até isso ser resolvido.',
+      '',
+      'Para recuperar o acesso, feche o SISFERIAS e execute nesta pasta:',
+      '    npm run admin -- --senha NOVA_SENHA',
+      'Para dar acesso de administrador a uma conta específica:',
+      '    npm run admin -- --login NIP_OU_EMAIL --senha NOVA_SENHA',
+      '',
+      'Mais detalhes no arquivo INSTALACAO.md.',
+      '!'.repeat(60),
+      '',
+    ].join('\n'));
+    return;
+  }
 
   const password = config.adminPassword || crypto.randomBytes(6).toString('base64url');
   const id = newId();
@@ -200,7 +220,8 @@ function seed() {
     `Login (NIP): admin    ou e-mail: ${email}`,
     `Senha: ${password}`,
     '',
-    'Troque esta senha após o primeiro acesso e apague este arquivo.',
+    'Troque esta senha após o primeiro acesso (Segurança > Sistema > Alterar Minha Senha)',
+    'e apague este arquivo. Guia completo: INSTALACAO.md',
   ].join('\n');
   if (!config.adminPassword) {
     fs.writeFileSync(path.join(config.dataDir, 'ADMIN_INICIAL.txt'), info + '\n', { mode: 0o600 });
@@ -209,4 +230,3 @@ function seed() {
 }
 
 migrate();
-seed();

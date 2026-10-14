@@ -19,7 +19,7 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 
 const items = ['dist', 'server', 'scripts', 'package.json', 'package-lock.json',
-  'iniciar.bat', 'iniciar.sh', 'README.md'];
+  'iniciar.bat', 'iniciar.sh', 'README.md', 'INSTALACAO.md'];
 for (const item of items) {
   const src = path.join(root, item);
   if (fs.existsSync(src)) fs.cpSync(src, path.join(out, item), { recursive: true });

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import { config } from './config.js';
-import './db.js'; // abre o banco, aplica migrações e cria o admin inicial
+import { seed } from './db.js'; // abre o banco e aplica as migrações
 import { api } from './api.js';
 import { loadSession, requireAppHeader, purgeExpiredSessions } from './auth.js';
 import { scheduleDailyBackup } from './backup.js';
@@ -32,6 +32,7 @@ if (fs.existsSync(path.join(config.distDir, 'index.html'))) {
     .send('Interface não compilada. Execute "npm run build" e reinicie o servidor.'));
 }
 
+seed(); // configurações padrão e administrador inicial
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 6 * 60 * 60_000).unref();
 scheduleDailyBackup();
