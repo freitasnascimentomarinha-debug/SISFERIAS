@@ -18,8 +18,8 @@ const arg = (name) => {
 
 const password = arg('senha');
 const login = arg('login') || 'admin';
-if (!password || password.length < 4) {
-  console.error('Uso: npm run admin -- [--login NIP_OU_EMAIL] --senha NOVA_SENHA   (mínimo 4 caracteres)');
+if (!password || password.length < config.minPasswordLength) {
+  console.error(`Uso: npm run admin -- [--login NIP_OU_EMAIL] --senha NOVA_SENHA   (mínimo ${config.minPasswordLength} caracteres)`);
   process.exit(1);
 }
 

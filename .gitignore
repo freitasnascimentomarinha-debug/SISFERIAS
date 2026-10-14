@@ -33,3 +33,6 @@ dados/
 *.db-wal
 *.db-shm
 pacote/
+
+# Resultados dos testes de navegador
+e2e-resultados/

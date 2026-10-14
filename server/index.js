@@ -39,7 +39,7 @@ setInterval(purgeExpiredSessions, 6 * 60 * 60_000).unref();
 scheduleDailyBackup();
 scheduleDeadlineCheck();
 
-app.listen(config.port, config.host, () => {
+const server = app.listen(config.port, config.host, () => {
   const addresses = Object.values(os.networkInterfaces())
     .flat()
     .filter(i => i && i.family === 'IPv4' && !i.internal)
@@ -49,4 +49,14 @@ app.listen(config.port, config.host, () => {
   for (const a of addresses) console.log(`  Na rede:           ${a}`);
   console.log(`  Banco de dados:    ${config.dbFile}`);
   console.log('Para encerrar, feche esta janela ou pressione Ctrl+C.');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\nA porta ${config.port} já está em uso.`);
+    console.error('O SISFERIAS provavelmente já está rodando neste computador (talvez como serviço).');
+    console.error(`Abra http://localhost:${config.port} no navegador, ou feche a outra instância.\n`);
+    process.exit(1);
+  }
+  throw err;
 });

@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Sun, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X, MessageSquare } from 'lucide-react';
+import { LogOut, Sun, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X, MessageSquare, Key } from 'lucide-react';
+import ChangePasswordModal from './ChangePasswordModal';
 import { Link, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
 
   if (!user) return null;
 
@@ -67,6 +69,14 @@ const Header: React.FC = () => {
               <p className="text-sm font-medium text-slate-900">Olá, {user.name.split(' ')[0]}</p>
               <p className="text-xs text-slate-500 font-bold">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsPasswordOpen(true)}
+              className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+              title="Alterar minha senha"
+            >
+              <Key size={20} />
+            </button>
             <button
               type="button"
               onClick={logout}
@@ -134,6 +144,13 @@ const Header: React.FC = () => {
                 </div>
               </div>
               <button
+                onClick={() => { setIsSidebarOpen(false); setIsPasswordOpen(true); }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-orange-600 rounded-lg transition-colors"
+              >
+                <Key size={20} />
+                Alterar minha senha
+              </button>
+              <button
                 onClick={logout}
                 className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-orange-600 rounded-lg transition-colors"
               >
@@ -144,6 +161,8 @@ const Header: React.FC = () => {
           </nav>
         </div>
       )}
+
+      {isPasswordOpen && <ChangePasswordModal onClose={() => setIsPasswordOpen(false)} />}
     </>
   );
 };

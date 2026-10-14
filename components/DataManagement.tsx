@@ -43,6 +43,8 @@ interface Stats {
   counts: Record<string, number>;
   dbFile: string;
   backups: { file: string; size: number; createdAt: string }[];
+  backupCopyDir: string | null;
+  backupCopyStatus: { ok: boolean; at: string; file: string; message?: string } | null;
 }
 
 const tableList = (report: ImportReport) => Object.values(report.tables) as TableReport[];
@@ -62,10 +64,13 @@ const DataManagement: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [copyDir, setCopyDir] = useState('');
 
   const loadStats = async () => {
     try {
-      setStats(await api.get<Stats>('/admin/stats'));
+      const s = await api.get<Stats>('/admin/stats');
+      setStats(s);
+      setCopyDir(s.backupCopyDir || '');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar a situação do banco.');
     }
@@ -142,6 +147,21 @@ const DataManagement: React.FC = () => {
     }
   };
 
+  const saveCopyDir = async (dir: string) => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const r = await api.put<{ backupCopyDir: string | null }>('/admin/backup-copy', { dir });
+      setMessage(r.backupCopyDir ? `Pasta configurada. Uma cópia de teste já foi gravada em ${r.backupCopyDir}.` : 'Cópia extra desativada.');
+      void loadStats();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao configurar a pasta.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const hasProblems = !!preview && preview.problems.length > 0;
 
   return (
@@ -205,6 +225,48 @@ const DataManagement: React.FC = () => {
             <Save size={16} /> Criar backup agora
           </button>
         </div>
+        <div className="mb-4 p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+            Copiar cada backup também para esta pasta (rede, outro disco ou pen drive)
+          </label>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              value={copyDir}
+              onChange={e => setCopyDir(e.target.value)}
+              placeholder="Ex.: \\servidor\backups\sisferias  ou  D:\Backups\SISFERIAS"
+              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <button
+              disabled={busy || !copyDir.trim()}
+              onClick={() => void saveCopyDir(copyDir)}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              Salvar e testar
+            </button>
+            {stats?.backupCopyDir && (
+              <button
+                disabled={busy}
+                onClick={() => void saveCopyDir('')}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+              >
+                Desativar
+              </button>
+            )}
+          </div>
+          {stats?.backupCopyStatus && (
+            <p className={`text-xs font-bold ${stats.backupCopyStatus.ok ? 'text-green-600' : 'text-red-600'}`}>
+              {stats.backupCopyStatus.ok
+                ? `Última cópia: ${formatDate(stats.backupCopyStatus.at)} (${stats.backupCopyStatus.file})`
+                : `A última cópia FALHOU em ${formatDate(stats.backupCopyStatus.at)}: ${stats.backupCopyStatus.message}`}
+            </p>
+          )}
+          <p className="text-[11px] text-slate-400">
+            Se o SISFERIAS roda como serviço do Windows, use o caminho de rede completo (\\servidor\pasta), não uma letra de unidade mapeada,
+            e libere na pasta compartilhada a gravação para a conta do computador servidor.
+          </p>
+        </div>
+
         {stats && stats.backups.length > 0 && (
           <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
             {stats.backups.map(b => (

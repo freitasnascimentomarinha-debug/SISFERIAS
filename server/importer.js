@@ -172,6 +172,12 @@ function prepareRow(table, raw) {
     data[col] = v;
   }
 
+  // A pasta de cópia dos backups é própria de cada servidor: não é importada.
+  if (table === 'system_settings') {
+    delete data.backup_copy_dir;
+    delete data.backup_copy_status;
+  }
+
   for (const key of spec.key) {
     if (data[key] === undefined) {
       if (table === 'system_settings') data.id = 1;

@@ -715,7 +715,7 @@ const PrintVacation: React.FC = () => {
                    )}
                  </div>
                  {!currentInputNup && employee && parcel && (
-                   <p className="text-[10px] text-amber-700 font-semibold">Esta parcela ainda nao possui NUP confirmado no campo de edicao atual.</p>
+                   <p className="text-[10px] text-amber-700 font-semibold">Esta parcela ainda não possui NUP confirmado no campo de edição atual.</p>
                  )}
                </div>
                {printError && (

@@ -91,6 +91,9 @@ export interface SystemSettings {
   vacationDeadline?: string | null;
 }
 
+/** Tamanho mínimo de senha (o servidor aplica a mesma regra). */
+export const MIN_PASSWORD_LENGTH = 6;
+
 export const SECTORS = ['01', '02', 'Secom', '10', '20', '30', '40', '50', '60', '70', 'Outro'];
 
 export const PRACA_RANKS = ['RC', 'MN', 'CB', '3SG', '2SG', '1SG', 'SO'];

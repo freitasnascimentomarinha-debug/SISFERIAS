@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Sun, Mail, Lock, User, Eye, EyeOff, AlertTriangle, CheckCircle2, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
+import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, MIN_PASSWORD_LENGTH } from '../types';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -33,6 +33,10 @@ const Register: React.FC = () => {
     setError('');
     setSuccess('');
     
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
     if (password !== confirmPass) {
       setError('As senhas não coincidem!');
       return;
@@ -78,9 +82,9 @@ const Register: React.FC = () => {
         result.errorCode === 'user_already_exists';
 
       if (isDuplicatedEmail) {
-        setError('Este e-mail ja esta cadastrado no sistema.');
+        setError('Este e-mail já está cadastrado no sistema.');
       } else {
-        setError(result.errorMessage || 'Nao foi possivel concluir o cadastro. Tente novamente.');
+        setError(result.errorMessage || 'Não foi possível concluir o cadastro. Tente novamente.');
       }
     }
     setLoading(false);

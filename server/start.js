@@ -12,7 +12,9 @@ process.on('warning', (w) => {
   if (w.name !== 'ExperimentalWarning') console.warn(w);
 });
 
-const target = process.argv[2] === 'admin' ? '../scripts/admin.js'
-  : process.argv[2] === 'backup' ? '../scripts/backup.js'
-  : './index.js';
+const target = {
+  admin: '../scripts/admin.js',        // npm run admin -- --senha X
+  backup: '../scripts/backup.js',      // npm run backup
+  servico: './supervisor.js',          // modo serviço (sem janela, reinicia se cair)
+}[process.argv[2]] || './index.js';
 await import(target);
