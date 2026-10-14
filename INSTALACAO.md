@@ -147,6 +147,25 @@ Sobre a área de Segurança:
 - **Usuários comuns:** não veem a área no menu, e o servidor recusa qualquer ação
   administrativa vinda deles.
 
+### Prazo final de lançamento
+
+Em **Segurança → Usuários → Prazo Final de Lançamento** o administrador define a data limite:
+
+- **Para todos:** o prazo fica gravado no servidor e vale para todos os administradores, em qualquer computador.
+- **Bloqueio automático:** quando o dia do prazo termina, o sistema bloqueia os lançamentos de **todos** os usuários,
+  mesmo que ninguém esteja com a tela aberta. Contas criadas depois disso já nascem bloqueadas.
+- **Exceções:** se o administrador liberar alguém manualmente depois do prazo, essa pessoa continua liberada.
+- **Remover o prazo:** o botão ao lado da data remove o prazo e libera todos.
+
+### Atualização das telas
+
+As telas buscam os dados mais recentes sozinhas: ao trocar de tela ou de aba na Segurança, ao voltar
+para a janela do navegador e a cada 1 minuto. Não é preciso apertar F5 para ver o que outras pessoas lançaram.
+
+### Auditoria
+
+Toda ação fica registrada com o **nome de quem a fez**, inclusive entre vários administradores.
+
 Para **dar ou tirar** o acesso de administrador: **Segurança → Gestão de Contas** →
 botão de nível de acesso ao lado do nome.
 
@@ -196,11 +215,12 @@ não consegue usá-lo.
 
 ---
 
-## 7. Trazer os dados do sistema antigo (Supabase)
+## 7. Trazer dados de outro lugar
 
-Resumo. O passo a passo completo está no `README.md`, seção 3.
+Resumo. Os formatos aceitos estão no `README.md`, seção 3.
 
-1. No Supabase, exporte cada tabela em CSV e o CSV de `auth.users`, que mantém as senhas.
+1. Tenha em mãos o **backup completo (.json)** de outro servidor SISFERIAS ou os **CSVs** das tabelas.
+   Opcionalmente, inclua o CSV de usuários e senhas criptografadas, para manter as senhas.
 2. No SISFERIAS: **Segurança → Dados e Backup → Importar Dados**.
 3. Selecione todos os arquivos e clique em **Analisar arquivos**. Nada é gravado nessa etapa.
 4. Confira o resumo e clique em **Importar**. Um backup é feito antes, automaticamente.

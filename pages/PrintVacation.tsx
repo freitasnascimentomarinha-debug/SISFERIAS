@@ -381,11 +381,20 @@ const PrintVacation: React.FC = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return alert("Por favor, habilite pop-ups.");
 
+    // Usa o estilo já compilado do próprio sistema (funciona sem internet).
+    // Em desenvolvimento o Vite injeta os estilos em <style data-vite-dev-id>.
+    const appStyles = [
+      ...Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
+        .map(link => `<link rel="stylesheet" href="${link.href}">`),
+      ...Array.from(document.querySelectorAll<HTMLStyleElement>('style[data-vite-dev-id]'))
+        .map(style => `<style>${style.textContent || ''}</style>`),
+    ].join('\n');
+
     printWindow.document.write(`
       <html>
         <head>
           <title>Papeleta MB - ${employee.warName}</title>
-          <script src="https://cdn.tailwindcss.com"></script>
+          ${appStyles}
           <style>
             @media print {
               body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }

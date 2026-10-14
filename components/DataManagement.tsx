@@ -259,10 +259,10 @@ const DataManagement: React.FC = () => {
           <Upload className="text-orange-500" size={24} /> Importar Dados
         </h3>
         <div className="text-sm text-slate-500 mb-4 space-y-1">
-          <p>Aceita o backup completo do SISFERIAS (.json) ou CSVs exportados do Supabase, um por tabela.</p>
+          <p>Aceita o backup completo do SISFERIAS (.json) ou CSVs, um por tabela (mesmas colunas dos CSVs exportados acima).</p>
           <p>
-            Para manter as senhas atuais vindas do Supabase, inclua também o CSV de <code className="bg-slate-100 px-1 rounded">auth.users</code>{' '}
-            com as colunas <code className="bg-slate-100 px-1 rounded">id, email, encrypted_password</code>.
+            Para manter as senhas, inclua também um CSV de usuários com as colunas{' '}
+            <code className="bg-slate-100 px-1 rounded">id, email, password_hash</code> (senha em bcrypt).
           </p>
           <p>Nada é gravado na análise. Importar o mesmo arquivo duas vezes não duplica registros.</p>
         </div>

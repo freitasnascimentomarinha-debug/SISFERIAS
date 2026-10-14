@@ -61,6 +61,8 @@ export const TABLES = {
       total_manpower: 'int',
       logo_url: 'text',
       staff_json: 'json',
+      vacation_deadline: 'text',
+      deadline_applied_for: 'text',
       created_at: 'text',
       updated_at: 'text',
     },
@@ -264,5 +266,11 @@ export const MIGRATIONS = [
     version: 2,
     name: 'confirmação de senha para a área de Segurança',
     sql: 'ALTER TABLE sessions ADD COLUMN elevated_until TEXT;',
+  },
+  {
+    version: 3,
+    name: 'prazo final de lançamento controlado pelo servidor',
+    sql: `ALTER TABLE system_settings ADD COLUMN vacation_deadline TEXT;
+          ALTER TABLE system_settings ADD COLUMN deadline_applied_for TEXT;`,
   },
 ];

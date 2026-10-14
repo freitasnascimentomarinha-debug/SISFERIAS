@@ -87,6 +87,8 @@ export interface SystemSettings {
   diretor?: StaffMember;
   viceDiretor?: StaffMember;
   encPessoal?: StaffMember;
+  // Prazo final de lançamento (AAAA-MM-DD), gravado no servidor.
+  vacationDeadline?: string | null;
 }
 
 export const SECTORS = ['01', '02', 'Secom', '10', '20', '30', '40', '50', '60', '70', 'Outro'];

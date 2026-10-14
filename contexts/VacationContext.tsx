@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Employee, AuditLog, VacationParcel, SystemSettings, Notice, StaffMember, Suggestion } from '../types';
 import { useAuth } from './AuthContext';
 import { api } from '../lib/api';
@@ -15,11 +16,13 @@ interface VacationContextType {
   getEmployeeByUserId: (userId: string) => Employee | undefined;
   addAuditLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => Promise<void>;
   updateSettings: (newSettings: SystemSettings) => Promise<void>;
+  setVacationDeadline: (deadline: string | null) => Promise<void>;
   addNotice: (notice: Omit<Notice, 'id' | 'date'>) => Promise<void>;
   deleteNotice: (id: string) => Promise<void>;
   togglePinNotice: (id: string, currentPinStatus: boolean) => Promise<void>;
   addSuggestion: (suggestion: { title: string; description: string; userId: string; userName: string; warName: string }) => Promise<void>;
   deleteSuggestion: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const defaultStaffMember = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
@@ -33,7 +36,27 @@ const defaultSettings: SystemSettings = {
   diretor: defaultStaffMember('Diretor'),
   viceDiretor: defaultStaffMember('Vice-Diretor'),
   encPessoal: defaultStaffMember('Encarregado do Dep. Pessoal'),
+  vacationDeadline: null,
 };
+
+// Intervalo da atualização automática enquanto a aba estiver visível.
+const AUTO_REFRESH_MS = 60_000;
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Mantém os mesmos objetos para os registros que não mudaram. Assim a
+ * atualização automática não reinicia formulários que o usuário está
+ * preenchendo (as telas reagem à troca de objeto, não ao conteúdo).
+ */
+function reuseUnchanged<T extends { id: string }>(prev: T[], next: T[]): T[] {
+  const byId = new Map(prev.map(item => [item.id, item]));
+  const merged = next.map(item => {
+    const old = byId.get(item.id);
+    return old && sameJson(old, item) ? old : item;
+  });
+  return merged.length === prev.length && merged.every((item, i) => item === prev[i]) ? prev : merged;
+}
 
 const VacationContext = createContext<VacationContextType | undefined>(undefined);
 
@@ -42,11 +65,32 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const { user } = useAuth();
+  const { user, fetchAllUsers } = useAuth();
+  const location = useLocation();
 
+  // Recarrega ao entrar, ao trocar de tela e quando o perfil muda.
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user, location.pathname]);
+
+  // Atualização automática: ao voltar para a aba do navegador e a cada minuto.
+  const refreshRef = useRef<() => void>(() => {});
+  refreshRef.current = () => {
+    if (!user || document.visibilityState !== 'visible') return;
+    void fetchData();
+    void fetchAllUsers();
+  };
+  useEffect(() => {
+    const onVisible = () => refreshRef.current();
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(onVisible, AUTO_REFRESH_MS);
+    return () => {
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const fetchData = async () => {
     if (!user) return;
@@ -62,9 +106,16 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
     };
 
-    // Lançamentos — o servidor aplica a regra de setor (admin vê apenas seu
-    // setor, exceto se viewAllSectors estiver ativado).
-    const empData = await safeGet<any[]>('/employees');
+    const [empData, setData, noticeData, logData, suggestionsData] = await Promise.all([
+      // Lançamentos — o servidor aplica a regra de setor (admin vê apenas seu
+      // setor, exceto se viewAllSectors estiver ativado).
+      safeGet<any[]>('/employees'),
+      safeGet<any>('/settings'),
+      safeGet<any[]>('/notices'),
+      user.role === 'admin' ? safeGet<any[]>('/audit-logs') : Promise.resolve(null),
+      safeGet<any[]>('/suggestions'),
+    ]);
+
     if (empData) {
       const mappedEmployees: Employee[] = empData.map(e => {
         let parcels = e.vacation_parcels;
@@ -90,44 +141,38 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
           justification: e.justification
         };
       });
-      setEmployees(mappedEmployees);
+      setEmployees(prev => reuseUnchanged(prev, mappedEmployees));
     }
 
-    // Fetch Settings
-    const setData = await safeGet<any>('/settings');
-    if (setData) {
-      const staff = setData.staff_json || {};
-      setSettings(prev => ({
-        ...prev,
-        institutionName: setData.institution_name,
-        totalManpower: setData.total_manpower,
-        logoUrl: setData.logo_url,
-        diretor: staff.diretor || defaultStaffMember('Diretor'),
-        viceDiretor: staff.viceDiretor || defaultStaffMember('Vice-Diretor'),
-        encPessoal: staff.encPessoal || defaultStaffMember('Encarregado do Dep. Pessoal'),
-        notices: [] // need to fetch notices separately
-      }));
+    if (setData || noticeData) {
+      setSettings(prev => {
+        const next = { ...prev };
+        if (setData) {
+          const staff = setData.staff_json || {};
+          next.institutionName = setData.institution_name;
+          next.totalManpower = setData.total_manpower;
+          next.logoUrl = setData.logo_url;
+          next.vacationDeadline = setData.vacation_deadline || null;
+          const keep = (old: StaffMember | undefined, incoming: StaffMember) => (old && sameJson(old, incoming) ? old : incoming);
+          next.diretor = keep(prev.diretor, staff.diretor || defaultStaffMember('Diretor'));
+          next.viceDiretor = keep(prev.viceDiretor, staff.viceDiretor || defaultStaffMember('Vice-Diretor'));
+          next.encPessoal = keep(prev.encPessoal, staff.encPessoal || defaultStaffMember('Encarregado do Dep. Pessoal'));
+        }
+        if (noticeData) {
+          next.notices = reuseUnchanged(prev.notices, noticeData.map(n => ({
+            id: n.id,
+            title: n.title,
+            content: n.content,
+            date: n.created_at || new Date().toISOString(),
+            isPinned: n.is_pinned
+          })));
+        }
+        return sameJson(prev, next) ? prev : next;
+      });
     }
 
-    // Fetch Notices
-    const noticeData = await safeGet<any[]>('/notices');
-    if (noticeData) {
-      setSettings(prev => ({
-        ...prev,
-        notices: noticeData.map(n => ({
-          id: n.id,
-          title: n.title,
-          content: n.content,
-          date: n.created_at || new Date().toISOString(),
-          isPinned: n.is_pinned
-        }))
-      }));
-    }
-
-    // Fetch Audit Logs
-    const logData = user.role === 'admin' ? await safeGet<any[]>('/audit-logs') : null;
     if (logData) {
-      setAuditLogs(logData.map(l => ({
+      setAuditLogs(prev => reuseUnchanged(prev, logData.map(l => ({
         id: l.id,
         timestamp: l.timestamp,
         userName: l.user_name,
@@ -135,13 +180,11 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         field: l.field,
         oldValue: l.old_value,
         newValue: l.new_value
-      })));
+      }))));
     }
 
-    const suggestionsData = await safeGet<any[]>('/suggestions');
-
     if (suggestionsData) {
-      setSuggestions(suggestionsData.map(s => ({
+      setSuggestions(prev => reuseUnchanged(prev, suggestionsData.map(s => ({
         id: s.id,
         userId: s.user_id || '',
         userName: s.user_name || '',
@@ -149,8 +192,21 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         title: s.title || '',
         description: s.description || '',
         createdAt: s.created_at || new Date().toISOString()
-      })));
+      }))));
     }
+  };
+
+  const refreshData = async () => {
+    await Promise.all([fetchData(), fetchAllUsers()]);
+  };
+
+  const setVacationDeadline = async (deadline: string | null) => {
+    try {
+      await api.put('/settings/deadline', { deadline });
+    } catch (error) {
+      alert('Erro ao salvar o prazo: ' + (error instanceof Error ? error.message : ''));
+    }
+    await refreshData();
   };
 
   const saveVacation = async (data: Employee) => {
@@ -354,8 +410,8 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     <VacationContext.Provider value={{
       employees, auditLogs, settings, suggestions,
       saveVacation, updateParcelNup, deleteVacation,
-      getEmployeeByUserId, addAuditLog, updateSettings,
-      addNotice, deleteNotice, togglePinNotice, addSuggestion, deleteSuggestion
+      getEmployeeByUserId, addAuditLog, updateSettings, setVacationDeadline,
+      addNotice, deleteNotice, togglePinNotice, addSuggestion, deleteSuggestion, refreshData
     }}>
       {children}
     </VacationContext.Provider>

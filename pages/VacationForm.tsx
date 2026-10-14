@@ -6,6 +6,7 @@ import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, Employee, VacationPar
 import { User, Shield, Calendar, ArrowLeft, Save, Info, Ban, AlertTriangle, MessageSquare, Clock, Camera, Trash2, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { differenceInDays, format, isValid, isAfter } from 'date-fns';
+import { api } from '../lib/api';
 
 const VacationForm: React.FC = () => {
   const { user, isAuthenticated, refreshUser, users, fetchAllUsers, fetchProfile } = useAuth();
@@ -207,21 +208,27 @@ const VacationForm: React.FC = () => {
   const scheduledTotal = parcels.reduce((acc, p) => acc + p.days, 0);
   const remainingDays = totalVacationDays - scheduledTotal;
 
+  // "Quadro/Esp." fica gravado no servidor (preferências de impressão do
+  // militar); o valor guardado no navegador é usado só enquanto carrega.
   useEffect(() => {
     if (!targetUserId) return;
+    let cancelled = false;
     const storageKey = `vacation_print_u_${targetUserId}_v15`;
-    const savedRaw = localStorage.getItem(storageKey);
-    if (!savedRaw) {
-      setSpecialization('');
-      return;
-    }
-
+    let localValue = '';
     try {
-      const savedData = JSON.parse(savedRaw);
-      setSpecialization((savedData?.specialization ?? '').toString());
+      const savedRaw = localStorage.getItem(storageKey);
+      localValue = savedRaw ? (JSON.parse(savedRaw)?.specialization ?? '').toString() : '';
     } catch {
-      setSpecialization('');
+      localValue = '';
     }
+    setSpecialization(localValue);
+
+    api.get<any>(`/print-preferences/${targetUserId}`)
+      .then(prefs => {
+        if (!cancelled && prefs?.specialization) setSpecialization(String(prefs.specialization));
+      })
+      .catch(() => { /* mantém o valor local */ });
+    return () => { cancelled = true; };
   }, [targetUserId]);
 
   const handleSpecializationChange = (value: string) => {
@@ -402,6 +409,8 @@ const VacationForm: React.FC = () => {
 
     try {
       await saveVacation(employeeData);
+      // Grava "Quadro/Esp." junto com o lançamento.
+      await api.put(`/print-preferences/${targetUserId}`, { specialization: specialization.trim().toUpperCase() });
       await fetchProfile(targetUserId);
       await fetchAllUsers();
       navigate('/');

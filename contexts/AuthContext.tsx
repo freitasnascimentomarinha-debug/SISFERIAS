@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   users: User[]; // Kept for interface compatibility, but might be empty or restricted
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }) => Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }>;
+  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string }) => Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   getRegisteredUsers: () => User[]; // Might need to be async or removed/deprecated
@@ -64,7 +64,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchAllUsers = async () => {
     try {
       const profiles = await api.get<any[]>('/profiles');
-      setUsers(profiles.map(mapProfile));
+      const next = profiles.map(mapProfile);
+      // Mantém os objetos que não mudaram (a atualização automática não
+      // deve reiniciar telas abertas).
+      setUsers(prev => {
+        const byId = new Map(prev.map(u => [u.id, u]));
+        const merged = next.map(u => {
+          const old = byId.get(u.id);
+          return old && JSON.stringify(old) === JSON.stringify(u) ? old : u;
+        });
+        return merged.length === prev.length && merged.every((u, i) => u === prev[i]) ? prev : merged;
+      });
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 401)) {
         console.error('Error fetching users:', error);
@@ -102,7 +112,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, _role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
+  const register = async (name: string, email: string, pass: string, _role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
     try {
       // O servidor sempre cria contas novas como 'user'; a promoção a admin
       // é feita por um administrador em Segurança.
@@ -114,7 +124,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         nip: extra?.nip || '',
         category: extra?.category || '',
         sector: extra?.sector || '',
-        rank: extra?.rank || ''
+        rank: extra?.rank || '',
+        specialization: extra?.specialization || ''
       });
       return { success: true, userId: id };
     } catch (e) {
