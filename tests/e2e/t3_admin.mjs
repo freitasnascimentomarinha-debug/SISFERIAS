@@ -3,12 +3,12 @@ import fs from 'fs';
 import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, shot, saveResults, QA, SHOTS } from './lib.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@123' };
+const ADMIN = { login: 'admin', pass: 'Admin@12345' };
 const A = {
-  ana:   { nip: '10000001', pass: 'Ana@1234',  email: 'ana@mb.mil.br',   name: 'Ana Lima' },
-  bruno: { nip: '20000002', pass: 'Bruno@123', email: 'bruno@mb.mil.br', name: 'Bruno Costa' },
-  carla: { nip: '30000003', pass: 'Carla@123', email: 'carla@mb.mil.br', name: 'Carla Dias' },
-  davi:  { nip: '40000004', pass: 'Davi@1234', email: 'davi@mb.mil.br',  name: 'Davi Rocha' },
+  ana:   { nip: '10000001', pass: 'Ana@123456',  email: 'ana@mb.mil.br',   name: 'Ana Lima' },
+  bruno: { nip: '20000002', pass: 'Bruno@12345', email: 'bruno@mb.mil.br', name: 'Bruno Costa' },
+  carla: { nip: '30000003', pass: 'Carla@12345', email: 'carla@mb.mil.br', name: 'Carla Dias' },
+  davi:  { nip: '40000004', pass: 'Davi@123456', email: 'davi@mb.mil.br',  name: 'Davi Rocha' },
 };
 const uid = (email) => db('SELECT id FROM profiles WHERE email = ?', email)[0]?.id;
 const emp = (email, year = 2025) => {
@@ -267,10 +267,11 @@ await step('admin redefine senha do Davi', async () => {
   await unlockSecurity(P, ADMIN.pass); await tab(P, 'Gestão de Contas');
   await P.locator('tr', { hasText: A.davi.email }).locator('button:has-text("Redefinir Senha")').click();
   const pw = P.locator('.fixed input[type=password]');
-  await pw.nth(0).fill('NovaDavi1'); await pw.nth(1).fill('NovaDavi1');
+  await pw.nth(0).fill('NovaDavi@1'); await pw.nth(1).fill('NovaDavi@1');
   await P.click('button:has-text("Salvar Senha")'); await P.waitForTimeout(1000);
   const { page: t } = await newSession(browser, 'davi-novo');
-  check('Davi entra com a nova senha', await login(t, A.davi.nip, 'NovaDavi1'));
+  check('Davi entra com a nova senha', await login(t, A.davi.nip, 'NovaDavi@1'));
+  check('senha redefinida pelo admin é provisória: troca obrigatória aparece', await t.isVisible('text=Defina uma Nova Senha'));
   const { page: t2 } = await newSession(browser, 'davi-velho');
   check('senha antiga do Davi deixa de funcionar', !(await login(t2, A.davi.nip, A.davi.pass)));
   const r = await api(S.davi.page, 'GET', '/auth/me');
@@ -280,11 +281,11 @@ await step('admin altera a própria senha', async () => {
   await unlockSecurity(P, ADMIN.pass); await tab(P, 'Sistema');
   await P.click('button:has-text("Alterar Minha Senha")');
   const pw = P.locator('.fixed input[type=password]');
-  await pw.nth(0).fill('Admin@456'); await pw.nth(1).fill('Admin@456');
+  await pw.nth(0).fill('Admin@45678'); await pw.nth(1).fill('Admin@45678');
   await P.click('button:has-text("Salvar Senha")'); await P.waitForTimeout(1000);
   const { page: t } = await newSession(browser, 'admin-novo');
-  check('admin entra com a nova senha', await login(t, 'admin', 'Admin@456'));
-  ADMIN.pass = 'Admin@456';
+  check('admin entra com a nova senha', await login(t, 'admin', 'Admin@45678'));
+  ADMIN.pass = 'Admin@45678';
 });
 await step('rebaixar Ana', async () => {
   await unlockSecurity(P, ADMIN.pass); await tab(P, 'Gestão de Contas');
@@ -309,7 +310,7 @@ await step('excluir conta do Davi', async () => {
   check('conta do Davi excluída', !uid(A.davi.email));
   check('lançamentos do Davi removidos', db('SELECT COUNT(*) c FROM employees WHERE user_id = ?', davi)[0].c === 0);
   const { page: t } = await newSession(browser, 'davi-excluido');
-  check('Davi não consegue mais entrar', !(await login(t, A.davi.nip, 'NovaDavi1')));
+  check('Davi não consegue mais entrar', !(await login(t, A.davi.nip, 'NovaDavi@1')));
   check('backup automático criado antes da exclusão', fs.readdirSync(`${QA}/data/backups`).some(f => f.includes('antes-exclusao-usuario')));
 });
 

@@ -550,7 +550,7 @@ const VacationForm: React.FC = () => {
           );
         })()}
 
-        <form onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
+        <form autoComplete="off" onSubmit={handleSubmit} className="p-5 lg:p-8 space-y-6">
           <fieldset disabled={isBlocked}>
             {!showNext ? (
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -593,7 +593,7 @@ const VacationForm: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase">Quantidade de dias de direito</label>
-                        <input
+                        <input autoComplete="off"
                           type="number"
                           className={`w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 font-bold ${fieldErrors.totalVacationDays ? 'bg-red-50 border-red-400 focus:ring-red-200' : 'bg-slate-50 border-slate-200 focus:ring-orange-500'}`}
                           value={totalVacationDays}
@@ -602,21 +602,21 @@ const VacationForm: React.FC = () => {
                       </div>
                       <div className="space-y-1.5 md:col-span-2 xl:col-span-3">
                         <label className="text-xs font-bold text-slate-500 uppercase">Nome Completo</label>
-                        <input required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
+                        <input autoComplete="off" required className={getInputClass(!!fieldErrors.name)} value={name} onChange={e => { setName(e.target.value); clearFieldError('name'); }} />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase">Nome de Guerra</label>
-                        <input required className={getInputClass(!!fieldErrors.warName)} value={warName} onChange={e => { setWarName(e.target.value); clearFieldError('warName'); }} />
+                        <input autoComplete="off" required className={getInputClass(!!fieldErrors.warName)} value={warName} onChange={e => { setWarName(e.target.value); clearFieldError('warName'); }} />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase">NIP</label>
-                        <input required className={getInputClass(!!fieldErrors.nip)} value={nip} onChange={e => { setNip(e.target.value); clearFieldError('nip'); }} />
+                        <input autoComplete="off" required className={getInputClass(!!fieldErrors.nip)} value={nip} onChange={e => { setNip(e.target.value); clearFieldError('nip'); }} />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase">Setor</label>
                         {isCustomSector ? (
                           <div className="flex gap-2">
-                            <input className={getInputClass(!!fieldErrors.sector, 'input-field flex-1')} value={sector} onChange={e => { setSector(e.target.value); clearFieldError('sector'); }} placeholder="Nome do novo setor" autoFocus />
+                            <input autoComplete="off" className={getInputClass(!!fieldErrors.sector, 'input-field flex-1')} value={sector} onChange={e => { setSector(e.target.value); clearFieldError('sector'); }} placeholder="Nome do novo setor" autoFocus />
                             <button type="button" onClick={() => { setIsCustomSector(false); setSector(allSectors[0] || ''); }} className="px-3 py-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
                           </div>
                         ) : (
@@ -651,7 +651,7 @@ const VacationForm: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase">Quadro / Esp.</label>
-                        <input
+                        <input autoComplete="off"
                           className="input-field"
                           value={specialization}
                           onChange={e => handleSpecializationChange(e.target.value)}
@@ -703,8 +703,8 @@ const VacationForm: React.FC = () => {
                           </div>
                         </div>
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2 min-w-0')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
-                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2 min-w-0')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
+                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Início</label><input autoComplete="off" type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-startDate`], 'input-field py-2 min-w-0')} value={p.startDate} onChange={e => handleParcelChange(p.id, 'startDate', e.target.value)} /></div>
+                          <div className="space-y-1 min-w-0"><label className="text-[10px] font-bold text-slate-400 uppercase">Término</label><input autoComplete="off" type="date" className={getInputClass(!!fieldErrors[`parcel-${p.id}-endDate`], 'input-field py-2 min-w-0')} value={p.endDate} onChange={e => handleParcelChange(p.id, 'endDate', e.target.value)} /></div>
                         </div>
                       </div>
                     ))}
@@ -718,7 +718,7 @@ const VacationForm: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-slate-700 block">Motivo da solicitação para a janela {planningYear}</label>
-                  <textarea className="w-full p-4 bg-white border border-slate-200 rounded-2xl min-h-[140px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
+                  <textarea autoComplete="off" className="w-full p-4 bg-white border border-slate-200 rounded-2xl min-h-[140px] outline-none focus:ring-2 focus:ring-orange-500 text-slate-600 text-sm leading-relaxed" placeholder="Descreva detalhadamente o motivo..." value={justification} onChange={e => setJustification(e.target.value)} />
                   <p className="text-[11px] text-slate-400 font-medium">Esta justificativa é referente exclusivamente ao planejamento de {planningYear}.</p>
                 </div>
               </section>

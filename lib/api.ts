@@ -3,6 +3,8 @@
 
 /** Disparado quando o servidor pede a confirmação da senha do administrador. */
 export const REAUTH_EVENT = 'sisferias:reauth-required';
+/** Disparado quando o servidor exige a troca da senha provisória. */
+export const PASSWORD_CHANGE_EVENT = 'sisferias:password-change-required';
 
 export class ApiError extends Error {
   status: number;
@@ -39,6 +41,9 @@ async function request<T = any>(method: string, path: string, body?: unknown): P
     // A confirmação de senha da área de Segurança expirou: avisa a tela.
     if (response.status === 403 && data && typeof data === 'object' && data.code === 'reauth_required') {
       window.dispatchEvent(new Event(REAUTH_EVENT));
+    }
+    if (response.status === 403 && data && typeof data === 'object' && data.code === 'password_change_required') {
+      window.dispatchEvent(new Event(PASSWORD_CHANGE_EVENT));
     }
     const message = (data && typeof data === 'object' && data.error) || `Erro ${response.status}`;
     throw new ApiError(response.status, message, data);

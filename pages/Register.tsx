@@ -3,7 +3,9 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Sun, Mail, Lock, User, Eye, EyeOff, AlertTriangle, CheckCircle2, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, MIN_PASSWORD_LENGTH } from '../types';
+import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
+import { passwordRuleMessage } from '../lib/password';
+import PasswordRules from '../components/PasswordRules';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -33,8 +35,9 @@ const Register: React.FC = () => {
     setError('');
     setSuccess('');
     
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+    const ruleError = passwordRuleMessage(password);
+    if (ruleError) {
+      setError(ruleError);
       return;
     }
     if (password !== confirmPass) {
@@ -116,11 +119,11 @@ const Register: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form autoComplete="off" onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Nome completo</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 value={name} 
                 onChange={e => setName(e.target.value)} 
@@ -138,7 +141,7 @@ const Register: React.FC = () => {
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Nome de Guerra</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 value={warName} 
                 onChange={e => setWarName(e.target.value)} 
@@ -156,7 +159,7 @@ const Register: React.FC = () => {
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">NIP</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 value={nip} 
                 onChange={e => setNip(e.target.value)} 
@@ -206,7 +209,7 @@ const Register: React.FC = () => {
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Quadro / Esp.</label>
-            <input
+            <input autoComplete="off"
               value={specialization}
               onChange={e => setSpecialization(e.target.value.toUpperCase())}
               className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium"
@@ -220,7 +223,7 @@ const Register: React.FC = () => {
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Setor</label>
             {isCustomSector ? (
               <div className="flex gap-2">
-                <input 
+                <input autoComplete="off" 
                   className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium flex-1"
                   value={sector}
                   onChange={e => setSector(e.target.value)}
@@ -246,7 +249,7 @@ const Register: React.FC = () => {
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">E-mail</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 type="email" 
                 value={email} 
@@ -265,7 +268,7 @@ const Register: React.FC = () => {
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Senha</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 type={showPass ? 'text' : 'password'} 
                 value={password} 
@@ -287,12 +290,13 @@ const Register: React.FC = () => {
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            <PasswordRules password={password} />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Confirmar senha</label>
             <div className="relative group">
-              <input 
+              <input autoComplete="off" 
                 required 
                 type={showPass ? 'text' : 'password'} 
                 value={confirmPass} 

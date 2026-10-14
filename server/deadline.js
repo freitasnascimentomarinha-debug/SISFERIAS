@@ -6,9 +6,9 @@
 // administrador liberar alguém depois, a verificação seguinte não o bloqueia
 // de novo.
 
-import { db, nowIso, newId, upsertRow } from './db.js';
+import { one, run, addAudit } from './db.js';
 
-const getSettings = () => db.prepare('SELECT vacation_deadline, deadline_applied_for FROM system_settings WHERE id = 1').get() || {};
+const getSettings = async () => (await one('SELECT vacation_deadline, deadline_applied_for FROM system_settings WHERE id = 1')) || {};
 
 /** Verdadeiro quando o dia do prazo (horário do servidor) já terminou. */
 export function deadlinePassed(deadline) {
@@ -18,50 +18,39 @@ export function deadlinePassed(deadline) {
 }
 
 /** O prazo atual já venceu e o bloqueio geral já foi aplicado. */
-export function deadlineInForce() {
-  const s = getSettings();
+export async function deadlineInForce() {
+  const s = await getSettings();
   return !!s.vacation_deadline && s.deadline_applied_for === s.vacation_deadline;
 }
 
 /** Aplica o bloqueio geral se o prazo venceu e ainda não foi aplicado. Retorna true se bloqueou. */
-export function applyDeadline(userName = 'Sistema') {
-  const s = getSettings();
+export async function applyDeadline(userName = 'Sistema') {
+  const s = await getSettings();
   if (!deadlinePassed(s.vacation_deadline) || s.deadline_applied_for === s.vacation_deadline) return false;
-  db.prepare('UPDATE profiles SET is_blocked = 1, updated_at = ?').run(nowIso());
-  db.prepare('UPDATE system_settings SET deadline_applied_for = ? WHERE id = 1').run(s.vacation_deadline);
-  upsertRow('audit_logs', {
-    id: newId(), timestamp: nowIso(), user_name: userName, action: 'Bloqueio',
-    field: 'Prazo Final de Lançamento', old_value: s.vacation_deadline, new_value: 'Prazo vencido: lançamentos bloqueados para todos',
-  });
+  await run('UPDATE profiles SET is_blocked = TRUE, updated_at = now()');
+  await run('UPDATE system_settings SET deadline_applied_for = ? WHERE id = 1', [s.vacation_deadline]);
+  await addAudit(userName, 'Bloqueio', 'Prazo Final de Lançamento', s.vacation_deadline, 'Prazo vencido: lançamentos bloqueados para todos');
   console.log(`[prazo] prazo ${s.vacation_deadline} vencido: lançamentos bloqueados para todos.`);
   return true;
 }
 
 /** Define (ou limpa, com null) o prazo. Limpar libera todos os usuários. */
-export function setDeadline(deadline, userName) {
-  const previous = getSettings().vacation_deadline || null;
+export async function setDeadline(deadline, userName) {
+  const previous = (await getSettings()).vacation_deadline || null;
   if (deadline) {
-    db.prepare('UPDATE system_settings SET vacation_deadline = ?, deadline_applied_for = NULL, updated_at = ? WHERE id = 1')
-      .run(deadline, nowIso());
-    upsertRow('audit_logs', {
-      id: newId(), timestamp: nowIso(), user_name: userName, action: 'Alteração',
-      field: 'Prazo Final de Lançamento', old_value: previous || 'Sem prazo', new_value: deadline,
-    });
-    return { blocked: applyDeadline(userName) };
+    await run('UPDATE system_settings SET vacation_deadline = ?, deadline_applied_for = NULL, updated_at = now() WHERE id = 1', [deadline]);
+    await addAudit(userName, 'Alteração', 'Prazo Final de Lançamento', previous || 'Sem prazo', deadline);
+    return { blocked: await applyDeadline(userName) };
   }
-  db.prepare('UPDATE system_settings SET vacation_deadline = NULL, deadline_applied_for = NULL, updated_at = ? WHERE id = 1').run(nowIso());
-  db.prepare('UPDATE profiles SET is_blocked = 0, updated_at = ?').run(nowIso());
-  upsertRow('audit_logs', {
-    id: newId(), timestamp: nowIso(), user_name: userName, action: 'Bloqueio',
-    field: 'Prazo Final de Lançamento', old_value: previous || 'Sem prazo', new_value: 'Prazo removido: liberado para todos',
-  });
+  await run('UPDATE system_settings SET vacation_deadline = NULL, deadline_applied_for = NULL, updated_at = now() WHERE id = 1');
+  await run('UPDATE profiles SET is_blocked = FALSE, updated_at = now()');
+  await addAudit(userName, 'Bloqueio', 'Prazo Final de Lançamento', previous || 'Sem prazo', 'Prazo removido: liberado para todos');
   return { blocked: false };
 }
 
 /** Verifica o prazo ao iniciar e a cada 10 minutos. */
 export function scheduleDeadlineCheck() {
-  applyDeadline();
-  setInterval(() => {
-    try { applyDeadline(); } catch (err) { console.error('[prazo] falha na verificação:', err.message); }
-  }, 10 * 60_000).unref();
+  const check = () => applyDeadline().catch(err => console.error('[prazo] falha na verificação:', err.message));
+  void check();
+  setInterval(check, 10 * 60_000).unref();
 }

@@ -5,34 +5,34 @@ import path from 'path';
 import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, shot, saveResults, QA, BASE } from './lib.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@456' };
+const ADMIN = { login: 'admin', pass: 'Admin@45678' };
 const { page: P } = await newSession(browser, 'admin'); await login(P, ADMIN.login, ADMIN.pass);
-const { page: B } = await newSession(browser, 'bruno'); await login(B, '20000002', 'Bruno@123');
+const { page: B } = await newSession(browser, 'bruno'); await login(B, '20000002', 'Bruno@12345');
 
 setSection('Item 1 — usuário troca a própria senha');
 await step('troca de senha pelo menu', async () => {
   await B.click('button[title="Alterar minha senha"]');
   const pw = B.locator('.fixed input[type=password]');
-  await pw.nth(0).fill('errada'); await pw.nth(1).fill('Bruno@789'); await pw.nth(2).fill('Bruno@789');
+  await pw.nth(0).fill('errada'); await pw.nth(1).fill('Bruno@78901'); await pw.nth(2).fill('Bruno@78901');
   await B.click('.fixed button[type=submit]'); await B.waitForTimeout(800);
   check('senha atual errada é recusada', await B.isVisible('text=Senha atual incorreta'));
-  await pw.nth(0).fill('Bruno@123'); await pw.nth(1).fill('12345'); await pw.nth(2).fill('12345');
+  await pw.nth(0).fill('Bruno@12345'); await pw.nth(1).fill('12345'); await pw.nth(2).fill('12345');
   await B.click('.fixed button[type=submit]'); await B.waitForTimeout(500);
-  check('senha nova curta é recusada (mínimo 6)', await B.isVisible('text=pelo menos 6 caracteres'));
-  await pw.nth(1).fill('Bruno@789'); await pw.nth(2).fill('Bruno@789');
+  check('senha nova fora da regra é recusada (DCTIM: 10+, maiúscula, minúscula, número, especial)', await B.isVisible('text=pelo menos 10 caracteres'));
+  await pw.nth(1).fill('Bruno@78901'); await pw.nth(2).fill('Bruno@78901');
   await B.click('.fixed button[type=submit]'); await B.waitForTimeout(1000);
   check('troca concluída com sucesso', await B.isVisible('text=Senha alterada com sucesso'));
   const { page: t } = await newSession(browser, 'bruno-nova');
-  check('entra com a nova senha', await login(t, '20000002', 'Bruno@789'));
+  check('entra com a nova senha', await login(t, '20000002', 'Bruno@78901'));
   const { page: t2 } = await newSession(browser, 'bruno-velha');
-  check('senha antiga deixa de funcionar', !(await login(t2, '20000002', 'Bruno@123')));
+  check('senha antiga deixa de funcionar', !(await login(t2, '20000002', 'Bruno@12345')));
   // volta a senha original para as próximas execuções
-  await api(t, 'POST', '/auth/password', { current_password: 'Bruno@789', password: 'Bruno@123' });
+  await api(t, 'POST', '/auth/password', { current_password: 'Bruno@78901', password: 'Bruno@12345' });
   await shot(B, 't7-alterar-senha');
 });
 
 setSection('Item 6 — regra única de senha');
-await step('cadastro e redefinição exigem 6 caracteres', async () => {
+await step('cadastro e redefinição seguem a regra de senha da DCTIM', async () => {
   const { page: r } = await newSession(browser, 'cadastro');
   await r.goto(BASE); await r.click('text=Cadastre-se');
   await r.fill('input[placeholder="Seu nome completo"]', 'Gabi Teste');
@@ -42,7 +42,8 @@ await step('cadastro e redefinição exigem 6 caracteres', async () => {
   const pw = r.locator('input[placeholder="********"]');
   await pw.nth(0).fill('12345'); await pw.nth(1).fill('12345');
   await r.click('button[type=submit]'); await r.waitForTimeout(800);
-  check('cadastro com senha de 5 caracteres é recusado', await r.isVisible('text=pelo menos 6 caracteres') && !db("SELECT 1 FROM profiles WHERE email = 'gabi@mb.mil.br'").length);
+  check('cadastro com senha fraca é recusado', await r.isVisible('text=pelo menos 10 caracteres') && !db("SELECT 1 FROM profiles WHERE email = 'gabi@mb.mil.br'").length);
+  check('a tela mostra o checklist da regra de senha', await r.isVisible('[data-testid=regras-senha]'));
   const res = await api(P, 'POST', '/admin/reset-password', { email: 'carla@mb.mil.br', password: '1234' });
   check('servidor recusa redefinição com senha curta', res.status === 400 || res.status === 403);
 });
@@ -76,10 +77,10 @@ await step('configurar pasta extra pela tela', async () => {
   await P.fill('input[placeholder^="Ex.:"]', extra);
   await P.click('button:has-text("Salvar e testar")'); await P.waitForTimeout(1500);
   check('pasta configurada com mensagem de confirmação', await P.isVisible('text=Pasta configurada'));
-  check('cópia de teste gravada na pasta', fs.readdirSync(extra).some(f => f.endsWith('.db')));
+  check('cópia de teste gravada na pasta', fs.readdirSync(extra).some(f => f.endsWith('.json')));
   check('tela mostra a última cópia', await P.isVisible('text=Última cópia'));
   await P.click('button:has-text("Criar backup agora")'); await P.waitForTimeout(1200);
-  check('backups seguintes também são copiados', fs.readdirSync(extra).filter(f => f.endsWith('.db')).length >= 2);
+  check('backups seguintes também são copiados', fs.readdirSync(extra).filter(f => f.endsWith('.json')).length >= 2);
   // pasta "dentro" de um arquivo comum: inválida em qualquer sistema
   const fileNotDir = path.join(extra, 'arquivo.txt'); fs.writeFileSync(fileNotDir, 'x');
   const bad = await api(P, 'PUT', '/admin/backup-copy', { dir: path.join(fileNotDir, 'sub') });

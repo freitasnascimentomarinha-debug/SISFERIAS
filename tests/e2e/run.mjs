@@ -19,7 +19,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sisferias-e2e-'));
 const dataDir = path.join(dir, 'data');
 const serverLog = path.join(dir, 'servidor.log');
-const env = { ADMIN_PASSWORD: 'Admin@123' };
+// BCRYPT_COST 4 deixa os logins dos testes rápidos (em produção o custo é 12).
+const env = { ADMIN_PASSWORD: 'Admin@12345', BCRYPT_COST: '4' };
 
 const steps = [
   ['t1_contas', 'Cadastro, login e papéis'],
@@ -33,6 +34,7 @@ const steps = [
   ['t6_bloqueado', 'Admin edita lançamento de bloqueado'],
   ['t7_pacote', 'Troca de senha, regra de senha, ajustes de tela e cópia de backups'],
   ['t8_excel_https', 'Excel, redução de imagens, aba removida, telas sob demanda e HTTPS'],
+  ['t9_dctim', 'Normas da DCTIM: troca obrigatória, bloqueio, registro de operações, autocomplete'],
 ];
 
 let srv = await startServer({ dataDir, env });
@@ -40,7 +42,7 @@ const summary = [];
 for (const [step, label] of steps) {
   if (step === '--reiniciar--') {
     await srv.stop();
-    srv = await startServer({ dataDir, port: srv.port, env: {} });
+    srv = await startServer({ dataDir, port: srv.port, env: { BCRYPT_COST: '4' } });
     fs.writeFileSync(serverLog, srv.output());
     console.log('\n=== Servidor reiniciado ===');
     continue;
@@ -48,7 +50,7 @@ for (const [step, label] of steps) {
   console.log(`\n=== ${label} (${step}) ===`);
   const r = spawnSync(process.execPath, [path.join(HERE, `${step}.mjs`)], {
     stdio: 'inherit',
-    env: { ...process.env, E2E_BASE: srv.base, E2E_DIR: dir, E2E_SERVER_LOG: serverLog },
+    env: { ...process.env, E2E_BASE: srv.base, E2E_DIR: dir, E2E_PG_PORT: String(srv.pgPort), E2E_SERVER_LOG: serverLog },
   });
   if (r.status === 2) process.exit(2); // Playwright ausente
   summary.push(step);

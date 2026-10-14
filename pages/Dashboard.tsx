@@ -342,7 +342,7 @@ const Dashboard: React.FC = () => {
             <label className="text-[10px] font-bold text-slate-500 uppercase">Buscar por nome</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-              <input
+              <input autoComplete="off"
                 type="text"
                 placeholder="NIP ou Nome..."
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 outline-none"
@@ -400,12 +400,12 @@ const Dashboard: React.FC = () => {
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase">Início (Filtro Período)</label>
-            <input type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <input autoComplete="off" type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" value={startDate} onChange={e => setStartDate(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase">Fim (Filtro Período)</label>
-            <input type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            <input autoComplete="off" type="date" className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-500" value={endDate} onChange={e => setEndDate(e.target.value)} />
           </div>
 
           <div className="flex items-end lg:col-span-2 xl:col-span-4">

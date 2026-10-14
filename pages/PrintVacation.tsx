@@ -26,9 +26,9 @@ const StaffInputGroup = ({ label, member, onChange }: { label: string, member: S
         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</h4>
       </div>
       <div className="space-y-2">
-        <input className={inputClass} placeholder="Nome Completo" value={member.name} onChange={e => onChange({ ...member, name: e.target.value })} />
+        <input autoComplete="off" className={inputClass} placeholder="Nome Completo" value={member.name} onChange={e => onChange({ ...member, name: e.target.value })} />
         <div className="grid grid-cols-2 gap-2">
-          <input className={inputClass} placeholder="NIP" value={member.nip} onChange={e => onChange({ ...member, nip: e.target.value })} />
+          <input autoComplete="off" className={inputClass} placeholder="NIP" value={member.nip} onChange={e => onChange({ ...member, nip: e.target.value })} />
           <select className={inputClass} value={member.category} onChange={e => onChange({ ...member, category: e.target.value as MilitaryCategory, rank: '' })}>
             <option value="oficial">Oficial</option>
             <option value="praca">Praça</option>
@@ -40,7 +40,7 @@ const StaffInputGroup = ({ label, member, onChange }: { label: string, member: S
             <option value="">Patente</option>
             {ranks.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <input className={inputClass} placeholder="Função" value={member.function} onChange={e => onChange({ ...member, function: e.target.value })} />
+          <input autoComplete="off" className={inputClass} placeholder="Função" value={member.function} onChange={e => onChange({ ...member, function: e.target.value })} />
         </div>
       </div>
     </div>
@@ -697,7 +697,7 @@ const PrintVacation: React.FC = () => {
                </div>
                <div className="space-y-1">
                  <label className="text-[10px] font-bold text-slate-500 uppercase">NUP (Obrigatório para Impressão/PDF)</label>
-                 <input
+                 <input autoComplete="off"
                    className={`${inputClass} ${printError ? 'border-red-400 bg-red-50 focus:ring-red-300' : ''}`}
                    placeholder="Ex: 62012.000123/2026-91"
                    value={nup}
@@ -725,7 +725,7 @@ const PrintVacation: React.FC = () => {
                )}
                <div className="space-y-1">
                  <label className="text-[10px] font-bold text-slate-500 uppercase">Emissão do Doc</label>
-                 <input type="date" className={inputClass} value={docDate} onChange={e => setDocDate(e.target.value)} />
+                 <input autoComplete="off" type="date" className={inputClass} value={docDate} onChange={e => setDocDate(e.target.value)} />
                </div>
             </section>
 
@@ -733,20 +733,20 @@ const PrintVacation: React.FC = () => {
                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><MapPin size={14}/> Local de Permanência</h3>
                <div className="grid grid-cols-4 gap-3">
                  <div className="col-span-3">
-                   <input className={inputClass} placeholder="Logradouro" value={address.street} onChange={e => setAddress({...address, street: e.target.value})} />
+                   <input autoComplete="off" className={inputClass} placeholder="Logradouro" value={address.street} onChange={e => setAddress({...address, street: e.target.value})} />
                  </div>
-                 <input className={inputClass} placeholder="Nº" value={address.number} onChange={e => setAddress({...address, number: e.target.value})} />
+                 <input autoComplete="off" className={inputClass} placeholder="Nº" value={address.number} onChange={e => setAddress({...address, number: e.target.value})} />
                  <div className="col-span-2">
-                   <input className={inputClass} placeholder="Cidade" value={address.city} onChange={e => setAddress({...address, city: e.target.value})} />
+                   <input autoComplete="off" className={inputClass} placeholder="Cidade" value={address.city} onChange={e => setAddress({...address, city: e.target.value})} />
                  </div>
-                 <input className={inputClass} placeholder="Estado" value={address.state} onChange={e => setAddress({...address, state: e.target.value})} />
-                 <input className={inputClass} placeholder="Telefone" value={phone} onChange={e => setPhone(e.target.value)} />
+                 <input autoComplete="off" className={inputClass} placeholder="Estado" value={address.state} onChange={e => setAddress({...address, state: e.target.value})} />
+                 <input autoComplete="off" className={inputClass} placeholder="Telefone" value={phone} onChange={e => setPhone(e.target.value)} />
                </div>
             </section>
 
             <section className="space-y-4">
                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText size={14}/> Observações</h3>
-               <textarea 
+               <textarea autoComplete="off" 
                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl min-h-[160px] outline-none focus:ring-2 focus:ring-orange-500 text-sm leading-relaxed"
                  placeholder="Ex: Vou para fora de SEDE, ficarei na cidade..."
                  value={observations}
@@ -759,11 +759,11 @@ const PrintVacation: React.FC = () => {
             <section className="p-5 bg-orange-50/50 rounded-3xl border border-orange-100 space-y-4">
                 <h3 className="text-xs font-black text-orange-600 uppercase tracking-widest flex items-center gap-2"><Shield size={14}/> Detalhes da Papeleta</h3>
                 <div className="space-y-3">
-                  <input className={inputClass} placeholder="Navio ou Órgão" value={ship} onChange={e => setShip(e.target.value)} />
+                  <input autoComplete="off" className={inputClass} placeholder="Navio ou Órgão" value={ship} onChange={e => setShip(e.target.value)} />
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-orange-600 uppercase">Quadro / Esp.</label>
-                      <input className={inputClass} placeholder="Opcional" value={specialization} onChange={e => setSpecialization(e.target.value.toUpperCase())} />
+                      <input autoComplete="off" className={inputClass} placeholder="Opcional" value={specialization} onChange={e => setSpecialization(e.target.value.toUpperCase())} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-orange-600 uppercase">Desmuniciado</label>
@@ -776,11 +776,11 @@ const PrintVacation: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-orange-600 uppercase">H. Licenc.</label>
-                      <input type="time" className={inputClass} value={licTime} onChange={e => setLicTime(e.target.value)} />
+                      <input autoComplete="off" type="time" className={inputClass} value={licTime} onChange={e => setLicTime(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-orange-600 uppercase">H. Apres.</label>
-                      <input type="time" className={inputClass} value={aprTime} onChange={e => setAprTime(e.target.value)} />
+                      <input autoComplete="off" type="time" className={inputClass} value={aprTime} onChange={e => setAprTime(e.target.value)} />
                     </div>
                   </div>
                 </div>

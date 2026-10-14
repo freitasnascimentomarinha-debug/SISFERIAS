@@ -66,7 +66,7 @@ const Suggestions: React.FC = () => {
           <p className="text-orange-100 text-sm mt-1">Descreva com clareza a melhoria que você gostaria de ver no sistema.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <form autoComplete="off" onSubmit={handleSubmit} className="p-8 space-y-6">
           {error && (
             <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-600 text-sm font-bold">
               {error}
@@ -81,7 +81,7 @@ const Suggestions: React.FC = () => {
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Título</label>
-            <input
+            <input autoComplete="off"
               value={title}
               onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 text-sm font-medium"
@@ -92,7 +92,7 @@ const Suggestions: React.FC = () => {
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Descrição</label>
-            <textarea
+            <textarea autoComplete="off"
               value={description}
               onChange={e => setDescription(e.target.value)}
               className="w-full min-h-[220px] px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-orange-500 text-sm font-medium leading-relaxed"

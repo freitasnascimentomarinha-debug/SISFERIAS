@@ -41,6 +41,10 @@ export interface User {
   isBlocked?: boolean;
   viewAllSectors?: boolean;
   hasPassword?: boolean;
+  /** Senha provisória: o usuário precisa trocá-la antes de usar o sistema. */
+  mustChangePassword?: boolean;
+  /** Conta bloqueada após tentativas inválidas de senha. */
+  accountLocked?: boolean;
 }
 
 export interface AuditLog {
@@ -92,7 +96,8 @@ export interface SystemSettings {
 }
 
 /** Tamanho mínimo de senha (o servidor aplica a mesma regra). */
-export const MIN_PASSWORD_LENGTH = 6;
+// DCTIMBOTEC 31/002/2020, item 3.2.b (ver lib/password.ts).
+export const MIN_PASSWORD_LENGTH = 10;
 
 export const SECTORS = ['01', '02', 'Secom', '10', '20', '30', '40', '50', '60', '70', 'Outro'];
 

@@ -13,7 +13,7 @@ if ! node -e "const [a,b]=process.versions.node.split('.').map(Number);process.e
   exit 1
 fi
 
-if [ ! -d node_modules/express ]; then
+if [ ! -d node_modules/pg ]; then
   echo "Instalando dependências (somente na primeira vez)..."
   npm install
 fi

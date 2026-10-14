@@ -5,22 +5,32 @@ interna, como funciona o primeiro acesso, quem pode administrar o sistema e o qu
 fazer se ninguém conseguir entrar.
 
 > Informações técnicas para a equipe de TI estão no arquivo `README.md`.
+> A relação de cada requisito das normas da DCTIM com o sistema está em `CONFORMIDADE.md`.
 
 ---
 
 ## 1. Como o sistema funciona
 
-- **Servidor:** o SISFERIAS fica instalado em **um único computador**. Esse computador
-  precisa estar ligado e com o SISFERIAS aberto enquanto as pessoas usam o sistema.
+- **Servidor:** o SISFERIAS fica instalado em **um único computador** (ou num servidor do CLTI).
+  Esse computador precisa estar ligado e com o SISFERIAS em execução enquanto as pessoas usam o sistema.
 - **Demais computadores:** acessam pelo **navegador** (Edge, Chrome, Firefox), digitando
   o endereço do servidor. Neles não se instala nada.
-- **Dados:** todos ficam guardados em um único arquivo dentro do servidor:
-  `data\sisferias.db`. Não é preciso instalar banco de dados.
+- **Banco de dados:** **PostgreSQL**, o banco padronizado pela DCTIM (DCTIMBOTEC 30/002/2023).
+  Há duas formas de uso:
+  - **Embutido (padrão):** o próprio SISFERIAS traz o PostgreSQL e o liga sozinho, guardando
+    os dados na pasta `data\postgres`. **Não é preciso instalar nada.** O banco só aceita
+    conexões do próprio computador.
+  - **Externo (recomendado em produção):** um servidor PostgreSQL administrado pela TI/CLTI
+    (seção 11).
+- **Dados pessoais cifrados:** nome, NIP, e-mail, foto, telefone e endereço são gravados
+  **cifrados** (AES-256). Quem tiver acesso apenas ao banco ou a um backup não consegue lê-los.
+  A chave fica no arquivo `data\chave-dados.key` (seção 8).
+- **Conexão criptografada (HTTPS):** sempre ligada. O endereço começa com `https://`.
 - **Internet:** não é necessária para usar o sistema, apenas a rede interna.
 
 ```
   Computador A ─┐
-  Computador B ─┼──(rede interna)──▶  SERVIDOR (SISFERIAS + arquivo de dados)
+  Computador B ─┼──(rede interna, HTTPS)──▶  SERVIDOR (SISFERIAS + PostgreSQL)
   Computador C ─┘
 ```
 
@@ -30,9 +40,10 @@ fazer se ninguém conseguir entrar.
 
 | Item | Detalhe |
 |---|---|
-| Um computador para ser o servidor | Windows 10/11 ou Linux, ligado durante o expediente |
+| Um computador para ser o servidor | Windows 10/11 (64 bits) ou Linux, ligado durante o expediente |
 | Node.js versão 22.13 ou mais nova | Gratuito: <https://nodejs.org> (botão "LTS") |
 | Rede interna | Os demais computadores precisam enxergar o servidor |
+| Certificado do servidor | Emitido pelo **CTIM** (DCTIMBOTEC 31/002, item 3.1.c). Até chegar, o sistema usa um provisório |
 
 ---
 
@@ -47,11 +58,9 @@ Se o servidor não tiver internet, baixe o instalador em outro computador e leve
 
 ### Passo 2 — Baixar o SISFERIAS
 
-Use uma das formas abaixo:
-
 | Forma | Quando usar | Como |
 |---|---|---|
-| **Pacote pronto** (recomendado) | Sempre que possível. Não precisa de internet na instalação | No GitHub do projeto, página **Releases**, baixe `sisferias-vX.Y.Z.zip` |
+| **Pacote pronto** (recomendado) | Sempre que possível. Não precisa de internet na instalação | No GitHub do projeto, página **Releases**, baixe `sisferias-vX.Y.Z-windows.zip` |
 | **Código-fonte** | Quando não houver pacote publicado | No GitHub, botão verde **Code → Download ZIP**. A primeira execução precisa de internet |
 
 ### Passo 3 — Extrair
@@ -63,31 +72,37 @@ Não rode de dentro do `.zip` nem da pasta Downloads.
 
 Dê dois cliques em **`iniciar.bat`**. Uma janela preta abrirá.
 
-- Na primeira vez, se for o código-fonte, ela instala os componentes e prepara a
-  interface. Isso leva de 1 a 3 minutos.
+- Na primeira vez o sistema cria o banco de dados PostgreSQL e a chave dos dados (alguns segundos).
+  Se for o código-fonte, antes ele instala os componentes (1 a 3 minutos).
 - Quando aparecer a mensagem abaixo, o sistema está funcionando:
 
 ```
 SISFERIAS em execução.
-  Neste computador:  http://localhost:3000
-  Na rede:           http://192.168.0.15:3000
+  Neste computador:  https://localhost:3000
+  Na rede:           https://192.168.0.15:3000
+  Banco de dados:    PostgreSQL embutido (C:\SISFERIAS\data\postgres, porta 5433, somente localhost)
 ```
 
-**Não feche essa janela.** Fechá-la desliga o sistema. Ela pode ficar minimizada.
+**Não feche essa janela** (ou instale como serviço, seção 9). Ela pode ficar minimizada.
 
 ### Passo 5 — Liberar no Firewall
 
 Na primeira execução o Windows pode perguntar se permite o acesso pela rede.
-Marque **Redes privadas** e clique em **Permitir acesso**.
+Marque **Redes privadas** e clique em **Permitir acesso**. Se aparecerem duas perguntas
+(Node.js e PostgreSQL), **permita só o Node.js**: o PostgreSQL não precisa ser acessado pela rede.
 
-Se não perguntar e os outros computadores não conseguirem abrir o sistema, peça à TI
-para liberar a **porta TCP 3000** para conexões de entrada.
+Se os outros computadores não conseguirem abrir o sistema, peça à TI para liberar a
+**porta TCP 3000** para conexões de entrada.
 
 ### Passo 6 — Acessar
 
-- **No próprio servidor:** abra <http://localhost:3000>.
+- **No próprio servidor:** abra <https://localhost:3000>.
 - **Nos outros computadores:** abra o endereço mostrado em **"Na rede"**
-  (exemplo: `http://192.168.0.15:3000`).
+  (exemplo: `https://192.168.0.15:3000`).
+
+Enquanto o certificado do CTIM não for instalado (seção 12), o navegador mostra o aviso
+"conexão não é particular". A conexão já é criptografada; o aviso só indica que o certificado
+é provisório. Para removê-lo, siga a seção 12.
 
 Dica: peça à TI um **IP fixo** para o servidor, para que esse endereço não mude.
 
@@ -101,33 +116,46 @@ ele cria automaticamente uma conta de administrador:
 | Campo | Valor |
 |---|---|
 | Login | `admin` (ou o e-mail `admin@sisferias.local`) |
-| Senha | Gerada ao acaso e mostrada **na janela do servidor** |
+| Senha | **Provisória**, gerada ao acaso e mostrada **na janela do servidor** |
 
 A senha também é gravada no arquivo **`data\ADMIN_INICIAL.txt`**, que fica apenas no
 computador servidor.
 
 Siga esta sequência:
 
-1. Entre no sistema com o login `admin` e a senha da janela ou do arquivo.
-2. Clique em **Segurança** no menu e confirme a mesma senha.
-3. Vá em **Sistema → Alterar Minha Senha** e defina uma senha nova.
-4. **Apague o arquivo `data\ADMIN_INICIAL.txt`.**
+1. Entre no sistema com o login `admin` e a senha provisória.
+2. O sistema pede **imediatamente uma nova senha** (troca obrigatória da senha provisória).
+3. **Apague o arquivo `data\ADMIN_INICIAL.txt`.**
+4. **Guarde uma cópia do arquivo `data\chave-dados.key`** em local seguro, fora do servidor (seção 8).
 5. Peça às pessoas que se cadastrem (tela de login → **Cadastre-se**), ou importe os dados
    antigos (seção 7).
 6. Em **Segurança → Gestão de Contas**, dê **Acesso Administrativo** a quem vai administrar.
 7. Opcional: depois que houver outro administrador funcionando, exclua a conta `admin`.
 
-Quer escolher a senha inicial em vez de usar uma aleatória? Antes do primeiro
-`iniciar.bat`, abra o Prompt de Comando na pasta e execute:
-
-```
-set ADMIN_PASSWORD=SuaSenhaInicial
-iniciar.bat
-```
+**Vindo da versão 2.x?** Na primeira execução da versão 3, os dados do arquivo antigo
+`data\sisferias.db` são **copiados automaticamente** para o PostgreSQL. O arquivo antigo é mantido
+como `sisferias.db.migrado-AAAA-MM-DD`. As senhas continuam valendo; quem tiver senha fora da regra
+nova (seção 5) terá de trocá-la no próximo acesso.
 
 ---
 
-## 5. Quem administra e como funciona a área de Segurança
+## 5. Senhas e bloqueio de contas (regras da DCTIM)
+
+| Regra | Como funciona |
+|---|---|
+| **Composição da senha** | Mínimo de **10 caracteres**, com **letra maiúscula, letra minúscula, número e caractere especial** (ex.: `@ # $ %`). Não há tamanho máximo. A tela mostra o que falta enquanto a pessoa digita |
+| **Senha provisória** | Senha definida pelo administrador (ou a inicial) é provisória: no primeiro acesso o sistema exige uma senha pessoal antes de liberar qualquer tela |
+| **Bloqueio por tentativas** | Após **5 tentativas de senha erradas seguidas**, a conta é **bloqueada**. Só um administrador pode liberar |
+| **Mensagem de erro** | A tela de login sempre diz "Usuário e/ou senha inválidos", sem revelar se o usuário existe, se a senha está errada ou se a conta está bloqueada |
+| **Guarda da senha** | O sistema não guarda a senha, só um código (hash) que não permite recuperá-la. Por isso ninguém, nem a TI, consegue ver a senha de alguém: só redefini-la |
+
+**Liberar uma conta bloqueada:** **Segurança → Gestão de Contas**. A conta aparece com o aviso
+"Conta bloqueada por tentativas inválidas de senha" e o botão **Desbloquear**. Redefinir a senha
+também libera a conta.
+
+---
+
+## 6. Quem administra e como funciona a área de Segurança
 
 Existem dois níveis de conta:
 
@@ -139,11 +167,10 @@ Existem dois níveis de conta:
 Sobre a área de Segurança:
 
 - **Senha:** não existe senha única ou compartilhada. Cada administrador entra com a
-  **própria senha de login**, que o sistema pede de novo ao abrir a área.
+  **própria senha de login**, que o sistema pede de novo ao abrir a área. Erros aqui também
+  contam para o bloqueio da conta.
 - **Bloqueio automático:** a área se bloqueia sozinha após **15 minutos sem uso**, e há o
   botão **Bloquear área** para quando o administrador sair de perto do computador.
-- **Auditoria:** toda entrada na área e toda tentativa com senha errada ficam registradas em
-  **Auditoria Detalhada**, com o nome de quem tentou.
 - **Usuários comuns:** não veem a área no menu, e o servidor recusa qualquer ação
   administrativa vinda deles.
 
@@ -162,9 +189,15 @@ Em **Segurança → Usuários → Prazo Final de Lançamento** o administrador d
 As telas buscam os dados mais recentes sozinhas: ao trocar de tela ou de aba na Segurança, ao voltar
 para a janela do navegador e a cada 1 minuto. Não é preciso apertar F5 para ver o que outras pessoas lançaram.
 
-### Auditoria
+### Auditoria e Registro de Operações
 
-Toda ação fica registrada com o **nome de quem a fez**, inclusive entre vários administradores.
+| Onde | O que registra |
+|---|---|
+| **Auditoria Detalhada** | As alterações feitas nas telas (férias, avisos, acessos, senhas, prazo), com o nome de quem fez |
+| **Registro de Operações** | **Toda** operação feita no sistema: logins (inclusive os recusados), consultas, gravações, exclusões, exportações e downloads, com usuário, data/hora, computador (IP) e resultado. Pode ser filtrado e exportado em CSV |
+
+Nenhum dos dois pode ser alterado ou apagado pelo sistema: o usuário de banco da aplicação
+só tem permissão para **inserir e consultar** esses registros (DCTIMARINST 30-17, item 4.4).
 
 Para **dar ou tirar** o acesso de administrador: **Segurança → Gestão de Contas** →
 botão de nível de acesso ao lado do nome.
@@ -176,84 +209,181 @@ Proteções contra ficar sem administrador:
 
 ---
 
-## 6. Ninguém consegue entrar como administrador: o que fazer
+## 7. Ninguém consegue entrar como administrador: o que fazer
 
 | Situação | O que acontece / o que fazer |
 |---|---|
 | Instalação nova, banco vazio | O sistema cria a conta `admin` sozinho (seção 4) |
-| Não há nenhum administrador com senha e a conta `admin` não existe | Ao reiniciar, o sistema **recria** a conta `admin` com senha nova, mostrada na janela |
+| Não há nenhum administrador com senha e a conta `admin` não existe | Ao reiniciar, o sistema **recria** a conta `admin` com senha provisória, mostrada na janela |
 | A conta `admin` existe, mas foi rebaixada ou está sem senha, e não há outro administrador | A janela do servidor mostra um **aviso em destaque**. Use o comando abaixo |
-| O administrador esqueceu a senha | Outro administrador redefine em **Gestão de Contas**. Se não houver outro, use o comando abaixo |
-| Um usuário comum esqueceu a senha | Um administrador redefine em **Segurança → Gestão de Contas** |
+| O administrador esqueceu a senha ou foi **bloqueado** por tentativas | Outro administrador redefine/desbloqueia em **Gestão de Contas**. Se não houver outro, use o comando abaixo |
+| Um usuário comum esqueceu a senha ou foi bloqueado | Um administrador redefine ou clica em **Desbloquear** em **Segurança → Gestão de Contas** |
 | Alguém quer trocar a própria senha | Ícone de **chave** no canto superior direito (pede a senha atual) |
 
-### Comando de recuperação
+### Comandos de recuperação
 
-No **computador servidor**:
+No **computador servidor** (pode ser com o SISFERIAS ligado):
 
-1. Feche a janela do SISFERIAS.
-2. Abra a pasta do SISFERIAS no Explorador de Arquivos, clique na barra de endereço,
+1. Abra a pasta do SISFERIAS no Explorador de Arquivos, clique na barra de endereço,
    digite `cmd` e pressione Enter.
-3. Execute um dos comandos:
+2. Execute um dos comandos:
 
 ```
-npm run admin -- --senha NOVA_SENHA
+npm run admin -- --senha NovaSenha@2026
 ```
 
-Esse primeiro comando redefine a senha da conta `admin` e a torna administradora. Se
-ela não existir, ele a cria.
+Redefine a senha da conta `admin` (provisória: o sistema pede outra no primeiro acesso),
+desbloqueia e a torna administradora. Se ela não existir, ele a cria.
 
 ```
-npm run admin -- --login 12345678 --senha NOVA_SENHA
+npm run admin -- --login 12345678 --senha NovaSenha@2026
 ```
 
-Esse segundo faz o mesmo para a conta com esse NIP (ou e-mail).
+Faz o mesmo para a conta com esse NIP (ou e-mail).
 
-4. Inicie de novo com `iniciar.bat` e entre com a nova senha.
+```
+npm run admin -- --login 12345678 --desbloquear
+```
 
-O comando só funciona **no próprio servidor**, então quem não tem acesso a esse computador
-não consegue usá-lo.
+Só libera a conta bloqueada por tentativas, sem mudar a senha.
+
+A senha informada precisa seguir a regra da seção 5. Os comandos só funcionam **no próprio
+servidor**, então quem não tem acesso a esse computador não consegue usá-los.
 
 ---
 
-## 7. Trazer dados de outro lugar
+## 8. A chave dos dados (MUITO IMPORTANTE)
+
+Os dados pessoais ficam cifrados com a chave do arquivo **`data\chave-dados.key`**, criada na
+primeira execução.
+
+- **Guarde uma cópia desse arquivo fora do servidor** (pen drive guardado em local seguro,
+  cofre da Divisão, pasta restrita da TI). **Sem ele, os dados do banco e dos backups não podem
+  ser lidos por ninguém.**
+- **Não** envie a chave junto com os backups nem por e-mail.
+- Se o arquivo for apagado ou trocado, o sistema **não inicia** (para não gravar dados que depois
+  não poderiam ser lidos) e mostra como resolver: basta devolver o arquivo original para a pasta `data`.
+- Alternativa para a TI: informar a chave na variável de ambiente `SISFERIAS_CHAVE` (README.md).
+
+---
+
+## 9. Trazer dados de outro lugar
 
 Resumo. Os formatos aceitos estão no `README.md`, seção 3.
 
-1. Tenha em mãos o **backup completo (.json)** de outro servidor SISFERIAS ou os **CSVs** das tabelas.
+1. Tenha em mãos o **backup (.json)** de outro servidor SISFERIAS ou os **CSVs** das tabelas.
    Opcionalmente, inclua o CSV de usuários e senhas criptografadas, para manter as senhas.
 2. No SISFERIAS: **Segurança → Dados e Backup → Importar Dados**.
 3. Selecione todos os arquivos e clique em **Analisar arquivos**. Nada é gravado nessa etapa.
 4. Confira o resumo e clique em **Importar**. Um backup é feito antes, automaticamente.
 
-Não envie esses CSVs para o GitHub nem por e-mail aberto, pois contêm dados pessoais.
+Não envie esses arquivos para o GitHub nem por e-mail aberto, pois contêm dados pessoais.
 
 ---
 
-## 8. Backups
+## 10. Backups
 
 | Tipo | Quando |
 |---|---|
-| **Automático** | Um por dia, enquanto o sistema estiver aberto |
+| **Automático** | Um por dia, enquanto o sistema estiver ligado |
 | **Antes de mudanças grandes** | Antes de cada importação e de cada exclusão de usuário |
-| **Manual** | **Segurança → Dados e Backup → Criar backup agora** |
+| **Manual** | **Segurança → Dados e Backup → Criar backup agora** (ou `npm run backup`) |
 
-- **Onde ficam:** pasta `data\backups`. O sistema guarda os 30 mais recentes.
+- **Onde ficam:** pasta `data\backups`, arquivos `sisferias_DATA_motivo.json`. O sistema guarda os 30 mais recentes.
+- **Cifrados:** os dados pessoais continuam cifrados dentro do backup. Para restaurá-lo é preciso a
+  mesma chave (seção 8).
 - **Cópia automática para outro lugar (recomendado):** em **Segurança → Dados e Backup**, no campo
   "Copiar cada backup também para esta pasta", informe uma pasta de rede (ex.: `\\servidor\backups\sisferias`)
   ou outro disco (ex.: `D:\Backups\SISFERIAS`) e clique em **Salvar e testar**. A partir daí, todo backup
-  é copiado para lá também, e a tela mostra se a última cópia deu certo. Se o disco do servidor falhar,
-  essas cópias salvam os dados.
+  é copiado para lá também, e a tela mostra se a última cópia deu certo.
 - **Atenção com o serviço do Windows:** como o serviço roda com a conta do sistema, use o caminho de rede
   completo (`\\servidor\pasta`), não uma letra de unidade mapeada, e peça à TI para liberar a gravação
   na pasta compartilhada para a conta do computador servidor.
 
-Para **trocar de computador**: feche o SISFERIAS, copie a pasta inteira (com a `data`) para o
-novo servidor e execute `iniciar.bat` lá.
+### Restaurar um backup
+
+- **Pela tela:** **Segurança → Dados e Backup → Importar Dados**, selecione o arquivo `.json` do backup,
+  **Analisar arquivos** → modo **Substituir** → **Importar**.
+- **Pelo comando** (no servidor): `npm run restaurar -- data\backups\sisferias_....json`
+
+Antes de restaurar, o sistema faz um backup do estado atual. Os registros de auditoria nunca são apagados.
+
+Para **trocar de computador**: feche o SISFERIAS, copie a pasta inteira (com a `data`, inclusive a
+chave) para o novo servidor e execute `iniciar.bat` lá.
 
 ---
 
-## 9. Uso no dia a dia
+## 11. Usando um PostgreSQL da TI/CLTI (banco externo)
+
+Em produção, o recomendado é o banco ficar num servidor PostgreSQL administrado pela TI.
+Com o **usuário administrador do PostgreSQL** (fornecido pelo DBA), execute no servidor do SISFERIAS:
+
+```
+npm run banco -- preparar --url postgres://postgres:SENHA@10.200.0.10:5432/postgres
+```
+
+O comando cria o banco `sisferias` e **dois usuários de banco** com senhas aleatórias:
+
+| Usuário de banco | Para quê |
+|---|---|
+| `sisferias_dono` | Criar e alterar as tabelas (só nas atualizações de versão) |
+| `sisferias_app` | O dia a dia do sistema: só lê e grava dados; **não** pode alterar tabelas nem apagar auditoria |
+
+A configuração fica em `data\config.json` (protegido). A senha do administrador do PostgreSQL **não** é guardada.
+
+Se o DBA preferir criar o banco e os usuários ele mesmo:
+
+```
+npm run banco -- configurar --url postgres://sisferias_app:SENHA@SERVIDOR:5432/sisferias --dono-url postgres://sisferias_dono:SENHA@SERVIDOR:5432/sisferias
+```
+
+Outros comandos: `npm run banco -- status` (qual banco está em uso e quantos registros),
+`npm run banco -- embutido` (volta ao banco embutido). Reinicie o SISFERIAS depois de mudar.
+
+Para levar os dados do banco embutido para o externo: faça um backup, configure o banco externo,
+reinicie e restaure o backup (seção 10).
+
+---
+
+## 12. Conexão criptografada (HTTPS) e certificado do CTIM
+
+O HTTPS vem **sempre ligado** (DCTIMBOTEC 31/002/2020, item 3.1.b). Na primeira execução o sistema
+gera um certificado **provisório**. Na RECIM, o certificado deve ser emitido pelo **CTIM** (item 3.1.c):
+
+1. Peça à TI/CTIM o certificado do servidor (nome e IP do computador do SISFERIAS).
+2. Instale com um dos comandos (conforme o formato recebido):
+
+```
+npm run https -- ativar --cert C:\certs\sisferias.crt --key C:\certs\sisferias.key
+npm run https -- ativar --pfx C:\certs\sisferias.pfx --senha SENHA_DO_PFX
+```
+
+3. Reinicie o SISFERIAS. Com o certificado do CTIM, os navegadores da RECIM não mostram aviso.
+
+Enquanto usar o provisório, é possível evitar o aviso instalando o certificado provisório nos computadores:
+abra `https://ENDERECO:3000/api/certificado`, salve o arquivo, dê dois cliques → **Instalar certificado** →
+**Máquina Local** → **Autoridades de Certificação Raiz Confiáveis**.
+
+O comando `npm run https -- desativar` existe só para quando um **proxy HTTPS da TI** fica na frente do
+SISFERIAS; sem isso, desativar viola a norma.
+
+---
+
+## 13. Ambiente de homologação (testes)
+
+A DCTIMARINST 30-17 (item 4.3) exige que testes sejam feitos em **ambiente separado, com dados fictícios**.
+
+1. Instale o SISFERIAS em **outra pasta** (ou outro computador), nunca na mesma `data` da produção.
+2. Crie o arquivo `data\config.json` dessa instalação com o conteúdo `{ "ambiente": "homologacao" }`.
+   (Se houver as duas instalações no mesmo computador, use também `"port": 3001` e `"database": { "port": 5434 }`.)
+3. Inicie e, numa janela de comando nessa pasta, execute `npm run dados-ficticios` para criar 30
+   militares fictícios (NIP `99000001` em diante, senha `Teste@2026#`).
+
+Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologação — use somente dados fictícios"**.
+
+---
+
+## 14. Uso no dia a dia
 
 - **Iniciar junto com o Windows, sem janela (recomendado):** dê dois cliques em **`instalar-servico.bat`**
   e confirme a permissão de administrador. O SISFERIAS passa a rodar como serviço:
@@ -263,18 +393,18 @@ novo servidor e execute `iniciar.bat` lá.
   - registra o funcionamento em `data\logs\sisferias.log`.
 
   Para voltar ao modo com janela, execute **`remover-servico.bat`**.
-- **Desligar o sistema:** no modo com janela, feche a janela preta ou pressione `Ctrl + C`.
-  No modo serviço, execute `remover-servico.bat` (ou, para só parar até o próximo
-  reinício do computador, `node scripts\servico.js parar` como administrador).
+- **Desligar o sistema:** no modo com janela, feche a janela preta ou pressione `Ctrl + C`
+  (o PostgreSQL embutido é desligado junto). No modo serviço, execute `remover-servico.bat` (ou, para só
+  parar até o próximo reinício do computador, `node scripts\servico.js parar` como administrador).
 - **Trocar a própria senha:** qualquer usuário clica no ícone de **chave**, no canto superior direito,
-  ao lado de "Sair". O sistema pede a senha atual e a nova (mínimo de **6 caracteres**).
+  ao lado de "Sair". O sistema pede a senha atual e a nova (regra da seção 5).
 - **Atualizar para uma versão nova:**
-  1. Faça um backup.
+  1. Faça um backup e confira se há cópia da chave (seção 8).
   2. Substitua os arquivos do sistema **mantendo a pasta `data`**.
   3. Se for código-fonte, execute `atualizar.bat`.
   4. Inicie normalmente.
-
----
+- **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
+  manter o antivírus homologado da MB (DCTIMBOTEC 31/002, item 3.4).
 
 ### Relatório em Excel
 
@@ -292,17 +422,13 @@ No **Painel**, o botão verde **Exportar Excel** gera uma planilha com o que est
 
 Pode enviar fotos direto do celular, mesmo grandes: o sistema reduz a imagem automaticamente antes de gravar (foto até 400 pixels, logo até 600 pixels). Isso mantém o banco de dados leve.
 
-### Conexão criptografada (HTTPS)
-
-Se a TI pedir conexão criptografada, o procedimento está no `README.md`, seção "Conexão criptografada (HTTPS)". O comando é `npm run https -- ativar`, e depois é preciso reiniciar o SISFERIAS. O endereço passa a começar com `https://`.
-
 ---
 
-## 10. Perguntas frequentes
+## 15. Perguntas frequentes
 
 **Os dados se apagam com o tempo?**
-Não. Ficam no arquivo `data\sisferias.db` até alguém apagá-lo. Desligar o computador não
-apaga nada.
+Não. Ficam no banco PostgreSQL (pasta `data\postgres` no modo embutido) até alguém apagá-los.
+Desligar o computador não apaga nada.
 
 **Quantas pessoas podem usar ao mesmo tempo?**
 Centenas, sem dificuldade.
@@ -311,20 +437,26 @@ Centenas, sem dificuldade.
 O SISFERIAS já está rodando neste computador, provavelmente como serviço. Basta abrir o endereço no
 navegador; não é preciso executar o `iniciar.bat`.
 
+**Aparece "Não foi possível iniciar o PostgreSQL na porta 5433".**
+Outro programa usa essa porta. Escolha outra em `data\config.json`: `{ "database": { "port": 5440 } }`.
+
+**Aparece "A chave de criptografia dos dados não foi encontrada" ou "não corresponde a este banco".**
+O arquivo `data\chave-dados.key` foi apagado ou trocado. Devolva o arquivo original (da sua cópia, seção 8).
+
 **A janela fechou logo ao abrir.**
 Verifique a versão do Node.js: abra o Prompt de Comando e digite `node -v`. Precisa ser
 22.13 ou maior.
 
 **Os outros computadores não abrem o sistema.**
-Confira se usam o endereço **"Na rede"** mostrado na janela, se o servidor está ligado com o
+Confira se usam o endereço **"Na rede"** (começando com `https://`), se o servidor está ligado com o
 SISFERIAS aberto e se a porta 3000 está liberada no firewall.
 
-**Aparece "Esta conta ainda não tem senha definida".**
-A conta veio de uma importação sem senha. Um administrador deve definir a senha em
-**Segurança → Gestão de Contas**.
+**Alguém não consegue entrar, mesmo com a senha certa.**
+A conta pode ter sido bloqueada por 5 tentativas erradas, ou não ter senha definida (importação).
+Um administrador resolve em **Segurança → Gestão de Contas** (Desbloquear ou Redefinir Senha).
 
-**Aparece "Muitas tentativas".**
-Aguarde 15 minutos, ou reinicie o SISFERIAS.
+**Aparece "Muitas tentativas a partir deste computador".**
+Proteção contra tentativas em massa: aguarde 15 minutos, ou reinicie o SISFERIAS.
 
 **Aparece "Interface não compilada".**
 Execute `atualizar.bat` (necessita internet na primeira vez) e depois `iniciar.bat`.

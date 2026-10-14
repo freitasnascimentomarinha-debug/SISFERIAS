@@ -4,11 +4,11 @@ import { BASE } from './lib.mjs';
 
 const browser = await chromium.launch();
 export const ACCOUNTS = {
-  admin: { login: 'admin', pass: 'Admin@123' },
-  ana:   { name: 'Ana Lima',    war: 'ANA',   nip: '10000001', email: 'ana@mb.mil.br',   pass: 'Ana@1234',   cat: 'oficial', rank: 'CT',  sector: '10' },
-  bruno: { name: 'Bruno Costa', war: 'BRUNO', nip: '20000002', email: 'bruno@mb.mil.br', pass: 'Bruno@123',  cat: 'praca',   rank: 'CB',  sector: '10' },
-  carla: { name: 'Carla Dias',  war: 'CARLA', nip: '30000003', email: 'carla@mb.mil.br', pass: 'Carla@123',  cat: 'praca',   rank: '3SG', sector: '20' },
-  davi:  { name: 'Davi Rocha',  war: 'DAVI',  nip: '40000004', email: 'davi@mb.mil.br',  pass: 'Davi@1234',  cat: 'civil',   rank: 'SC',  sector: '20' },
+  admin: { login: 'admin', pass: 'Admin@12345' },
+  ana:   { name: 'Ana Lima',    war: 'ANA',   nip: '10000001', email: 'ana@mb.mil.br',   pass: 'Ana@123456',   cat: 'oficial', rank: 'CT',  sector: '10' },
+  bruno: { name: 'Bruno Costa', war: 'BRUNO', nip: '20000002', email: 'bruno@mb.mil.br', pass: 'Bruno@12345',  cat: 'praca',   rank: 'CB',  sector: '10' },
+  carla: { name: 'Carla Dias',  war: 'CARLA', nip: '30000003', email: 'carla@mb.mil.br', pass: 'Carla@12345',  cat: 'praca',   rank: '3SG', sector: '20' },
+  davi:  { name: 'Davi Rocha',  war: 'DAVI',  nip: '40000004', email: 'davi@mb.mil.br',  pass: 'Davi@123456',  cat: 'civil',   rank: 'SC',  sector: '20' },
 };
 
 setSection('1. Cadastro de contas (tela Cadastre-se)');
@@ -50,7 +50,7 @@ await step('cadastro duplicado (mesmo e-mail) é recusado', async () => {
     (await reg.textContent('form')).match(/já|cadastrad|exist/i)?.[0] ? 'mensagem exibida' : 'sem mensagem clara');
 });
 await step('cadastro com NIP repetido é recusado', async () => {
-  const r = await api(reg, 'POST', '/auth/register', { name: 'Clone', email: 'clone@mb.mil.br', password: '123456', nip: ACCOUNTS.carla.nip });
+  const r = await api(reg, 'POST', '/auth/register', { name: 'Clone', email: 'clone@mb.mil.br', password: 'Clone@12345', nip: ACCOUNTS.carla.nip });
   check('cadastro com NIP repetido é recusado', r.status === 409, `${r.status} ${r.data?.error}`);
 });
 
@@ -62,7 +62,7 @@ await step('login errado', async () => {
   await p.goto(BASE);
   await p.fill('input[type=text]', ACCOUNTS.bruno.nip); await p.fill('input[type=password]', 'errada');
   await p.click('button[type=submit]'); await p.waitForTimeout(900);
-  check('senha errada é recusada com mensagem', await p.isVisible('text=incorretos'));
+  check('senha errada é recusada com mensagem genérica (DCTIMBOTEC 31/002, 3.2.f)', await p.isVisible('text=Usuário e/ou senha inválidos'));
 });
 check('login admin (NIP "admin")', await login(sessions.admin.page, 'admin', ACCOUNTS.admin.pass));
 check('login Ana por e-mail', await login(sessions.ana.page, ACCOUNTS.ana.email, ACCOUNTS.ana.pass));
