@@ -1,212 +1,276 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # SISFERIAS
 
-Sistema web para planejamento, lançamento, acompanhamento, impressão e administração de férias do efetivo. Esta documentação é o guia de entrega para técnicos de TI.
+Sistema web para planejamento, lançamento, acompanhamento, impressão e administração de férias do efetivo, feito para rodar **em um computador da rede interna** e ser acessado pelo navegador nos demais.
 
-## Visão geral
+- **Instalação simples:** só é preciso ter o Node.js. Não há banco de dados para instalar.
+- **Banco embutido (SQLite):** os dados ficam em um único arquivo, `data/sisferias.db`.
+- **Funciona sem internet:** interface, fontes e estilos vão empacotados.
+- **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário.
+- **Importação e exportação** pela própria tela, incluindo a migração do Supabase com preservação das senhas.
 
-O SISFERIAS é uma SPA (Single Page Application) em React 19, TypeScript e Vite 6. O frontend é publicado como arquivo estático e acessa diretamente o Supabase, que fornece autenticação, banco PostgreSQL e funções RPC. Não existe backend Node próprio neste repositório.
+> **Vai instalar ou administrar o sistema?** Comece pelo guia passo a passo **[INSTALACAO.md](INSTALACAO.md)**: instalação, primeiro acesso, quem administra, recuperação de acesso e backups, em linguagem simples.
 
-Tecnologias principais:
+---
 
-- React, React DOM e `react-router-dom`.
-- TypeScript e Vite.
-- Supabase Auth e Supabase Database.
-- `date-fns` para datas, `recharts` para gráficos e `lucide-react` para ícones.
-- Vercel como hospedagem prevista.
+## 1. Instalação rápida (Windows)
 
-O ponto de entrada é `index.tsx`. `App.tsx` monta `ErrorBoundary`, `MemoryRouter`, `AuthProvider` e `VacationProvider`. O primeiro provider controla sessão e perfis; o segundo carrega e persiste férias, configurações, avisos, auditoria e sugestões.
+1. Instale o **Node.js LTS** (versão 22.13 ou mais recente) em <https://nodejs.org>, aceitando as opções padrão.
+2. Baixe o SISFERIAS de uma das duas formas:
+   - **Pacote pronto (recomendado, não precisa de internet na instalação):** na página **Releases** do GitHub, baixe `sisferias-vX.Y.Z.zip`.
+   - **Código-fonte:** botão verde **Code → Download ZIP**. Nesse caso a primeira execução precisa de internet para baixar as dependências.
+3. Extraia o `.zip` em uma pasta fixa, por exemplo `C:\SISFERIAS`.
+4. Dê dois cliques em **`iniciar.bat`**.
+5. A janela mostra os endereços de acesso:
+   ```
+   SISFERIAS em execução.
+     Neste computador:  http://localhost:3000
+     Na rede:           http://192.168.0.15:3000
+   ```
+   Nos outros computadores da rede, abra o endereço **"Na rede"** no navegador.
 
-## Estrutura do projeto
+A janela precisa ficar aberta enquanto o sistema estiver em uso. Ao fechá-la, o sistema para.
+
+### Primeiro acesso
+
+Na primeira execução é criado um administrador:
+
+- **Login:** `admin` (ou `admin@sisferias.local`)
+- **Senha:** aparece na janela e fica gravada em `data/ADMIN_INICIAL.txt`
+
+Depois de entrar, troque a senha em **Segurança → Sistema → Alterar Minha Senha** e apague o arquivo `ADMIN_INICIAL.txt`.
+
+### Quem acessa a área de Segurança
+
+Não existe senha única para a área de Segurança. O controle funciona assim:
+
+1. **Só administradores veem a área.** Usuários comuns não têm o item no menu, e o servidor recusa as ações deles.
+2. **Para entrar, o administrador confirma a própria senha de login.** Cada um usa a sua senha, e cada entrada (ou tentativa errada) fica registrada na **Auditoria** com o nome de quem tentou.
+3. **A área bloqueia sozinha** após 15 minutos sem uso (configurável em `ELEVATION_MINUTES`) e tem o botão **Bloquear área**, para quando o administrador se afastar do computador.
+4. **Quem é administrador** é definido em **Gestão de Contas**, botão de nível de acesso. Para tirar o acesso de alguém, basta voltar a conta para **Acesso Padrão**.
+
+### Linux
+
+```bash
+./iniciar.sh
+```
+
+### Docker (alternativa)
+
+```bash
+docker compose up -d
+```
+
+Os dados ficam em `./data`. Para ver a senha inicial, use `docker compose logs sisferias`.
+
+---
+
+## 2. Acesso pela rede
+
+- **Firewall:** o computador servidor precisa aceitar conexões na porta **3000**. No Windows, na primeira execução, permita o acesso quando o Firewall perguntar. Se não perguntar, crie uma regra de entrada TCP para a porta 3000.
+- **Endereço fixo:** peça à TI um **IP fixo** (ou nome DNS) para o servidor, para que o endereço não mude.
+- **Outra porta:** se a 3000 estiver ocupada, defina a variável `PORT` antes de iniciar (no Windows, `set PORT=8080` e depois `iniciar.bat`).
+- **Iniciar com o Windows:** coloque um atalho de `iniciar.bat` em `shell:startup`, ou peça à TI para registrá-lo como serviço (por exemplo, com NSSM).
+
+---
+
+## 3. Migração do Supabase (sem perder dados)
+
+O Supabase continua intacto durante todo o processo. Desligue-o só depois de conferir o sistema novo.
+
+1. **Exporte as tabelas.** No painel do Supabase, em **Table Editor**, abra cada tabela e use **Export → Export table as CSV**:
+   `profiles`, `employees`, `system_settings`, `notices`, `audit_logs`, `suggestions` e `print_preferences`.
+2. **Exporte as senhas.** Para que ninguém precise trocar de senha, abra o **SQL Editor**, execute a consulta abaixo e exporte o resultado em CSV com o nome `users.csv`:
+   ```sql
+   select id, email, encrypted_password, created_at from auth.users;
+   ```
+   As senhas estão criptografadas (bcrypt). Nem você nem o sistema veem a senha real.
+3. No SISFERIAS, entre como admin e abra **Segurança → Dados e Backup → Importar Dados**.
+4. Selecione **todos os CSVs de uma vez** e clique em **Analisar arquivos**. Nada é gravado nessa etapa. A tela mostra:
+   - qual tabela foi reconhecida em cada arquivo (dá para corrigir manualmente);
+   - quantos registros serão **novos**, **atualizados** e **com erro**, com o motivo e o número da linha;
+   - avisos, como perfis que ficarão sem senha ou colunas não previstas.
+5. Clique em **Importar**. Antes de gravar, o sistema faz um backup automático. A importação roda em uma transação: se algo falhar, nada é alterado.
+6. Confira o quadro **Antes / Depois** e confira alguns registros por amostragem.
+
+Outros detalhes:
+
+- **Importar de novo não duplica:** os registros são reconhecidos pelo identificador e apenas atualizados.
+- **Colunas desconhecidas não se perdem:** ficam guardadas no campo `extra_json` e voltam no backup.
+- **Perfis sem senha:** quando o CSV de `auth.users` não é importado, esses perfis aparecem com o aviso **"Sem senha"** em Gestão de Contas. O admin define uma senha e o usuário passa a conseguir entrar.
+
+> **Atenção:** os CSVs contêm dados pessoais (NIP, e-mail, hash de senha). **Não os coloque no GitHub.** As pastas `data/` e `dados/` já estão no `.gitignore`.
+
+---
+
+## 4. Backups
+
+| Tipo | Quando | Onde |
+|---|---|---|
+| Automático diário | Ao iniciar e a cada hora, se ainda não houver backup no dia | `data/backups/` |
+| Antes de importar | Em toda importação | `data/backups/` |
+| Antes de excluir usuário | Em toda exclusão | `data/backups/` |
+| Manual | Botão **Criar backup agora**, ou `npm run backup` | `data/backups/` |
+| Exportação completa | Botão **Backup completo (.json)** | Download no navegador |
+
+O sistema mantém os 30 backups mais recentes. Para mudar a quantidade, use a variável `KEEP_BACKUPS`.
+
+**Guarde cópias fora do servidor** (pasta de rede, pen drive). Se o disco do servidor falhar, só restam essas cópias.
+
+### Restaurar
+
+- **Pelo backup em JSON:** em **Importar Dados**, selecione o `.json` e escolha o modo **Substituir**.
+- **Pelo arquivo `.db`:** feche o SISFERIAS, apague `data/sisferias.db-wal` e `data/sisferias.db-shm` (se existirem), substitua `data/sisferias.db` pelo backup desejado (renomeando-o) e inicie de novo.
+
+### Mudar de computador
+
+Copie a pasta inteira do SISFERIAS, incluindo a pasta `data/`, para o novo computador e execute `iniciar.bat`.
+
+---
+
+## 5. Esqueci a senha do administrador
+
+No servidor, abra um terminal na pasta do SISFERIAS e execute:
+
+```bash
+npm run admin -- --senha NOVA_SENHA
+```
+
+Isso redefine a senha da conta `admin` (ou recria a conta, se tiver sido excluída). Para outra conta, informe o login:
+
+```bash
+npm run admin -- --login 12345678 --senha NOVA_SENHA
+```
+
+Atenção: esse comando também **torna a conta administradora** e a desbloqueia.
+
+---
+
+## 6. Atualizar para uma versão nova
+
+1. Faça um backup (botão **Criar backup agora**).
+2. Substitua os arquivos do sistema pelos da versão nova, **mantendo a pasta `data/`**.
+3. Execute `atualizar.bat` (Windows) ou `./atualizar.sh` (Linux). Com o pacote pronto da página Releases, não é necessário: basta substituir os arquivos.
+4. Inicie normalmente. Se houver mudanças no banco, elas são aplicadas automaticamente.
+
+---
+
+## 7. Configuração (variáveis de ambiente)
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `PORT` | `3000` | Porta do servidor |
+| `HOST` | `0.0.0.0` | Interface de rede (`0.0.0.0` = todas) |
+| `DATA_DIR` | `./data` | Pasta do banco e dos backups |
+| `ADMIN_EMAIL` | `admin@sisferias.local` | E-mail do admin criado na primeira execução |
+| `ADMIN_PASSWORD` | (aleatória) | Senha do admin criado na primeira execução |
+| `SESSION_DAYS` | `7` | Dias até a sessão expirar |
+| `ELEVATION_MINUTES` | `15` | Minutos sem uso até a área de Segurança pedir a senha de novo |
+| `KEEP_BACKUPS` | `30` | Quantidade de backups mantidos |
+
+---
+
+## 8. Informações técnicas
+
+### Arquitetura
 
 ```text
-App.tsx                    Rotas, guards e composição dos providers
-index.tsx                  Montagem do React no elemento #root
-types.ts                   Tipos, categorias, postos e setores
-vite.config.ts             Vite, porta e variáveis de build
-components/                Header, lista, gráficos e exportações
-contexts/AuthContext.tsx   Sessão, perfis, usuários e administração
-contexts/VacationContext.tsx Férias, avisos, auditoria e sugestões
-pages/                     Telas funcionais
-lib/supabase.ts            Cliente Supabase
-lib/textUtils.ts           Normalização de texto
-supabase/migrations/       Evolução do banco e funções SQL
+Navegador (React)  ──HTTP──▶  Servidor Node (Express)  ──▶  SQLite (data/sisferias.db)
+                              • entrega a interface (dist/)
+                              • API /api/* com login e permissões
 ```
 
-## Rotas e permissões
+- **Front-end:** React 19, TypeScript, Vite 6, Tailwind CSS 3 (compilado), `react-router-dom`, `recharts`, `date-fns` e `lucide-react`.
+- **Servidor:** Node.js 22.13+ com Express 5. O banco usa o módulo nativo `node:sqlite`, então não há nada para compilar nem banco para instalar.
+- **Banco:** modo WAL (leituras e gravações simultâneas), atende de algumas centenas a poucos milhares de usuários simultâneos.
+- **Login:** NIP ou e-mail. Senhas em bcrypt. Sessão em cookie `httpOnly` (sem token no navegador).
+- **Segurança:**
+  - permissões verificadas no servidor (não só na tela);
+  - ações administrativas exigem a confirmação recente da senha do próprio admin (expira por inatividade);
+  - limite de 10 tentativas de login em 15 minutos;
+  - proteção contra requisições forjadas.
 
-`PrivateRoute` exige usuário autenticado. `AdminRoute` exige autenticação e `user.role === 'admin'`. Usuários comuns que tentam uma rota administrativa são enviados para `/home`.
+### Estrutura
 
-| Rota | Tela | Acesso | Função |
-|---|---|---|---|
-| `/login` | Login | Público | Login por e-mail ou NIP |
-| `/register` | Register | Público | Cadastro de conta e perfil |
-| `/home` | Home | Autenticado | Área pessoal e avisos |
-| `/` | Dashboard | Admin | Indicadores e gestão de férias |
-| `/justifications` | Justifications | Admin | Justificativas |
-| `/tramite` | Tramite | Admin | Trâmite administrativo |
-| `/vacation-form` | VacationForm | Autenticado | Novo lançamento |
-| `/vacation-form/:id` | VacationForm | Autenticado | Editar lançamento |
-| `/vacation-form/user/:userId` | VacationForm | Autenticado | Formulário de usuário |
-| `/calendar` | CalendarView | Admin | Calendário do planejamento |
-| `/print` e `/print/:id` | PrintVacation | Autenticado | Documento para impressão |
-| `/suggestions` | Suggestions | Autenticado | Envio e consulta de sugestões |
-| `/security` | Security | Autenticado | Usuários, permissões e auditoria |
-| `*` | Redirecionamento | Todos | Vai para `/home` |
-
-O guard do frontend não substitui RLS. As policies do Supabase devem aplicar as mesmas regras mesmo que alguém faça chamadas diretamente à API.
-
-## Regras de visibilidade
-
-Perfis possuem papel `admin` ou `user`. Para registros em `employees`, o administrador:
-
-- vê todos os setores quando `view_all_sectors` é `true`;
-- vê somente seu setor quando `view_all_sectors` é `false` e possui setor;
-- não recebe registros quando está sem setor e sem visão global.
-
-O setor do perfil prioriza o setor do lançamento de férias mais recente por `planning_year`; na ausência de lançamento, usa `profiles.sector`.
-
-## Modelo de dados
-
-### `auth.users` e `profiles`
-
-O Auth guarda credenciais e sessão. `profiles` guarda `id`, `name`, `email`, `war_name`, `nip`, `category`, `sector`, `rank`, `role`, `is_blocked` e `view_all_sectors`. O frontend não mantém senha; o campo existente no tipo `User` fica vazio por compatibilidade.
-
-### `employees`
-
-Cada linha representa o planejamento de férias de um usuário em um ano de direito: `id`, `user_id`, dados funcionais, `planning_year`, `total_vacation_days`, `vacation_parcels`, `photo_url` e `justification`. `vacation_parcels` é JSON serializado; cada parcela contém `id`, `startDate`, `endDate`, `days` e NUP opcional.
-
-A migration `20260616_fix_employees_uniqueness_for_vacation_windows.sql` remove a unicidade global por NIP e cria unicidade em `(user_id, planning_year)`. Novos registros usam `upsert` por esse par, permitindo vários anos para a mesma pessoa, mas somente um registro por ano. Registro legado sem `planning_year` é exibido como ano atual menos um.
-
-### `system_settings` e `notices`
-
-`system_settings` normalmente usa `id = 1` e guarda nome da instituição, efetivo total, logo e `staff_json` com diretor, vice-diretor e encarregado de pessoal. `notices` guarda `title`, `content`, `created_at` e `is_pinned`.
-
-### `audit_logs`
-
-Guarda `timestamp`, `user_name`, ação (`Criação`, `Alteração`, `Exclusão`, `Senha`, `Bloqueio` ou `Impressão`), campo e valores anterior/novo. A tela de segurança lista em ordem decrescente e exporta CSV.
-
-### `suggestions`
-
-Possui `id`, `user_id`, nomes do remetente no momento do envio, `title`, `description` e `created_at`. Há índice por data. É criada pela migration `20260625_create_suggestions_table.sql`.
-
-### `print_preferences`
-
-Possui uma linha por `user_id` e guarda telefone, endereço, responsáveis, observações, navio, especialização, horários e indicação de desmuniciamento. `updated_at` é mantido por trigger. É criada pela migration `20260806_create_print_preferences_table.sql`.
-
-## Fluxos lógicos
-
-### Login e cadastro
-
-Se a entrada do login contém `@`, ela é tratada como e-mail. Caso contrário, o sistema chama `get_email_by_nip(p_nip)` e usa o e-mail retornado em `signInWithPassword`. Depois, busca o perfil e o setor do lançamento mais recente. No cadastro, `auth.signUp` é executado primeiro e uma linha é criada em `profiles`; há fallback para payload mínimo quando colunas funcionais ainda não foram aplicadas.
-
-### Férias
-
-`VacationContext.saveVacation` converte camelCase para `snake_case`, serializa parcelas e atualiza por ID ou faz `upsert` por usuário/ano. Após salvar, recarrega os dados. O NUP de uma parcela é salvo editando o JSON inteiro de parcelas; a exclusão ocorre por ID.
-
-### Avisos, configurações e sugestões
-
-Configurações são salvas por upsert no registro 1. Avisos podem ser inseridos, excluídos e fixados. Sugestões são inseridas no banco e adicionadas ao estado local; exclusões atualizam banco e estado.
-
-### Impressão e exportação
-
-`PrintVacation` monta o documento no navegador e chama `window.print()`. Preferências são lidas do Supabase com fallback em `localStorage`. `ExportButtons` gera CSV e imprime; `Security` exporta auditoria em CSV. Não há geração de PDF no servidor: para PDF usa-se a opção do diálogo de impressão do navegador.
-
-## Configuração do ambiente
-
-Crie `.env.local` em desenvolvimento ou cadastre no provedor:
-
-```env
-VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
+```text
+server/
+  start.js        Ponto de entrada (verifica a versão do Node)
+  index.js        Servidor HTTP: API + interface compilada
+  api.js          Rotas da API e regras de permissão
+  auth.js         Sessões, login e proteção das rotas
+  db.js           Conexão SQLite, conversões, migrações e admin inicial
+  schema.js       Tabelas e migrações versionadas
+  importer.js     Importação (CSV/JSON) e exportação
+  backup.js       Backups (VACUUM INTO) e rotina diária
+scripts/          admin.js (senha), backup.js, pacote.js (pacote offline)
+lib/api.ts        Cliente da API usado pelas telas
+contexts/         AuthContext (sessão/usuários) e VacationContext (dados)
+pages/, components/  Telas
 ```
 
-As duas variáveis são obrigatórias; `lib/supabase.ts` lança erro se estiverem ausentes. A anon key é pública, mas a `service_role key` nunca pode aparecer no frontend.
+### Permissões aplicadas pelo servidor
 
-## Supabase e migrations
+| Ação | Usuário | Admin |
+|---|---|---|
+| Ver lançamentos de férias | Todos | Todos se tiver visão global, senão só do próprio setor |
+| Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Qualquer um |
+| Preferências de impressão | Só as próprias | Qualquer usuário |
+| Enviar sugestão | Sim | Sim |
+| Ver sugestões | Só as próprias | Todas |
+| Avisos, configurações, auditoria | Só leitura de avisos e configurações | Total |
+| Usuários (bloquear, papel, visibilidade, senha, excluir) | Não | Sim |
+| Importar, exportar e backups | Não | Sim |
 
-Migrations incrementais existentes, em ordem cronológica:
+O último administrador não pode ser rebaixado, e o admin não pode excluir a própria conta.
 
-- `20260608_add_view_all_sectors_to_profiles.sql`: adiciona visão global por setor.
-- `20260609_add_missing_profile_columns.sql`: adiciona dados funcionais do perfil.
-- `20260609_add_staff_json_to_settings.sql`: adiciona autoridades em JSONB.
-- `20260609_resolve_email_by_nip.sql`: cria RPC segura de NIP para e-mail.
-- `20260616_fix_employees_uniqueness_for_vacation_windows.sql`: define unicidade por usuário e ano.
-- `20260625_create_suggestions_table.sql`: cria sugestões e índice por data.
-- `20260806_create_print_preferences_table.sql`: cria preferências de impressão e trigger.
-- `20260821_fix_admin_reset_password.sql`: restringe reset de senha ao admin e ao usuário alvo.
+### Telas e rotas
 
-O repositório não contém o esquema inicial completo nem todas as policies/RPCs consumidas. Antes da entrega, confirme no projeto Supabase as tabelas `profiles`, `employees`, `system_settings`, `notices`, `audit_logs`, `suggestions` e `print_preferences`, suas colunas, RLS, policies, índices, extensões e as RPCs `get_email_by_nip`, `admin_reset_password`, `admin_delete_user` e `admin_update_block_status`.
+| Rota | Tela | Acesso |
+|---|---|---|
+| `/login`, `/register` | Login e cadastro | Público |
+| `/home` | Área pessoal e avisos | Autenticado |
+| `/` | Painel | Admin |
+| `/calendar`, `/justifications`, `/tramite` | Calendário, justificativas, trâmite | Admin |
+| `/vacation-form` | Lançamento de férias | Autenticado |
+| `/print` | Documento para impressão | Autenticado |
+| `/suggestions` | Sugestões | Autenticado |
+| `/security` | Segurança (abas administrativas e **Dados e Backup**) | Admin, com confirmação da própria senha |
 
-As funções sensíveis devem validar `auth.uid()` no banco. Em especial, `admin_reset_password` verifica papel admin e altera somente o usuário alvo; não deve ser substituída por `auth.updateUser` para redefinir senha de outra pessoa.
-
-## Instalação e execução
-
-Requisitos: Node.js LTS, npm e acesso ao Supabase.
+### Desenvolvimento
 
 ```bash
 npm install
-npm run dev
+npm run dev:server   # API em http://localhost:3000 (reinicia ao salvar)
+npm run dev          # interface em http://localhost:5173 (repassa /api para a 3000)
 ```
 
-O Vite usa `0.0.0.0:3000`. Validação de produção:
+| Script | Função |
+|---|---|
+| `npm start` | Inicia o servidor (usa `dist/`) |
+| `npm run build` | Compila a interface em `dist/` |
+| `npm run preview` | Compila e inicia |
+| `npm run backup` | Cria um backup manual |
+| `npm run admin -- --senha X` | Redefine a senha do administrador |
+| `npm run pacote` | Gera `pacote/sisferias` pronto para rodar sem internet |
+
+### Publicar uma versão (pacote pronto no GitHub)
+
+Crie e envie uma tag:
 
 ```bash
-npm run build
-npm run preview
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
-Scripts disponíveis: `dev`, `build` e `preview`. Não há testes automatizados nem lint configurado no `package.json`; o mínimo é executar o build e testar manualmente os fluxos com o Supabase correto.
+A automação `.github/workflows/release.yml` gera `sisferias-v2.0.0.zip` e o publica na página **Releases**.
 
-## Deploy na Vercel
+### Evolução do banco
 
-Use preset **Vite**, comando `npm run build` e diretório `dist`. Configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` em cada ambiente e faça novo deploy após alterá-las. `vercel.json` redireciona caminhos para `index.html`.
+Para mudar o esquema, acrescente uma nova migração ao final de `MIGRATIONS` em `server/schema.js`, sem alterar as já publicadas. Ela é aplicada automaticamente na próxima inicialização (depois de um backup manual, por segurança).
 
-O arquivo `VERCEL_DEPLOY.md` menciona `GEMINI_API_KEY`, mas não há dependência Gemini nem uso funcional identificado no código atual. Essa variável não é necessária para o SISFERIAS presente; a injeção legada ainda existente em `vite.config.ts` pode ser removida após confirmação de que nenhuma integração externa depende dela.
+### Diagnóstico
 
-O roteador atual é `MemoryRouter`, portanto as rotas são mantidas em memória. Não trocar para `BrowserRouter` sem revisar links, refresh e fallback da hospedagem.
-
-## Persistência local
-
-Além do Supabase, o navegador guarda rascunhos e preferências auxiliares: prazo de férias, dados temporários de cadastro/formulário, preferências de impressão e chaves legadas de segurança. Limpar `localStorage` remove esses dados locais, mas não remove registros já persistidos no Supabase.
-
-## Diagnóstico
-
-- **Aplicação não inicia:** conferir as variáveis `VITE_*`, instalar dependências e executar `npm run build`.
-- **Login por NIP falha:** conferir `profiles.nip`, existência da RPC, `GRANT EXECUTE`, Auth e perfil correspondente.
-- **Sem dados após login:** conferir perfil, papel, setor, `view_all_sectors`, RLS e respostas 401/403 na aba Network.
-- **Salvamento falha:** conferir colunas de `employees`, constraint `(user_id, planning_year)` e formato JSON de `vacation_parcels`.
-- **Impressão falha:** permitir pop-ups e verificar impressora/diálogo do navegador.
-- **Preferências sumiram:** conferir `print_preferences` e o `localStorage` do navegador.
-
-## Checklist de entrega
-
-- [ ] Aplicar migrations em ordem.
-- [ ] Confirmar esquema inicial, RLS, policies e RPCs.
-- [ ] Criar o primeiro admin de forma controlada.
-- [ ] Configurar variáveis na Vercel.
-- [ ] Executar `npm run build` sem erros.
-- [ ] Testar cadastro, login por e-mail/NIP e logout.
-- [ ] Testar criar, editar, excluir e manter férias de anos diferentes.
-- [ ] Testar restrição por setor e visão global.
-- [ ] Testar avisos, auditoria, sugestões, calendário, CSV e impressão.
-- [ ] Definir backup e retenção das tabelas.
-- [ ] Revisar a exposição de detalhes pelo `ErrorBoundary` e dados legados no `localStorage` antes de produção pública.
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1-1zZXR1WT-SfKsfxjk7ix9039AuS_YWr
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **A janela fecha logo ao abrir:** confira a versão do Node com `node -v` (precisa ser 22.13 ou mais recente).
+- **Outros computadores não acessam:** verifique o firewall (porta 3000) e se estão usando o IP mostrado em "Na rede".
+- **"Esta conta ainda não tem senha definida":** o admin precisa definir a senha em Gestão de Contas.
+- **"Muitas tentativas":** aguarde 15 minutos ou reinicie o servidor.
+- **"Interface não compilada":** execute `npm run build` (ou `atualizar.bat`).

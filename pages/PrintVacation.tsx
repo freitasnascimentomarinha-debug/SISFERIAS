@@ -6,7 +6,7 @@ import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid, addDays, startOfDay, isAfter } from 'date-fns';
 import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, StaffMember } from '../types';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all";
 
@@ -187,11 +187,12 @@ const PrintVacation: React.FC = () => {
     }
 
     const loadPreferences = async () => {
-      const { data: dbData } = await supabase
-        .from('print_preferences')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .maybeSingle();
+      let dbData: any = null;
+      try {
+        dbData = await api.get(`/print-preferences/${targetUserId}`);
+      } catch (error) {
+        console.warn('Falha ao carregar preferências de impressão:', error);
+      }
 
       if (cancelled) return;
 
@@ -296,10 +297,9 @@ const PrintVacation: React.FC = () => {
     localStorage.setItem(storageKey, JSON.stringify(newData));
 
     const targetUserId = targetedEmployee?.userId || targetId;
-    const { error: savePreferencesError } = await supabase
-      .from('print_preferences')
-      .upsert({
-        user_id: targetUserId,
+    let savePreferencesError: Error | null = null;
+    try {
+      await api.put(`/print-preferences/${targetUserId}`, {
         phone,
         address,
         encarregado,
@@ -312,7 +312,10 @@ const PrintVacation: React.FC = () => {
         lic_time: licTime,
         apr_time: aprTime,
         is_desmuniciado: isDesmuniciado
-      }, { onConflict: 'user_id' });
+      });
+    } catch (error) {
+      savePreferencesError = error instanceof Error ? error : new Error(String(error));
+    }
 
     if (savePreferencesError) {
       const message = savePreferencesError.message || 'Falha ao salvar dados da impressão.';

@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { supabase } from '../lib/supabase';
+import { api, ApiError } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -24,112 +24,61 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Converte o perfil devolvido pela API para o tipo usado nas telas.
+// O setor prioriza o lançamento de férias mais recente, que reflete
+// atualizações feitas depois do cadastro.
+const mapProfile = (p: any): User => ({
+  id: p.id,
+  name: p.name || '',
+  warName: p.war_name || '',
+  nip: p.nip || '',
+  category: p.category || '',
+  sector: p.latest_sector || p.sector || '',
+  rank: p.rank || '',
+  email: p.email || '',
+  role: p.role as 'admin' | 'user',
+  isBlocked: !!p.is_blocked,
+  viewAllSectors: !!p.view_all_sectors,
+  hasPassword: p.has_password !== false,
+  password: ''
+});
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Fetch all users for admin/listing purposes
-    fetchAllUsers();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Restaura a sessão (cookie) ao abrir o sistema.
+    api.get<{ user: any }>('/auth/me')
+      .then(({ user: me }) => {
+        if (me) {
+          setUser(mapProfile(me));
+          void fetchAllUsers();
+        }
+      })
+      .catch(error => console.error('Error restoring session:', error))
+      .finally(() => setLoading(false));
   }, []);
 
   const fetchAllUsers = async () => {
-    const [{ data: profiles }, { data: employeeSectors }] = await Promise.all([
-      supabase.from('profiles').select('*'),
-      supabase
-        .from('employees')
-        .select('user_id, sector, planning_year')
-        .order('planning_year', { ascending: false })
-    ]);
-
-    if (profiles) {
-      const sectorByUserId = new Map<string, string>();
-      (employeeSectors || []).forEach(employee => {
-        if (!sectorByUserId.has(employee.user_id) && employee.sector) {
-          sectorByUserId.set(employee.user_id, employee.sector);
-        }
-      });
-
-      const allUsers = profiles.map(p => ({
-        id: p.id,
-        name: p.name || '',
-        warName: p.war_name || '',
-        nip: p.nip || '',
-        category: p.category || '',
-        // Prioriza o setor mais recente dos lançamentos de férias para refletir atualização pós-cadastro.
-        sector: sectorByUserId.get(p.id) || p.sector || '',
-        rank: p.rank || '',
-        email: p.email || '',
-        role: p.role as 'admin' | 'user',
-        isBlocked: p.is_blocked || false,
-        viewAllSectors: !!p.view_all_sectors,
-        password: ''
-      }));
-      setUsers(allUsers);
+    try {
+      const profiles = await api.get<any[]>('/profiles');
+      setUsers(profiles.map(mapProfile));
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401)) {
+        console.error('Error fetching users:', error);
+      }
     }
   };
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (data && !error) {
-        const { data: employeeData } = await supabase
-          .from('employees')
-          .select('sector, planning_year')
-          .eq('user_id', userId)
-          .order('planning_year', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const resolvedSector = employeeData?.sector || data.sector || '';
-
-        const profileData: User = {
-          id: data.id,
-          name: data.name,
-          warName: data.war_name || '',
-          nip: data.nip || '',
-          category: data.category || '',
-          sector: resolvedSector,
-          rank: data.rank || '',
-          email: data.email,
-          role: data.role as 'admin' | 'user',
-          isBlocked: !!data.is_blocked,
-          viewAllSectors: !!data.view_all_sectors,
-          password: '' // Don't store password in state
-        };
-
-        // Only update the 'user' state if the fetched profile matches the current user's ID
-        // This prevents accidentally overwriting the logged-in user with another user's profile
-        // if fetchProfile is called for a different user ID (e.g., for display purposes).
-        if (user === null || user.id === userId) {
-          setUser(profileData);
-        }
+      const profile = await api.get(`/profiles/${userId}`);
+      const profileData = mapProfile(profile);
+      // Só atualiza o usuário logado se o perfil buscado for o dele.
+      if (user === null || user.id === userId) {
+        setUser(profileData);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -140,169 +89,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (emailOrNip: string, pass: string): Promise<boolean> => {
     try {
-      let email = emailOrNip.trim();
-
-      // Se não parece um e-mail, tenta resolver pelo NIP via função SECURITY DEFINER
-      if (!email.includes('@')) {
-        console.log('[Login] Tentando resolver NIP:', email);
-        const { data: resolvedEmail, error: nipError } = await supabase
-          .rpc('get_email_by_nip', { p_nip: email });
-        console.log('[Login] Resultado RPC:', { resolvedEmail, nipError });
-        if (nipError) {
-          console.error('[Login] Erro na RPC get_email_by_nip:', nipError);
-          return false;
-        }
-        if (!resolvedEmail) {
-          console.warn('[Login] NIP não encontrado na base:', email);
-          return false;
-        }
-        email = resolvedEmail as string;
-        console.log('[Login] Email resolvido pelo NIP:', email);
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+      const { user: me } = await api.post<{ user: any }>('/auth/login', {
+        login: emailOrNip.trim(),
         password: pass
       });
-      if (error) {
-        console.error('[Login] Falha no signInWithPassword:', error);
-        return false;
-      }
-      if (!data.user) return false;
-
-      await fetchProfile(data.user.id);
+      setUser(mapProfile(me));
+      void fetchAllUsers();
       return true;
     } catch (e) {
-      console.error('[Login] Exceção:', e);
-      return false;
+      console.error('[Login] Falha:', e);
+      throw e;
     }
   };
 
-  const register = async (name: string, email: string, pass: string, role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
+  const register = async (name: string, email: string, pass: string, _role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: pass,
-      });
-
-      if (authError) {
-        return {
-          success: false,
-          errorCode: authError.code,
-          errorMessage: authError.message
-        };
-      }
-
-      if (!authData.user) {
-        return {
-          success: false,
-          errorMessage: 'Nao foi possivel criar o usuario de autenticacao.'
-        };
-      }
-
-      // Create profile. If optional columns are not present in the database yet,
-      // retry with a minimal payload so registration can still succeed.
-      const profilePayload = {
-        id: authData.user.id,
+      // O servidor sempre cria contas novas como 'user'; a promoção a admin
+      // é feita por um administrador em Segurança.
+      const { id } = await api.post<{ id: string }>('/auth/register', {
         name,
         email,
-        role,
-        is_blocked: false,
+        password: pass,
         war_name: extra?.warName || '',
         nip: extra?.nip || '',
         category: extra?.category || '',
         sector: extra?.sector || '',
         rank: extra?.rank || ''
-      };
-
-      const { error: profileError } = await supabase.from('profiles').insert([profilePayload]);
-
-      if (profileError) {
-        const message = (profileError.message || '').toLowerCase();
-        const isMissingProfileColumn =
-          message.includes('could not find the') &&
-          message.includes('column') &&
-          message.includes('profiles');
-
-        if (isMissingProfileColumn) {
-          const minimalProfilePayload = {
-            id: authData.user.id,
-            name,
-            email,
-            role,
-            is_blocked: false
-          };
-
-          const { error: minimalInsertError } = await supabase
-            .from('profiles')
-            .insert([minimalProfilePayload]);
-
-          if (minimalInsertError) {
-            console.error('Profile creation failed (fallback):', minimalInsertError);
-            return {
-              success: false,
-              errorCode: minimalInsertError.code,
-              errorMessage: minimalInsertError.message
-            };
-          }
-        } else {
-          console.error('Profile creation failed:', profileError);
-          return {
-            success: false,
-            errorCode: profileError.code,
-            errorMessage: profileError.message
-          };
-        }
-      }
-
-      return { success: true, userId: authData.user.id };
+      });
+      return { success: true, userId: id };
     } catch (e) {
       console.error("Registration failed:", e);
       const errorMessage = e instanceof Error ? e.message : 'Erro inesperado ao cadastrar usuario.';
-      return { success: false, errorMessage };
+      const errorCode = e instanceof ApiError && e.status === 409 ? 'user_already_exists' : undefined;
+      return { success: false, errorCode, errorMessage };
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
     setUser(null);
+    setUsers([]);
   };
 
   // Deprecated/Admin features that are tricky with client-side only auth
   // For now, implementing strictly necessary ones or mocks
 
   const getRegisteredUsers = () => {
-    // This should ideally be an async call to supabase.from('profiles').select('*')
-    // But keeping synchronous signature breaks things. 
-    // For now returning empty array strictly, or we need to refactor the consumer.
-    return [];
+    return users;
   };
 
   const changeUserPassword = async (email: string, newPass: string): Promise<boolean> => {
     try {
-      // Alterando a própria senha (mesmo e-mail do usuário logado): usa updateUser normal.
+      // Alterando a própria senha.
       if (user && user.email.toLowerCase() === email.toLowerCase()) {
-        const { error } = await supabase.auth.updateUser({ password: newPass });
-        if (error) {
-          console.error("Self password update failed:", error);
-          return false;
-        }
+        await api.post('/auth/password', { password: newPass });
         return true;
       }
 
-      // Alterando a senha de OUTRO usuário: nunca usar auth.updateUser aqui,
-      // pois isso alteraria a senha da sessão atual (do admin), não a do usuário-alvo.
-      // É preciso passar exclusivamente pela RPC SECURITY DEFINER, restrita a admins.
+      // Alterando a senha de OUTRO usuário: somente administradores.
       if (user?.role !== 'admin') return false;
-
-      const { data, error: rpcError } = await supabase.rpc('admin_reset_password', {
-        target_email: email,
-        new_password: newPass
-      });
-
-      if (!rpcError && data) return true;
-      console.error("Admin reset failed:", rpcError);
-      return false;
+      await api.post('/admin/reset-password', { email, password: newPass });
+      void fetchAllUsers();
+      return true;
     } catch (e) {
       console.error("Password change error:", e);
       return false;
@@ -310,26 +162,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const deleteUser = async (userId: string) => {
-    // if (!user || user.role !== 'admin') return;
-
     // Optimistic update
     setUsers(prev => prev.filter(u => u.id !== userId));
 
-    const { error } = await supabase.rpc('admin_delete_user', { target_user_id: userId });
-
-    if (error) {
+    try {
+      await api.delete(`/profiles/${userId}`);
+    } catch (error) {
       console.error("Error deleting user:", error);
-      alert("Erro ao excluir usuário: " + error.message);
-      // Revert/Refetch would be better, but fetching all is easy
+      alert("Erro ao excluir usuário: " + (error instanceof Error ? error.message : ''));
       fetchAllUsers();
     }
   };
 
   const toggleBlockUser = async (userId: string, forceStatus?: boolean) => {
-    // Update profile is_blocked
-    // Allow any authenticated user who passed the UI check to attempt this
-    // if (!user || user.role !== 'admin') return; 
-
     const targetUser = users.find(u => u.id === userId);
     if (!targetUser) return;
 
@@ -344,9 +189,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return u;
     }));
 
-    const { error } = await supabase.from('profiles').update({ is_blocked: newStatus }).eq('id', userId);
-
-    if (error) {
+    try {
+      await api.patch(`/profiles/${userId}`, { is_blocked: newStatus });
+    } catch (error) {
       console.error("Error toggling block:", error);
       // Revert if error
       setUsers(prev => prev.map(u => {
@@ -373,11 +218,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     if (user?.id === userId) setUser(prev => prev ? { ...prev, role: newRole } : null);
 
-    const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
-
-    if (error) {
+    try {
+      await api.patch(`/profiles/${userId}`, { role: newRole });
+    } catch (error) {
       console.error("Error toggling role:", error);
+      alert("Erro ao alterar perfil: " + (error instanceof Error ? error.message : ''));
       fetchAllUsers();
+      if (user?.id === userId) void fetchProfile(userId);
     }
   };
 
@@ -389,17 +236,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ view_all_sectors: viewAllSectors })
-      .eq('id', userId);
-
-    if (!error) {
+    try {
+      await api.patch(`/profiles/${userId}`, { view_all_sectors: viewAllSectors });
       updateLocalStates();
       return { success: true };
+    } catch (error) {
+      return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro ao salvar.' };
     }
-
-    return { success: false, errorMessage: error.message };
   };
 
   const refreshUser = async () => {

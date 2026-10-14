@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Employee, AuditLog, VacationParcel, SystemSettings, Notice, StaffMember, Suggestion } from '../types';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface VacationContextType {
   employees: Employee[];
@@ -51,23 +51,21 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const fetchData = async () => {
     if (!user) return;
 
-    // Fetch Employees — admin vê apenas seu setor (exceto se viewAllSectors estiver ativado)
-    let empQuery = supabase.from('employees').select('*');
-    if (user.role === 'admin' && !user.viewAllSectors) {
-      if (user.sector) {
-        empQuery = empQuery.eq('sector', user.sector);
-      } else {
-        // Se o setor não está definido, nunca conceder visão global por padrão.
-        empQuery = empQuery.eq('id', '__no_results__');
+    // Cada consulta é independente: a falha de uma (ex.: auditoria, restrita
+    // a administradores) não impede o carregamento das demais.
+    const safeGet = async <T,>(path: string): Promise<T | null> => {
+      try {
+        return await api.get<T>(path);
+      } catch (error) {
+        console.warn(`Falha ao carregar ${path}:`, error);
+        return null;
       }
-    }
-    const { data: empData } = await empQuery;
+    };
+
+    // Lançamentos — o servidor aplica a regra de setor (admin vê apenas seu
+    // setor, exceto se viewAllSectors estiver ativado).
+    const empData = await safeGet<any[]>('/employees');
     if (empData) {
-      // Map Supabase data to local types if needed (snake_case to camelCase)
-      // Assumption: Database defines exact column names matching types or we map them here
-      // Current DB schema uses snake_case, so mapping is likely needed unless we aliased in select or types match
-      // Let's assume some mapping is needed based on common patterns, but I'll optimize for direct usage if keys match
-      // Or I map them manually
       const mappedEmployees: Employee[] = empData.map(e => {
         let parcels = e.vacation_parcels;
         if (typeof parcels === 'string') {
@@ -96,7 +94,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     // Fetch Settings
-    const { data: setData } = await supabase.from('system_settings').select('*').single();
+    const setData = await safeGet<any>('/settings');
     if (setData) {
       const staff = setData.staff_json || {};
       setSettings(prev => ({
@@ -112,7 +110,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     // Fetch Notices
-    const { data: noticeData } = await supabase.from('notices').select('*');
+    const noticeData = await safeGet<any[]>('/notices');
     if (noticeData) {
       setSettings(prev => ({
         ...prev,
@@ -127,7 +125,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     // Fetch Audit Logs
-    const { data: logData } = await supabase.from('audit_logs').select('*').order('timestamp', { ascending: false });
+    const logData = user.role === 'admin' ? await safeGet<any[]>('/audit-logs') : null;
     if (logData) {
       setAuditLogs(logData.map(l => ({
         id: l.id,
@@ -140,10 +138,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       })));
     }
 
-    const { data: suggestionsData } = await supabase
-      .from('suggestions')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const suggestionsData = await safeGet<any[]>('/suggestions');
 
     if (suggestionsData) {
       setSuggestions(suggestionsData.map(s => ({
@@ -161,6 +156,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   const saveVacation = async (data: Employee) => {
     // Map to DB structure
     const dbEmployee: any = {
+      id: data.id || undefined,
       user_id: data.userId,
       name: data.name,
       war_name: data.warName,
@@ -170,32 +166,18 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       rank: data.rank,
       planning_year: data.planningYear,
       total_vacation_days: data.totalVacationDays,
-      vacation_parcels: JSON.stringify(data.vacationParcels), // Ensure serialized
+      vacation_parcels: data.vacationParcels,
       photo_url: data.photoUrl,
       justification: data.justification
     };
 
-    if (data.id) {
-      // Edição direta do registro existente
-      const { error: updateError } = await supabase
-        .from('employees')
-        .update(dbEmployee)
-        .eq('id', data.id);
-
-      if (updateError) {
-        console.error('Error updating vacation:', updateError);
-        throw new Error(updateError.message || 'Não foi possível atualizar o lançamento.');
-      }
-    } else {
-      // Novo lançamento: garante 1 registro por militar por ano de direito
-      const { error: upsertError } = await supabase
-        .from('employees')
-        .upsert(dbEmployee, { onConflict: 'user_id,planning_year' });
-
-      if (upsertError) {
-        console.error('Error saving vacation:', upsertError);
-        throw new Error(upsertError.message || 'Não foi possível salvar o lançamento.');
-      }
+    // Com id: edita o registro existente. Sem id: o servidor garante
+    // 1 registro por militar por ano de direito.
+    try {
+      await api.post('/employees', dbEmployee);
+    } catch (error) {
+      console.error('Error saving vacation:', error);
+      throw new Error((error instanceof Error && error.message) || 'Não foi possível salvar o lançamento.');
     }
 
     await fetchData();
@@ -213,14 +195,11 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       return { ...parcel, nup: normalizedNup };
     });
 
-    const { error } = await supabase
-      .from('employees')
-      .update({ vacation_parcels: JSON.stringify(updatedParcels) })
-      .eq('id', employeeId);
-
-    if (error) {
+    try {
+      await api.patch(`/employees/${employeeId}`, { vacation_parcels: updatedParcels });
+    } catch (error) {
       console.error('Error updating parcel NUP:', error);
-      throw new Error(error.message || 'Não foi possível salvar o NUP da parcela.');
+      throw new Error((error instanceof Error && error.message) || 'Não foi possível salvar o NUP da parcela.');
     }
 
     setEmployees(prev => prev.map(emp => {
@@ -230,63 +209,67 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const deleteVacation = async (id: string) => {
-    const { error } = await supabase.from('employees').delete().eq('id', id);
-    if (!error) {
+    try {
+      await api.delete(`/employees/${id}`);
       setEmployees(prev => prev.filter(e => e.id !== id));
+    } catch (error) {
+      console.error('Error deleting vacation:', error);
+      alert('Erro ao excluir lançamento: ' + (error instanceof Error ? error.message : ''));
     }
   };
 
   const updateSettings = async (newSettings: SystemSettings) => {
-    // Upsert settings (assuming ID 1)
-    await supabase.from('system_settings').upsert({
-      id: 1,
-      institution_name: newSettings.institutionName,
-      total_manpower: newSettings.totalManpower,
-      logo_url: newSettings.logoUrl,
-      staff_json: {
-        diretor: newSettings.diretor,
-        viceDiretor: newSettings.viceDiretor,
-        encPessoal: newSettings.encPessoal,
-      }
-    });
+    try {
+      await api.put('/settings', {
+        institution_name: newSettings.institutionName,
+        total_manpower: newSettings.totalManpower,
+        logo_url: newSettings.logoUrl,
+        staff_json: {
+          diretor: newSettings.diretor,
+          viceDiretor: newSettings.viceDiretor,
+          encPessoal: newSettings.encPessoal,
+        }
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Erro ao salvar configurações: ' + (error instanceof Error ? error.message : ''));
+      return;
+    }
 
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const addNotice = async (notice: Omit<Notice, 'id' | 'date'>) => {
-    const { error } = await supabase.from('notices').insert([{
-      title: notice.title,
-      content: notice.content,
-      is_pinned: notice.isPinned || false
-    }]);
-
-    if (!error) {
+    try {
+      await api.post('/notices', {
+        title: notice.title,
+        content: notice.content,
+        is_pinned: notice.isPinned || false
+      });
       await fetchData();
-    } else {
+    } catch (error) {
       console.error("Error adding notice:", error);
-      alert("Erro ao adicionar aviso: " + error.message);
+      alert("Erro ao adicionar aviso: " + (error instanceof Error ? error.message : ''));
     }
   };
 
   const deleteNotice = async (id: string) => {
-    const { error } = await supabase.from('notices').delete().eq('id', id);
-
-    if (!error) {
+    try {
+      await api.delete(`/notices/${id}`);
       await fetchData();
-    } else {
+    } catch (error) {
       console.error("Error deleting notice:", error);
-      alert("Erro ao excluir aviso: " + error.message);
+      alert("Erro ao excluir aviso: " + (error instanceof Error ? error.message : ''));
     }
   };
 
   const togglePinNotice = async (id: string, currentPinStatus: boolean) => {
-    const { error } = await supabase.from('notices').update({ is_pinned: !currentPinStatus }).eq('id', id);
-
-    if (!error) {
+    try {
+      await api.patch(`/notices/${id}`, { is_pinned: !currentPinStatus });
       await fetchData();
-    } else {
+    } catch (error) {
       console.error("Error toggling pin status:", error);
-      alert("Erro ao fixar aviso: " + error.message);
+      alert("Erro ao fixar aviso: " + (error instanceof Error ? error.message : ''));
     }
   };
 
@@ -299,15 +282,12 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       description: suggestion.description
     };
 
-    const { data, error } = await supabase
-      .from('suggestions')
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) {
+    let data: any;
+    try {
+      data = await api.post('/suggestions', payload);
+    } catch (error) {
       console.error('Error adding suggestion:', error);
-      throw new Error(error.message || 'Nao foi possivel enviar a sugestao.');
+      throw new Error((error instanceof Error && error.message) || 'Nao foi possivel enviar a sugestao.');
     }
 
     if (data) {
@@ -325,11 +305,11 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const deleteSuggestion = async (id: string) => {
-    const { error } = await supabase.from('suggestions').delete().eq('id', id);
-
-    if (error) {
+    try {
+      await api.delete(`/suggestions/${id}`);
+    } catch (error) {
       console.error('Error deleting suggestion:', error);
-      throw new Error(error.message || 'Nao foi possivel excluir a sugestao.');
+      throw new Error((error instanceof Error && error.message) || 'Nao foi possivel excluir a sugestao.');
     }
 
     setSuggestions(prev => prev.filter(item => item.id !== id));
@@ -340,14 +320,19 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const addAuditLog = async (logData: Omit<AuditLog, 'id' | 'timestamp'>) => {
-    // Insert into DB
-    const { data, error } = await supabase.from('audit_logs').insert([{
-      user_name: logData.userName,
-      action: logData.action,
-      field: logData.field,
-      old_value: logData.oldValue,
-      new_value: logData.newValue,
-    }]).select().single();
+    let data: any = null;
+    let error: unknown = null;
+    try {
+      data = await api.post('/audit-logs', {
+        user_name: logData.userName,
+        action: logData.action,
+        field: logData.field,
+        old_value: logData.oldValue,
+        new_value: logData.newValue,
+      });
+    } catch (e) {
+      error = e;
+    }
 
     if (!error && data) {
       const newLog: AuditLog = {

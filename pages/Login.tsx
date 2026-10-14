@@ -17,11 +17,13 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const success = await login(emailOrNip, password);
-    if (success) {
+    try {
+      await login(emailOrNip, password);
       navigate('/home');
-    } else {
-      setError('Credenciais inválidas. Verifique seu e-mail/NIP e senha.');
+    } catch (err) {
+      setError(err instanceof Error && err.message
+        ? err.message
+        : 'Credenciais inválidas. Verifique seu e-mail/NIP e senha.');
     }
     setLoading(false);
   };
