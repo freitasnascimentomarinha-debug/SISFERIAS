@@ -54,12 +54,12 @@ const VacationForm: React.FC = () => {
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
 
 
-  // Bloqueio efetivo para todos (incluindo admins conforme requisitos)
+  // O bloqueio impede o próprio militar de alterar o lançamento. O
+  // administrador continua podendo editar (o servidor aplica a mesma regra).
   const targetUserObj = users.find(u => u.id === targetUserId);
-  const isBlocked = targetUserObj ? targetUserObj.isBlocked === true : (user?.id === targetUserId ? user?.isBlocked === true : false);
-
-  // Flag para avisar admin, mas o bloqueio acima agora é soberano
-  const adminOverride = user?.role === 'admin' && isBlocked;
+  const targetIsBlocked = targetUserObj ? targetUserObj.isBlocked === true : (user?.id === targetUserId ? user?.isBlocked === true : false);
+  const adminOverride = user?.role === 'admin' && targetIsBlocked;
+  const isBlocked = targetIsBlocked && !adminOverride;
   const ranks = useMemo(() => {
     return category === 'praca' ? PRACA_RANKS : category === 'oficial' ? OFICIAL_RANKS : CIVIL_RANKS;
   }, [category]);
@@ -430,6 +430,15 @@ const VacationForm: React.FC = () => {
             <h3 className="font-bold text-lg">Acesso Bloqueado para Lançamento</h3>
             <p className="text-sm">Você está fora do período de alteração. Entre em contato com o administrador.</p>
           </div>
+        </div>
+      )}
+
+      {adminOverride && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800">
+          <Info size={20} className="shrink-0" />
+          <p className="text-sm font-medium">
+            Este militar está <b>bloqueado</b> para lançamentos. Você pode editar porque é administrador; a alteração fica registrada na auditoria.
+          </p>
         </div>
       )}
 
