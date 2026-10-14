@@ -9,6 +9,7 @@ import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, MIN_PASSWOR
 import { api, REAUTH_EVENT } from '../lib/api';
 import DataManagement from '../components/DataManagement';
 import { normalizeText } from '../lib/textUtils';
+import { resizeImageFile } from '../lib/image';
 
 const Security: React.FC = () => {
   // Acesso liberado pelo servidor após o admin confirmar a própria senha.
@@ -18,7 +19,7 @@ const Security: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [elevationMinutes, setElevationMinutes] = useState(15);
-  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking' | 'suggestions' | 'data'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'suggestions' | 'data'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -139,14 +140,16 @@ const Security: React.FC = () => {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateSettings({ ...settings, logoUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      // Reduz o logo (mantendo a transparência de PNG) antes de gravar.
+      const logoUrl = await resizeImageFile(file, { maxSize: 600, keepTransparency: true });
+      await updateSettings({ ...settings, logoUrl });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível usar esta imagem.');
     }
   };
 
@@ -391,8 +394,6 @@ const Security: React.FC = () => {
 
   // Filtro para aba de Visibilidade
   const [visibilitySearch, setVisibilitySearch] = useState('');
-  const [trackingSearch, setTrackingSearch] = useState('');
-  const [trackingYearFilter, setTrackingYearFilter] = useState<string>('all');
 
   const getResolvedSector = (u: User) => {
     if (u.sector && u.sector.trim().length > 0) return u.sector;
@@ -407,68 +408,6 @@ const Security: React.FC = () => {
     );
   }, [users, visibilitySearch, employees]);
 
-  const trackingRows = useMemo(() => {
-    const today = startOfDay(new Date());
-
-    return employees.flatMap(employee => {
-      const owner = users.find(u => u.id === employee.userId);
-      return employee.vacationParcels.map((parcel, index) => {
-        const start = parcel.startDate ? startOfDay(new Date(parcel.startDate + 'T00:00:00')) : null;
-        const missingNup = !parcel.nup || parcel.nup.trim().length === 0;
-        const shouldHighlight = !!start && today.getTime() >= start.getTime() && missingNup;
-
-        return {
-          key: `${employee.id}-${parcel.id}`,
-          employeeName: employee.name,
-          warName: employee.warName,
-          rank: employee.rank,
-          sector: employee.sector,
-          planningYear: employee.planningYear,
-          parcelLabel: `Parcela ${index + 1}`,
-          startDate: parcel.startDate,
-          endDate: parcel.endDate,
-          days: parcel.days,
-          nup: parcel.nup || '',
-          shouldHighlight,
-          ownerEmail: owner?.email || ''
-        };
-      });
-    }).sort((a, b) => {
-      if (a.shouldHighlight !== b.shouldHighlight) return a.shouldHighlight ? -1 : 1;
-      if (a.employeeName !== b.employeeName) return a.employeeName.localeCompare(b.employeeName);
-      if (a.planningYear !== b.planningYear) return b.planningYear - a.planningYear;
-      return a.parcelLabel.localeCompare(b.parcelLabel);
-    });
-  }, [employees, users]);
-
-  const filteredTrackingRows = useMemo(() => {
-    const term = normalizeText(trackingSearch.trim());
-    return trackingRows.filter(row => {
-      const matchYear = trackingYearFilter === 'all' || row.planningYear.toString() === trackingYearFilter;
-      if (!matchYear) return false;
-      if (!term) return true;
-      return (
-        normalizeText(row.employeeName).includes(term) ||
-        normalizeText(row.warName).includes(term) ||
-        row.rank.toLowerCase().includes(term) ||
-        row.sector.toLowerCase().includes(term) ||
-        row.ownerEmail.toLowerCase().includes(term) ||
-        row.nup.toLowerCase().includes(term)
-      );
-    });
-  }, [trackingRows, trackingSearch, trackingYearFilter]);
-
-  const trackingStats = useMemo(() => {
-    const total = filteredTrackingRows.length;
-    const withNup = filteredTrackingRows.filter(row => row.nup.trim().length > 0).length;
-    const pending = filteredTrackingRows.filter(row => row.shouldHighlight).length;
-    return { total, withNup, pending };
-  }, [filteredTrackingRows]);
-
-  const trackingYears = useMemo(() => {
-    const years = Array.from(new Set(trackingRows.map(r => r.planningYear))).sort((a, b) => b - a);
-    return years;
-  }, [trackingRows]);
 
   const handleToggleViewAllSectors = async (userId: string) => {
     const targetUser = users.find(u => u.id === userId);
@@ -1140,117 +1079,6 @@ const Security: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'tracking' && (
-          <div className="p-8 animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="text-orange-500" size={24} /> NUP
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">Acompanhe cada parcela de férias e o NUP vinculado ao documento de impressão.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nome, e-mail, setor ou NUP..."
-                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-96"
-                    value={trackingSearch}
-                    onChange={e => setTrackingSearch(e.target.value)}
-                  />
-                </div>
-                <select
-                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500"
-                  value={trackingYearFilter}
-                  onChange={e => setTrackingYearFilter(e.target.value)}
-                >
-                  <option value="all">Janela: Todas</option>
-                  {trackingYears.map(year => (
-                    <option key={year} value={year.toString()}>{`Janela: ${year}`}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total de Parcelas</p>
-                <p className="text-2xl font-black text-slate-900 mt-1">{trackingStats.total}</p>
-              </div>
-              <div className="p-4 rounded-2xl border border-green-200 bg-green-50">
-                <p className="text-[10px] font-black uppercase tracking-widest text-green-700">Parcelas com NUP</p>
-                <p className="text-2xl font-black text-green-700 mt-1">{trackingStats.withNup}</p>
-              </div>
-              <div className="p-4 rounded-2xl border border-red-200 bg-red-50">
-                <p className="text-[10px] font-black uppercase tracking-widest text-red-700">Pendentes (Iniciada sem NUP)</p>
-                <p className="text-2xl font-black text-red-700 mt-1">{trackingStats.pending}</p>
-              </div>
-            </div>
-
-            <div className="mb-5 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 text-sm font-semibold">
-              Linhas em destaque indicam parcela iniciada (ou já passada) sem NUP informado, sinalizando pendência de conformidade da papeleta.
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="text-slate-400 border-b border-slate-100">
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Status</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Militar</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Setor</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Janela</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Parcela</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">Período</th>
-                    <th className="pb-4 px-4 font-black uppercase text-[10px] tracking-widest">NUP</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {filteredTrackingRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-16 text-center text-slate-400 font-medium">Nenhuma parcela encontrada para o filtro informado.</td>
-                    </tr>
-                  ) : (
-                    filteredTrackingRows.map(row => (
-                      <tr key={row.key} className={row.shouldHighlight ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-slate-50/50'}>
-                        <td className="py-4 px-4">
-                          {row.shouldHighlight ? (
-                            <span className="inline-flex items-center gap-1.5 text-red-600 font-black text-[10px] uppercase tracking-wider">
-                              <AlertCircle size={13} /> Sem NUP (atrasado)
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-green-600 font-black text-[10px] uppercase tracking-wider">
-                              <CheckCircle2 size={13} /> Regular
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <p className="font-bold text-slate-800">{row.rank} {row.warName || row.employeeName}</p>
-                          <p className="text-[10px] text-slate-500 font-semibold uppercase">{row.employeeName}</p>
-                        </td>
-                        <td className="py-4 px-4 font-semibold text-slate-700">{row.sector || 'Não definido'}</td>
-                        <td className="py-4 px-4 font-bold text-slate-700">{row.planningYear}</td>
-                        <td className="py-4 px-4 font-semibold text-slate-700">{row.parcelLabel} ({row.days} dias)</td>
-                        <td className="py-4 px-4 text-slate-600 text-[12px]">
-                          {row.startDate ? format(new Date(row.startDate + 'T00:00:00'), 'dd/MM/yyyy') : '--'}
-                          {' '}a{' '}
-                          {row.endDate ? format(new Date(row.endDate + 'T00:00:00'), 'dd/MM/yyyy') : '--'}
-                        </td>
-                        <td className="py-4 px-4">
-                          {row.nup ? (
-                            <span className="font-bold text-slate-900">{row.nup}</span>
-                          ) : (
-                            <span className="text-red-600 font-black text-[11px] uppercase">Não informado</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {activeTab === 'logs' && (
           <div className="p-8">

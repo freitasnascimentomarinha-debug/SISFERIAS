@@ -61,6 +61,8 @@ docker compose up -d
 ```
 
 Os dados ficam em `./data`. Para ver a senha inicial, use `docker compose logs sisferias`.
+A imagem base pode ser trocada por um espelho interno: `docker build --build-arg NODE_IMAGE=meu-espelho/node:22-alpine .`.
+A instalação por Docker é testada automaticamente no GitHub a cada mudança (workflow "Testes").
 
 ---
 
@@ -74,6 +76,24 @@ Os dados ficam em `./data`. Para ver a senha inicial, use `docker compose logs s
   - Usa o modo `node server/start.js servico`, que reinicia o servidor se ele cair e grava o log em `data/logs/sisferias.log`.
   - Para remover: `remover-servico.bat`.
   - No Linux: `sudo node scripts/servico.js instalar` (systemd). Os comandos disponíveis são `instalar`, `remover`, `iniciar`, `parar` e `status`; acrescente `--simular` para só ver o que seria feito.
+
+---
+
+### Conexão criptografada (HTTPS)
+
+Por padrão o sistema usa HTTP. Na rede interna o risco é baixo, mas a TI pode exigir criptografia. Para ativar:
+
+```bash
+npm run https -- ativar
+```
+
+- **Certificado automático:** o sistema gera um certificado próprio em `data/certs/`, válido por 5 anos, para o nome do computador e todos os seus IPs. Se o servidor ganhar um IP novo, o certificado é refeito sozinho.
+- **Certificado da instituição:** `npm run https -- ativar --cert C:\certs\servidor.crt --key C:\certs\servidor.key`.
+- **Reinício:** depois de ativar, reinicie o SISFERIAS (ou o serviço). O endereço passa a ser `https://IP-DO-SERVIDOR:3000`.
+- **Evitar o aviso de "conexão não segura"** (só com o certificado automático): em cada computador, abra `https://IP-DO-SERVIDOR:3000/api/certificado`, salve o arquivo, dê dois cliques nele e escolha **Instalar certificado → Máquina Local → Autoridades de Certificação Raiz Confiáveis**. A TI pode distribuir o mesmo arquivo por política de grupo.
+- **Desativar:** `npm run https -- desativar`. Para conferir a situação: `npm run https -- status`.
+
+A configuração fica em `data/config.json`, que também vale para o modo serviço. Com HTTPS ativo, o cookie de sessão é marcado como `Secure` e só trafega criptografado.
 
 ---
 
@@ -237,6 +257,9 @@ Outras regras do servidor:
 - **Auditoria:** o autor é sempre o usuário da sessão; o nome enviado pela tela é ignorado.
 - **Telas:** buscam os dados de novo ao trocar de tela, ao voltar para a janela e a cada 60 s. Registros sem mudança mantêm o mesmo objeto, para não reiniciar formulários abertos.
 - **"Quadro/Esp.":** gravado em `print_preferences.specialization` no cadastro e no formulário de férias.
+- **Imagens:** foto e logo são reduzidos no navegador (foto até 400 px; logo até 600 px, mantendo a transparência). O servidor recusa imagens acima de 2 MB ou fora dos formatos JPG, PNG, WEBP e GIF.
+- **Relatório Excel:** gerado no navegador a partir da lista do Painel (`lib/excelReport.ts`), respeitando os filtros. A biblioteca só é baixada no clique.
+- **Carregamento:** as telas são carregadas sob demanda (`React.lazy`), e as bibliotecas grandes ficam em arquivos próprios. A tela de login abre com cerca de 260 KB.
 - **Papeleta:** usa o CSS compilado do próprio sistema, sem CDN, e funciona sem internet.
 
 ### Telas e rotas
@@ -270,6 +293,8 @@ npm run dev          # interface em http://localhost:5173 (repassa /api para a 3
 | `npm run pacote` | Gera `pacote/sisferias` pronto para rodar sem internet |
 | `npm run servico -- instalar` | Instala como serviço (Windows/Linux); também `remover`, `parar`, `status` |
 | `npm test` | Testes do servidor (API, permissões, prazo, backups, persistência) em segundos, sem navegador |
+| `npm run typecheck` | Verifica os tipos do código (TypeScript); deve terminar sem erros |
+| `npm run https -- ativar` | Ativa o HTTPS (veja "Conexão criptografada") |
 | `npm run test:e2e` | Testes completos no navegador com 5 contas. Requer uma vez: `npm install --no-save playwright && npx playwright install chromium` |
 
 Rode `npm test` antes de publicar qualquer mudança. Os testes de navegador cobrem as telas de ponta a ponta, inclusive a papeleta, o reinício do servidor e as gravações simultâneas.

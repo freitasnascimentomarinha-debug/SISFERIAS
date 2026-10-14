@@ -32,6 +32,7 @@ const steps = [
   ['t5_correcoes', 'Papeleta offline, prazo, auditoria, atualização, Quadro/Esp.'],
   ['t6_bloqueado', 'Admin edita lançamento de bloqueado'],
   ['t7_pacote', 'Troca de senha, regra de senha, ajustes de tela e cópia de backups'],
+  ['t8_excel_https', 'Excel, redução de imagens, aba removida, telas sob demanda e HTTPS'],
 ];
 
 let srv = await startServer({ dataDir, env });

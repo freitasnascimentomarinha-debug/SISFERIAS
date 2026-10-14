@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
+import http from 'node:http';
+import https from 'node:https';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -27,9 +29,15 @@ export async function startServer({ dataDir, port, env = {} } = {}) {
   let output = '';
   child.stdout.on('data', d => { output += d; });
   child.stderr.on('data', d => { output += d; });
-  const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i += 1) {
-    try { if ((await fetch(`${base}/api/health`)).ok) break; } catch { /* ainda iniciando */ }
+  const secure = env.HTTPS === '1';
+  const base = `${secure ? 'https' : 'http'}://127.0.0.1:${port}`;
+  const healthy = () => new Promise(resolve => {
+    const req = (secure ? https : http).get(`${base}/api/health`, { rejectUnauthorized: false }, res => { res.resume(); resolve(res.statusCode === 200); });
+    req.on('error', () => resolve(false));
+  });
+  // HTTPS gera o certificado na primeira vez (alguns segundos).
+  for (let i = 0; i < 300; i += 1) {
+    if (await healthy()) break;
     if (child.exitCode !== null) throw new Error(`servidor não iniciou:\n${output}`);
     await new Promise(r => setTimeout(r, 100));
   }

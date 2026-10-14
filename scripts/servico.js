@@ -11,6 +11,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
+import https from 'node:https';
+import { config } from '../server/config.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -18,7 +20,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const NAME = 'SISFERIAS';
 const START = path.join(ROOT, 'server', 'start.js');
 const NODE = process.execPath;
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = config.port;
+const SCHEME = config.https.enabled ? 'https' : 'http';
 const args = process.argv.slice(2);
 const command = args.find(a => !a.startsWith('--')) || 'status';
 const SIMULATE = args.includes('--simular');
@@ -41,7 +44,9 @@ function run(cmd, cmdArgs, { ignoreError = false } = {}) {
 
 function checkHealth() {
   return new Promise(resolve => {
-    const req = http.get({ host: '127.0.0.1', port: PORT, path: '/api/health', timeout: 3000 }, res => {
+    const client = config.https.enabled ? https : http;
+    // Certificado próprio da rede interna: aqui só se verifica se o servidor responde.
+    const req = client.get({ host: '127.0.0.1', port: PORT, path: '/api/health', timeout: 3000, rejectUnauthorized: false }, res => {
       resolve(res.statusCode === 200);
       res.resume();
     });
@@ -155,7 +160,7 @@ const windows = {
     run('schtasks', ['/Run', '/TN', NAME]);
     console.log('Serviço instalado: o SISFERIAS vai iniciar sozinho sempre que o computador ligar.');
     if (!SIMULATE) {
-      console.log(await waitHealth() ? `Funcionando em http://localhost:${PORT}` : 'Ainda iniciando... confira em alguns segundos com "status" ou no log data\\logs\\sisferias.log.');
+      console.log(await waitHealth() ? `Funcionando em ${SCHEME}://localhost:${PORT}` : 'Ainda iniciando... confira em alguns segundos com "status" ou no log data\\logs\\sisferias.log.');
     }
   },
   async remover() {
@@ -215,7 +220,7 @@ const linux = {
     run('systemctl', ['daemon-reload']);
     run('systemctl', ['enable', '--now', `${NAME.toLowerCase()}.service`]);
     console.log('Serviço instalado e iniciado (systemd). Logs: journalctl -u sisferias -f');
-    if (!SIMULATE) console.log(await waitHealth() ? `Funcionando em http://localhost:${PORT}` : 'Ainda iniciando... confira com "systemctl status sisferias".');
+    if (!SIMULATE) console.log(await waitHealth() ? `Funcionando em ${SCHEME}://localhost:${PORT}` : 'Ainda iniciando... confira com "systemctl status sisferias".');
   },
   async remover() {
     run('systemctl', ['disable', '--now', `${NAME.toLowerCase()}.service`], { ignoreError: true });
@@ -240,7 +245,7 @@ if (isMain) {
   try {
     await impl[command]();
     if (command === 'status' && !SIMULATE) {
-      console.log(await checkHealth() ? `Respondendo em http://localhost:${PORT}` : `Não está respondendo em http://localhost:${PORT}`);
+      console.log(await checkHealth() ? `Respondendo em ${SCHEME}://localhost:${PORT}` : `Não está respondendo em ${SCHEME}://localhost:${PORT}`);
     }
   } catch (err) {
     console.error(`\nErro: ${err.message}\n`);

@@ -1,6 +1,8 @@
 
-import React from 'react';
-import { Download, FileDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, FileDown, FileSpreadsheet } from 'lucide-react';
+import { useVacation } from '../contexts/VacationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { format, startOfDay, isBefore, isAfter, isValid, differenceInDays } from 'date-fns';
 import { Employee } from '../types';
 
@@ -11,6 +13,29 @@ interface ExportButtonsProps {
 }
 
 const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, planningYear = new Date().getFullYear() }) => {
+  const { settings } = useVacation();
+  const { user } = useAuth();
+  const [excelBusy, setExcelBusy] = useState(false);
+
+  const exportExcel = async () => {
+    setExcelBusy(true);
+    try {
+      const { exportVacationExcel } = await import('../lib/excelReport');
+      await exportVacationExcel(employees, {
+        planningYear,
+        filters,
+        totalManpower: settings.totalManpower,
+        institutionName: settings.institutionName,
+        generatedBy: user?.name,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar Excel:', error);
+      alert('Não foi possível gerar o Excel: ' + (error instanceof Error ? error.message : ''));
+    } finally {
+      setExcelBusy(false);
+    }
+  };
+
   const now = startOfDay(new Date());
 
   const escapeHtml = (value: string) => {
@@ -361,6 +386,14 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
         className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-black shadow-lg shadow-slate-200"
       >
         <FileDown size={18} /> Gerar Relatório (PDF)
+      </button>
+      <button
+        type="button"
+        onClick={() => void exportExcel()}
+        disabled={excelBusy}
+        className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-green-700 disabled:opacity-60"
+      >
+        <FileSpreadsheet size={18} /> {excelBusy ? 'Gerando...' : 'Exportar Excel'}
       </button>
       <button 
         type="button"

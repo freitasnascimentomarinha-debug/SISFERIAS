@@ -13,7 +13,7 @@ export function createSession(res, userId) {
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false, // rede interna sem HTTPS; ative se publicar atrás de HTTPS
+    secure: config.https.enabled, // com HTTPS o cookie só trafega criptografado
     expires,
     path: '/',
   });

@@ -13,6 +13,7 @@ import { previewImport, applyImport, exportAll, exportTableCsv, countAll } from 
 import { createBackup, listBackups, getBackupCopyDir, getBackupCopyStatus, setBackupCopyDir, copyToExtraFolder } from './backup.js';
 import { config } from './config.js';
 import { setDeadline, deadlineInForce } from './deadline.js';
+import { autoCertFile } from './tls.js';
 
 export const api = express.Router();
 
@@ -30,6 +31,18 @@ const h = (fn) => (req, res, next) => {
     if (result && typeof result.catch === 'function') result.catch(next);
   } catch (err) { next(err); }
 };
+
+// Imagens chegam como data URL (já reduzidas pela tela). Limite de 2 MB.
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+function checkImage(value, label) {
+  if (value === undefined || value === null || value === '') return;
+  const text = String(value);
+  if (!text.startsWith('data:')) return; // endereço de imagem (http...) não é validado aqui
+  const match = /^data:image\/(png|jpeg|jpg|webp|gif);base64,/.exec(text);
+  if (!match) fail(400, `${label}: formato de imagem não suportado (use JPG, PNG ou WEBP).`);
+  const bytes = Math.floor((text.length - match[0].length) * 3 / 4);
+  if (bytes > MAX_IMAGE_BYTES) fail(413, `${label}: imagem grande demais (máximo de 2 MB).`);
+}
 
 function checkPasswordRule(password) {
   if (password.length < config.minPasswordLength) {
@@ -71,6 +84,17 @@ const effectiveSector = (profile) => profile.latest_sector || profile.sector || 
 // ---------------------------------------------------------------------------
 
 api.get('/health', (_req, res) => res.json({ ok: true }));
+
+// Certificado público do servidor (com HTTPS ativo), para instalar nos
+// computadores da rede e evitar o aviso de "conexão não segura".
+api.get('/certificado', h((_req, res) => {
+  if (!config.https.enabled) fail(404, 'O HTTPS não está ativado neste servidor.');
+  const file = config.https.cert || autoCertFile();
+  if (!fs.existsSync(file)) fail(404, 'Certificado não encontrado.');
+  res.setHeader('Content-Type', 'application/x-x509-ca-cert');
+  res.setHeader('Content-Disposition', 'attachment; filename="sisferias.crt"');
+  res.send(fs.readFileSync(file));
+}));
 
 api.post('/auth/login', h((req, res) => {
   const login = String(req.body?.login || '').trim();
@@ -299,6 +323,7 @@ api.post('/employees', requireAuth, h((req, res) => {
   const body = req.body || {};
   const data = pick(body, EMPLOYEE_FIELDS);
   if (!data.user_id) fail(400, 'Lançamento sem usuário.');
+  checkImage(data.photo_url, 'Foto');
   if (!Number.isInteger(Number(data.planning_year))) fail(400, 'Ano de referência inválido.');
   if (data.vacation_parcels !== undefined && !Array.isArray(
     typeof data.vacation_parcels === 'string' ? JSON.parse(data.vacation_parcels) : data.vacation_parcels,
@@ -331,6 +356,7 @@ api.patch('/employees/:id', requireAuth, h((req, res) => {
   if (!existing) fail(404, 'Lançamento não encontrado.');
   assertCanEdit(req, existing.user_id);
   const data = pick(req.body, EMPLOYEE_FIELDS.filter(f => f !== 'user_id'));
+  checkImage(data.photo_url, 'Foto');
   updateRow('employees', { id: req.params.id }, data);
   res.json(rowOut('employees', db.prepare('SELECT * FROM employees WHERE id = ?').get(req.params.id)));
 }));
@@ -353,6 +379,7 @@ api.get('/settings', requireAuth, (_req, res) => {
 
 api.put('/settings', requireElevated, h((req, res) => {
   const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json']);
+  checkImage(data.logo_url, 'Logo');
   upsertRow('system_settings', { ...data, id: 1 });
   res.json(rowOut('system_settings', db.prepare('SELECT * FROM system_settings WHERE id = 1').get()));
 }));
