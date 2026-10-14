@@ -12,6 +12,7 @@ import { TABLES } from './schema.js';
 import { previewImport, applyImport, exportAll, exportTableCsv, countAll } from './importer.js';
 import { createBackup, listBackups } from './backup.js';
 import { config } from './config.js';
+import { setDeadline, deadlineInForce } from './deadline.js';
 
 export const api = express.Router();
 
@@ -128,12 +129,15 @@ api.post('/auth/register', h((req, res) => {
     upsertRow('profiles', {
       id, name, email, nip,
       role: 'user',
-      is_blocked: false,
+      // Depois do prazo final, contas novas já nascem bloqueadas.
+      is_blocked: deadlineInForce(),
       war_name: String(b.war_name || ''),
       category: String(b.category || ''),
       sector: String(b.sector || ''),
       rank: String(b.rank || ''),
     });
+    const specialization = String(b.specialization || '').trim().toUpperCase();
+    if (specialization) upsertRow('print_preferences', { user_id: id, specialization });
   });
   res.status(201).json({ id });
 }));
@@ -347,6 +351,14 @@ api.put('/settings', requireElevated, h((req, res) => {
   res.json(rowOut('system_settings', db.prepare('SELECT * FROM system_settings WHERE id = 1').get()));
 }));
 
+// Prazo final de lançamento (vale para todos os administradores).
+api.put('/settings/deadline', requireElevated, h((req, res) => {
+  const deadline = req.body?.deadline ? String(req.body.deadline) : null;
+  if (deadline && !/^\d{4}-\d{2}-\d{2}$/.test(deadline)) fail(400, 'Data inválida.');
+  const result = setDeadline(deadline, req.user.name);
+  res.json({ ...result, settings: rowOut('system_settings', db.prepare('SELECT * FROM system_settings WHERE id = 1').get()) });
+}));
+
 api.get('/notices', requireAuth, (_req, res) => {
   res.json(rowsOut('notices', db.prepare('SELECT * FROM notices ORDER BY created_at').all()));
 });
@@ -379,7 +391,9 @@ api.post('/audit-logs', requireAuth, h((req, res) => {
   upsertRow('audit_logs', {
     id,
     timestamp: nowIso(),
-    ...pick(req.body, ['user_name', 'action', 'field', 'old_value', 'new_value']),
+    ...pick(req.body, ['action', 'field', 'old_value', 'new_value']),
+    // Sempre o nome de quem está logado: a tela não pode escolher o autor.
+    user_name: req.user.name,
   });
   res.status(201).json(rowOut('audit_logs', db.prepare('SELECT * FROM audit_logs WHERE id = ?').get(id)));
 }));

@@ -40,7 +40,7 @@ const Register: React.FC = () => {
     
     setLoading(true);
     const result = await register(name, email, password, 'user', {
-      warName, nip, category, sector, rank
+      warName, nip, category, sector, rank, specialization: specialization.trim()
     });
     
     if (result.success) {

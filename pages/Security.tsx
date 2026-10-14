@@ -51,7 +51,7 @@ const Security: React.FC = () => {
 
   const navigate = useNavigate();
   const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
-  const { employees, auditLogs, addAuditLog, settings, updateSettings, addNotice, deleteNotice, togglePinNotice, suggestions, deleteSuggestion } = useVacation();
+  const { employees, auditLogs, addAuditLog, settings, updateSettings, setVacationDeadline, addNotice, deleteNotice, togglePinNotice, suggestions, deleteSuggestion, refreshData } = useVacation();
 
   const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
 
@@ -66,38 +66,21 @@ const Security: React.FC = () => {
     if (settings.encPessoal) setStaffEncPessoal(settings.encPessoal);
   }, [settings.diretor, settings.viceDiretor, settings.encPessoal]);
 
-  // Bloqueio Automático por Prazo
-  const [deadline, setDeadline] = useState(() => localStorage.getItem('vacation_deadline') || '');
-  const lastProcessedDeadline = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!isAdminAuthenticated) return;
-    if (deadline && deadline !== lastProcessedDeadline.current) {
-      localStorage.setItem('vacation_deadline', deadline);
-      const deadlineDate = endOfDay(new Date(deadline + 'T00:00:00'));
-
-      if (isAfter(new Date(), deadlineDate)) {
-        if (isAfter(new Date(), deadlineDate)) {
-          api.post('/profiles/block-all', { status: true })
-            .then(() => {
-              // Update local state visuals efficiently
-              batchUpdateBlockStatus(true);
-            })
-            .catch(error => console.error('Erro ao bloquear lançamentos:', error));
-          lastProcessedDeadline.current = deadline;
-        }
-      }
-    } else if (!deadline) {
-      localStorage.removeItem('vacation_deadline');
-      lastProcessedDeadline.current = null;
-    }
-  }, [deadline, users, toggleBlockUser, isAdminAuthenticated]);
+  // Prazo final de lançamento: gravado no servidor, vale para todos os
+  // administradores. O servidor bloqueia todos quando o prazo vence.
+  const deadline = settings.vacationDeadline || '';
+  const changeDeadline = async (value: string) => {
+    await setVacationDeadline(value || null);
+  };
 
   // Verifica se a confirmação de senha ainda vale e volta a pedi-la quando
   // o servidor avisar que expirou (inatividade).
   useEffect(() => {
     // Remove a antiga senha fixa da área, que ficava guardada no navegador.
-    try { localStorage.removeItem('vacation_admin_pass'); } catch { /* ignora */ }
+    try {
+      localStorage.removeItem('vacation_admin_pass');
+      localStorage.removeItem('vacation_deadline'); // prazo agora fica no servidor
+    } catch { /* ignora */ }
 
     api.get<{ elevated: boolean; minutes: number }>('/auth/elevation')
       .then(r => { setIsAdminAuthenticated(r.elevated); setElevationMinutes(r.minutes); })
@@ -107,6 +90,11 @@ const Security: React.FC = () => {
     window.addEventListener(REAUTH_EVENT, lock);
     return () => window.removeEventListener(REAUTH_EVENT, lock);
   }, []);
+
+  // Cada aba aberta mostra os dados mais recentes (novos usuários, sugestões...).
+  useEffect(() => {
+    if (isAdminAuthenticated) void refreshData();
+  }, [activeTab, isAdminAuthenticated]);
 
   const lockNow = async () => {
     try { await api.post('/auth/elevate/end'); } catch { /* ignora */ }
@@ -150,7 +138,7 @@ const Security: React.FC = () => {
     });
     setNoticeTitle('');
     setNoticeContent('');
-    addAuditLog({ userName: 'Admin', action: 'Criação', field: 'Quadro de Avisos', oldValue: '-', newValue: noticeTitle });
+    addAuditLog({ userName: user?.name || 'Admin', action: 'Criação', field: 'Quadro de Avisos', oldValue: '-', newValue: noticeTitle });
   };
 
   const confirmRemoveNotice = (id: string) => {
@@ -162,7 +150,7 @@ const Security: React.FC = () => {
     if (!noticeIdToDelete) return;
     const target = settings.notices.find(n => n.id === noticeIdToDelete);
     await deleteNotice(noticeIdToDelete);
-    addAuditLog({ userName: 'Admin', action: 'Exclusão', field: 'Quadro de Avisos', oldValue: target?.title || noticeIdToDelete, newValue: '-' });
+    addAuditLog({ userName: user?.name || 'Admin', action: 'Exclusão', field: 'Quadro de Avisos', oldValue: target?.title || noticeIdToDelete, newValue: '-' });
     setIsDeleteNoticeModalOpen(false);
     setNoticeIdToDelete(null);
   };
@@ -172,7 +160,7 @@ const Security: React.FC = () => {
     if (!target) return;
     await togglePinNotice(id, !!target.isPinned);
     addAuditLog({
-      userName: 'Admin',
+      userName: user?.name || 'Admin',
       action: 'Alteração',
       field: 'Fixação de Aviso',
       oldValue: target.isPinned ? 'Fixado' : 'Normal',
@@ -182,7 +170,7 @@ const Security: React.FC = () => {
 
   const handleSaveStaff = async () => {
     await updateSettings({ ...settings, diretor: staffDiretor, viceDiretor: staffViceDiretor, encPessoal: staffEncPessoal });
-    addAuditLog({ userName: 'Admin', action: 'Alteração', field: 'Autoridades Assinantes', oldValue: '-', newValue: `Diretor: ${staffDiretor.name} | Vice: ${staffViceDiretor.name} | Enc. Pessoal: ${staffEncPessoal.name}` });
+    addAuditLog({ userName: user?.name || 'Admin', action: 'Alteração', field: 'Autoridades Assinantes', oldValue: '-', newValue: `Diretor: ${staffDiretor.name} | Vice: ${staffViceDiretor.name} | Enc. Pessoal: ${staffEncPessoal.name}` });
     setStaffSaveSuccess(true);
     setTimeout(() => setStaffSaveSuccess(false), 3000);
   };
@@ -243,7 +231,7 @@ const Security: React.FC = () => {
   const handleDeleteSuggestion = async (suggestionId: string, suggestionTitle: string) => {
     try {
       await deleteSuggestion(suggestionId);
-      addAuditLog({ userName: 'Admin', action: 'Exclusão', field: 'Sugestão', oldValue: suggestionTitle, newValue: '-' });
+      addAuditLog({ userName: user?.name || 'Admin', action: 'Exclusão', field: 'Sugestão', oldValue: suggestionTitle, newValue: '-' });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Nao foi possivel excluir a sugestao.');
     }
@@ -314,7 +302,7 @@ const Security: React.FC = () => {
     toggleBlockUser(userId);
 
     addAuditLog({
-      userName: 'Admin',
+      userName: user?.name || 'Admin',
       action: 'Bloqueio',
       field: `Status de Acesso (${name})`,
       oldValue: oldValue,
@@ -348,7 +336,7 @@ const Security: React.FC = () => {
     if (targetUser) {
       const success = await changeUserPassword(targetUser.email, newPass);
       if (success) {
-        addAuditLog({ userName: 'Admin', action: 'Senha', field: 'Senha do Usuário', oldValue: '********', newValue: 'Alterada via Gestão' });
+        addAuditLog({ userName: user?.name || 'Admin', action: 'Senha', field: 'Senha do Usuário', oldValue: '********', newValue: 'Alterada via Gestão' });
         setIsPassModalOpen(false);
         setTargetUser(null);
       } else {
@@ -360,7 +348,7 @@ const Security: React.FC = () => {
   const handleExecuteDelete = () => {
     if (targetUser) {
       deleteUser(targetUser.id);
-      addAuditLog({ userName: 'Admin', action: 'Exclusão', field: 'Usuário', oldValue: targetUser.name, newValue: '-' });
+      addAuditLog({ userName: user?.name || 'Admin', action: 'Exclusão', field: 'Usuário', oldValue: targetUser.name, newValue: '-' });
       setIsDeleteModalOpen(false);
       setTargetUser(null);
     }
@@ -468,7 +456,7 @@ const Security: React.FC = () => {
     const result = await setUserSectorVisibility(userId, newValue);
     if (result.success) {
       addAuditLog({
-        userName: 'Admin',
+        userName: user?.name || 'Admin',
         action: 'Alteração',
         field: `Visibilidade de Setor (${targetUser.name})`,
         oldValue: targetUser.viewAllSectors ? 'Todos os Setores' : 'Apenas Seu Setor',
@@ -905,23 +893,11 @@ const Security: React.FC = () => {
                       type="date"
                       className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500"
                       value={deadline}
-                      onChange={e => setDeadline(e.target.value)}
+                      onChange={e => void changeDeadline(e.target.value)}
                     />
                     {deadline && (
                       <button
-                        onClick={async () => {
-                          setDeadline('');
-                          lastProcessedDeadline.current = null;
-                          try {
-                            await api.post('/profiles/block-all', { status: false });
-                          } catch (error) {
-                            alert('Erro ao liberar lançamentos: ' + (error instanceof Error ? error.message : ''));
-                            return;
-                          }
-                          // Update local state efficiently
-                          batchUpdateBlockStatus(false);
-                          addAuditLog({ userName: 'Admin', action: 'Bloqueio', field: 'Prazo Limpo', oldValue: 'Com Prazo', newValue: 'Liberado para Todos' });
-                        }}
+                        onClick={() => void changeDeadline('')}
                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
                         title="Limpar prazo e liberar todos"
                       >
@@ -1035,7 +1011,7 @@ const Security: React.FC = () => {
                             onClick={async () => {
                               await toggleUserRole(u.id);
                               addAuditLog({
-                                userName: 'Admin',
+                                userName: user?.name || 'Admin',
                                 action: 'Alteração',
                                 field: `Nível de Acesso (${u.name})`,
                                 oldValue: u.role === 'admin' ? 'Admin' : 'Usuário',

@@ -7,6 +7,7 @@ import { seed } from './db.js'; // abre o banco e aplica as migrações
 import { api } from './api.js';
 import { loadSession, requireAppHeader, purgeExpiredSessions } from './auth.js';
 import { scheduleDailyBackup } from './backup.js';
+import { scheduleDeadlineCheck } from './deadline.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -36,6 +37,7 @@ seed(); // configurações padrão e administrador inicial
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 6 * 60 * 60_000).unref();
 scheduleDailyBackup();
+scheduleDeadlineCheck();
 
 app.listen(config.port, config.host, () => {
   const addresses = Object.values(os.networkInterfaces())

@@ -223,6 +223,13 @@ pages/, components/  Telas
 
 O último administrador não pode ser rebaixado, e o admin não pode excluir a própria conta.
 
+Outras regras do servidor:
+- **Prazo final de lançamento:** fica em `system_settings.vacation_deadline` (`server/deadline.js`). É verificado ao iniciar e a cada 10 minutos. Quando vence, bloqueia todos uma única vez por prazo, o que preserva as liberações manuais. Contas novas nascem bloqueadas enquanto o prazo vencido estiver em vigor.
+- **Auditoria:** o autor é sempre o usuário da sessão; o nome enviado pela tela é ignorado.
+- **Telas:** buscam os dados de novo ao trocar de tela, ao voltar para a janela e a cada 60 s. Registros sem mudança mantêm o mesmo objeto, para não reiniciar formulários abertos.
+- **"Quadro/Esp.":** gravado em `print_preferences.specialization` no cadastro e no formulário de férias.
+- **Papeleta:** usa o CSS compilado do próprio sistema, sem CDN, e funciona sem internet.
+
 ### Telas e rotas
 
 | Rota | Tela | Acesso |
