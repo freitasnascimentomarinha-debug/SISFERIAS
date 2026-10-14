@@ -1,12 +1,21 @@
-# Gera o pacote pronto para uso (sem precisar de internet na instalação)
-# sempre que uma versão é publicada com uma tag "v*" (ex.: v2.0.0).
-# O arquivo sisferias-vX.Y.Z.zip fica disponível na página "Releases".
+# Gera o pacote pronto para uso (sem precisar de internet na instalação) e o
+# publica na página "Releases" do GitHub, como sisferias-vX.Y.Z.zip.
+#
+# Duas formas de publicar uma versão:
+#  - enviar uma etiqueta "v*" (ex.: git tag v2.0.0 && git push origin v2.0.0);
+#  - ou, pelo GitHub: Actions > "Pacote de instalação" > Run workflow,
+#    informando a versão (ex.: v2.0.0). A etiqueta é criada automaticamente
+#    no commit mais recente da branch principal.
 name: Pacote de instalação
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      versao:
+        description: 'Versão a publicar (ex.: v2.0.0)'
+        required: true
 
 permissions:
   contents: write
@@ -14,8 +23,15 @@ permissions:
 jobs:
   pacote:
     runs-on: ubuntu-latest
+    env:
+      VERSAO: ${{ github.event.inputs.versao || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+      - name: Conferir o nome da versão
+        run: |
+          if ! echo "$VERSAO" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Versão inválida: '$VERSAO' (use o formato v2.0.0)"; exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -24,13 +40,25 @@ jobs:
       - run: npm test
       - run: npm run pacote
       - name: Compactar
-        run: cd pacote && zip -rq "../sisferias-${GITHUB_REF_NAME}.zip" sisferias
+        run: cd pacote && zip -rq "../sisferias-${VERSAO}.zip" sisferias
       - uses: actions/upload-artifact@v4
         with:
-          name: sisferias-${{ github.ref_name }}
+          name: sisferias-${{ env.VERSAO }}
           path: sisferias-*.zip
       - name: Publicar na página de Releases
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.VERSAO }}
+          target_commitish: ${{ github.sha }}
+          name: SISFERIAS ${{ env.VERSAO }}
           files: sisferias-*.zip
+          body: |
+            ## Como instalar (Windows)
+            1. Instale o **Node.js LTS** (22.13 ou mais recente): https://nodejs.org
+            2. Baixe **sisferias-${{ env.VERSAO }}.zip** abaixo e extraia em uma pasta fixa (ex.: `C:\SISFERIAS`).
+            3. Dê dois cliques em **iniciar.bat** (ou em **instalar-servico.bat** para iniciar junto com o Windows, sem janela).
+            4. Abra no navegador o endereço mostrado em "Na rede".
+
+            Não é preciso internet para instalar. O guia completo está no arquivo **INSTALACAO.md** dentro do pacote.
+
+            **Atualizando uma instalação existente:** faça um backup, substitua os arquivos **mantendo a pasta `data`** e inicie de novo.
