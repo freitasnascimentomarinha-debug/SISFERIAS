@@ -93,6 +93,23 @@ describe('lançamentos de férias e permissões', () => {
     assert.equal((await bruno.get(`/print-preferences/${ids.carla}`)).status, 403);
   });
 
+  it('usuário comum não recebe dados pessoais de outras pessoas (LGPD)', async () => {
+    await carla.patch(`/employees/${ids.carlaEmp}`, { justification: 'motivo pessoal', nip: '30000003',
+      vacation_parcels: [{ id: 'c1', startDate: '2026-03-02', endDate: '2026-03-11', days: 10, nup: '62012.000001/2026-01' }] });
+    const emps = (await bruno.get('/employees')).data;
+    const own = emps.find(e => e.user_id === ids.bruno);
+    const other = emps.find(e => e.user_id === ids.carla);
+    assert.equal(own.name, 'Bruno Costa', 'os próprios dados vêm completos');
+    for (const k of ['name', 'war_name', 'nip', 'photo_url', 'justification']) assert.equal(other[k], undefined, k);
+    assert.deepEqual(other.vacation_parcels, [{ id: 'c1', startDate: '2026-03-02', endDate: '2026-03-11', days: 10 }], 'só datas, sem NUP');
+    const profiles = (await bruno.get('/profiles')).data;
+    const otherProfile = profiles.find(p => p.id === ids.carla);
+    for (const k of ['name', 'nip', 'email']) assert.equal(otherProfile[k], undefined, k);
+    assert.equal(profiles.find(p => p.id === ids.bruno).email, 'bruno@mb.mil.br');
+    assert.equal((await bruno.get(`/profiles/${ids.carla}`)).status, 403);
+    assert.equal((await admin.get('/employees')).data.find(e => e.user_id === ids.carla).justification, 'motivo pessoal', 'admin vê tudo');
+  });
+
   it('usuário comum não acessa funções de administrador', async () => {
     for (const [m, p] of [['get', '/admin/stats'], ['get', '/audit-logs'], ['get', '/admin/export']]) {
       assert.equal((await bruno[m](p)).status, 403, p);
