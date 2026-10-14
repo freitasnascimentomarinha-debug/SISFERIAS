@@ -276,14 +276,13 @@ Rode `npm test` antes de publicar qualquer mudança. Os testes de navegador cobr
 
 ### Publicar uma versão (pacote pronto no GitHub)
 
-Crie e envie uma tag:
+Pelo GitHub, sem usar a linha de comando:
+1. Abra **Actions → Pacote de instalação → Run workflow**.
+2. Informe a versão (ex.: `v2.0.1`) e confirme.
 
-```bash
-git tag v2.0.0
-git push origin v2.0.0
-```
+Pela linha de comando: `git tag v2.0.1 && git push origin v2.0.1`.
 
-A automação `.github/workflows/release.yml` gera `sisferias-v2.0.0.zip` e o publica na página **Releases**.
+Nos dois casos, a automação roda os testes, gera `sisferias-v2.0.1.zip` e o publica na página **Releases** com as instruções de instalação.
 
 ### Evolução do banco
 
