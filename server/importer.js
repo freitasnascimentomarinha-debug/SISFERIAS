@@ -2,9 +2,9 @@
 //
 // Aceita:
 //  - o arquivo de backup do próprio SISFERIAS (.json, gerado em "Exportar");
-//  - CSVs exportados do Supabase (Table Editor > Export > CSV), um por tabela;
-//  - o CSV de auth.users do Supabase (id, email, encrypted_password), que
-//    preserva as senhas dos usuários (hash bcrypt).
+//  - CSVs, um por tabela, com os nomes das colunas na primeira linha;
+//  - um CSV de usuários (id, email, password_hash ou encrypted_password)
+//    que preserva as senhas dos usuários (hash bcrypt).
 //
 // O fluxo é sempre: preview (nada é gravado) -> apply (tudo em uma transação).
 
@@ -223,7 +223,7 @@ function analyze(files, overrides) {
     if (!report.tables[table]) {
       report.tables[table] = {
         table,
-        label: table === AUTH_USERS ? 'Usuários e senhas (auth.users)' : TABLES[table].label,
+        label: table === AUTH_USERS ? 'Usuários e senhas' : TABLES[table].label,
         total: 0, insert: 0, update: 0, errors: [], unmappedColumns: [],
       };
     }
@@ -248,7 +248,7 @@ function analyze(files, overrides) {
     const known = source.table === AUTH_USERS ? AUTH_COLUMNS : [...Object.keys(TABLES[source.table].columns), 'extra_json'];
     const unmapped = Object.keys(source.rows[0] || {}).filter(c => !known.includes(c));
     if (source.table === AUTH_USERS) {
-      // As demais colunas de auth.users (metadados do Supabase) não são necessárias.
+      // Demais colunas do CSV de usuários (metadados) não são necessárias.
     } else {
       tr.unmappedColumns = [...new Set([...tr.unmappedColumns, ...unmapped])];
     }
@@ -302,7 +302,7 @@ function analyze(files, overrides) {
   if (withoutPassword.length) {
     report.warnings.push(
       `${withoutPassword.length} perfil(is) ficará(ão) sem senha. Esses usuários só conseguirão entrar depois que um administrador definir uma senha em Segurança > Contas` +
-      (authIdsInFile.size ? '.' : ' — ou importe também o CSV de auth.users para manter as senhas atuais.'),
+      (authIdsInFile.size ? '.' : ' — ou importe também o CSV de usuários e senhas para manter as senhas atuais.'),
     );
   }
   for (const tr of Object.values(report.tables)) {

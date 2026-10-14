@@ -196,11 +196,12 @@ não consegue usá-lo.
 
 ---
 
-## 7. Trazer os dados do sistema antigo (Supabase)
+## 7. Trazer dados de outro lugar
 
-Resumo. O passo a passo completo está no `README.md`, seção 3.
+Resumo. Os formatos aceitos estão no `README.md`, seção 3.
 
-1. No Supabase, exporte cada tabela em CSV e o CSV de `auth.users`, que mantém as senhas.
+1. Tenha em mãos o **backup completo (.json)** de outro servidor SISFERIAS ou os **CSVs** das tabelas.
+   Opcionalmente, inclua o CSV de usuários e senhas criptografadas, para manter as senhas.
 2. No SISFERIAS: **Segurança → Dados e Backup → Importar Dados**.
 3. Selecione todos os arquivos e clique em **Analisar arquivos**. Nada é gravado nessa etapa.
 4. Confira o resumo e clique em **Importar**. Um backup é feito antes, automaticamente.

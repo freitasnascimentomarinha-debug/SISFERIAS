@@ -6,7 +6,7 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 - **Banco embutido (SQLite):** os dados ficam em um único arquivo, `data/sisferias.db`.
 - **Funciona sem internet:** interface, fontes e estilos vão empacotados.
 - **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário.
-- **Importação e exportação** pela própria tela, incluindo a migração do Supabase com preservação das senhas.
+- **Importação e exportação** pela própria tela (CSV ou backup JSON), inclusive com as senhas já criptografadas.
 
 > **Vai instalar ou administrar o sistema?** Comece pelo guia passo a passo **[INSTALACAO.md](INSTALACAO.md)**: instalação, primeiro acesso, quem administra, recuperação de acesso e backups, em linguagem simples.
 
@@ -73,30 +73,31 @@ Os dados ficam em `./data`. Para ver a senha inicial, use `docker compose logs s
 
 ---
 
-## 3. Migração do Supabase (sem perder dados)
+## 3. Importar dados (de outro servidor, sistema anterior ou planilha)
 
-O Supabase continua intacto durante todo o processo. Desligue-o só depois de conferir o sistema novo.
+Em **Segurança → Dados e Backup → Importar Dados** o administrador pode carregar:
 
-1. **Exporte as tabelas.** No painel do Supabase, em **Table Editor**, abra cada tabela e use **Export → Export table as CSV**:
-   `profiles`, `employees`, `system_settings`, `notices`, `audit_logs`, `suggestions` e `print_preferences`.
-2. **Exporte as senhas.** Para que ninguém precise trocar de senha, abra o **SQL Editor**, execute a consulta abaixo e exporte o resultado em CSV com o nome `users.csv`:
-   ```sql
-   select id, email, encrypted_password, created_at from auth.users;
-   ```
-   As senhas estão criptografadas (bcrypt). Nem você nem o sistema veem a senha real.
-3. No SISFERIAS, entre como admin e abra **Segurança → Dados e Backup → Importar Dados**.
-4. Selecione **todos os CSVs de uma vez** e clique em **Analisar arquivos**. Nada é gravado nessa etapa. A tela mostra:
+| Arquivo | Conteúdo |
+|---|---|
+| **Backup completo (.json)** | Gerado pelo botão "Backup completo" de outro servidor SISFERIAS. Inclui tudo, inclusive as senhas criptografadas |
+| **Um CSV por tabela** | `profiles`, `employees`, `system_settings`, `notices`, `audit_logs`, `suggestions` e `print_preferences`, com os nomes das colunas na primeira linha (os mesmos dos CSVs que o próprio sistema exporta) |
+| **CSV de usuários e senhas** (opcional) | Colunas `id`, `email` e `password_hash` (ou `encrypted_password`), com a senha em **bcrypt**. Serve para que ninguém precise trocar de senha |
+
+Passo a passo:
+
+1. Selecione **todos os arquivos de uma vez** e clique em **Analisar arquivos**. Nada é gravado nessa etapa. A tela mostra:
    - qual tabela foi reconhecida em cada arquivo (dá para corrigir manualmente);
    - quantos registros serão **novos**, **atualizados** e **com erro**, com o motivo e o número da linha;
    - avisos, como perfis que ficarão sem senha ou colunas não previstas.
-5. Clique em **Importar**. Antes de gravar, o sistema faz um backup automático. A importação roda em uma transação: se algo falhar, nada é alterado.
-6. Confira o quadro **Antes / Depois** e confira alguns registros por amostragem.
+2. Escolha o modo: **Mesclar** (insere e atualiza, nada é apagado) ou **Substituir** (apaga as tabelas importadas e recarrega, usado para restaurar backups).
+3. Clique em **Importar**. Antes de gravar, o sistema faz um backup automático. A importação roda em uma transação: se algo falhar, nada é alterado.
+4. Confira o quadro **Antes / Depois** e confira alguns registros por amostragem.
 
 Outros detalhes:
 
 - **Importar de novo não duplica:** os registros são reconhecidos pelo identificador e apenas atualizados.
 - **Colunas desconhecidas não se perdem:** ficam guardadas no campo `extra_json` e voltam no backup.
-- **Perfis sem senha:** quando o CSV de `auth.users` não é importado, esses perfis aparecem com o aviso **"Sem senha"** em Gestão de Contas. O admin define uma senha e o usuário passa a conseguir entrar.
+- **Perfis sem senha:** quando o CSV de usuários e senhas não é importado, esses perfis aparecem com o aviso **"Sem senha"** em Gestão de Contas. O admin define uma senha e o usuário passa a conseguir entrar.
 
 > **Atenção:** os CSVs contêm dados pessoais (NIP, e-mail, hash de senha). **Não os coloque no GitHub.** As pastas `data/` e `dados/` já estão no `.gitignore`.
 
