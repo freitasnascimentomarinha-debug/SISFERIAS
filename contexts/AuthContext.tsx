@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: true, userId: id };
     } catch (e) {
       console.error("Registration failed:", e);
-      const errorMessage = e instanceof Error ? e.message : 'Erro inesperado ao cadastrar usuario.';
+      const errorMessage = e instanceof Error ? e.message : 'Erro inesperado ao cadastrar usuário.';
       const errorCode = e instanceof ApiError && e.status === 409 ? 'user_already_exists' : undefined;
       return { success: false, errorCode, errorMessage };
     }

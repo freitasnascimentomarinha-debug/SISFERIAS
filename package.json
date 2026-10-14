@@ -15,7 +15,10 @@
     "preview": "vite build && node server/start.js",
     "backup": "node server/start.js backup",
     "admin": "node server/start.js admin",
-    "pacote": "node scripts/pacote.js"
+    "pacote": "node scripts/pacote.js",
+    "servico": "node scripts/servico.js",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
+    "test:e2e": "node tests/e2e/run.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

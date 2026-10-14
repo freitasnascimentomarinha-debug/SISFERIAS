@@ -34,6 +34,15 @@ const VacationForm: React.FC = () => {
   const [parcelToDelete, setParcelToDelete] = useState<string | null>(null);
   const [showNext, setShowNext] = useState(false);
 
+  // Clicar de novo em "Minhas Férias" (mesmo endereço) volta para a 1ª etapa.
+  const location = useLocation();
+  useEffect(() => {
+    setShowNext(false);
+    setErrorMsg(null);
+    setErrorDetails([]);
+    setFooterErrorMsg(null);
+  }, [location.key]);
+
   const existing = useMemo(() => {
     if (id) return employees.find(e => e.id === id);
     return employees.find(e => e.userId === targetUserId && (e.planningYear || currentYear) === planningYear);

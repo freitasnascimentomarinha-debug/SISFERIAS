@@ -1,0 +1,36 @@
+import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, shot, saveResults, QA } from './lib.mjs';
+const browser = await chromium.launch();
+const uid = (e) => db('SELECT id FROM profiles WHERE email = ?', e)[0].id;
+const emp = () => { const r = db('SELECT * FROM employees WHERE user_id = ? AND planning_year = 2025', uid('bruno@mb.mil.br'))[0]; r.parcels = JSON.parse(r.vacation_parcels); return r; };
+const { page: P } = await newSession(browser, 'admin'); await login(P, 'admin', 'Admin@456');
+const { page: B } = await newSession(browser, 'bruno'); await login(B, '20000002', 'Bruno@123');
+setSection('Admin edita lançamento de usuário bloqueado');
+await step('admin edita bloqueado', async () => {
+  await unlockSecurity(P, 'Admin@456'); await tab(P, 'Usuários');
+  const row = P.locator('tr', { hasText: 'Bruno Costa' });
+  if (await row.locator('button[title="Bloquear Manualmente"]').count()) await row.locator('button[title="Bloquear Manualmente"]').click();
+  await P.waitForTimeout(900);
+  check('Bruno bloqueado', db('SELECT is_blocked b FROM profiles WHERE email = ?', 'bruno@mb.mil.br')[0].b === 1);
+  await row.locator('button[title="Editar Férias"]').click(); await P.waitForTimeout(1300);
+  check('admin vê aviso de que o militar está bloqueado', await P.isVisible('text=Você pode editar porque é administrador'));
+  check('formulário habilitado para o admin', !(await P.locator('form fieldset').first().isDisabled()));
+  const d = P.locator('form input[type=date]');
+  await d.nth(2).fill('2026-09-01'); await d.nth(3).fill('2026-09-15');
+  await P.click('button:has-text("Próximo")'); await P.waitForTimeout(300);
+  check('botão Salvar disponível para o admin', await P.isVisible('button[type=submit]:has-text("Salvar")'));
+  await P.click('button[type=submit]:has-text("Salvar")'); await P.waitForTimeout(1500);
+  const e = emp();
+  check('alteração do admin gravada no lançamento do bloqueado', e.parcels[1].startDate === '2026-09-01', e.parcels.map(p => p.startDate).join(','));
+  await shot(P, 'admin-edita-bloqueado');
+});
+await step('Bruno continua sem poder editar', async () => {
+  await B.reload(); await B.waitForTimeout(1200); await nav(B, 'Início'); await nav(B, 'Minhas Férias'); await B.waitForTimeout(800);
+  check('Bruno vê aviso de bloqueio', await B.isVisible('text=Acesso Bloqueado para Lançamento'));
+  check('formulário do Bruno desabilitado', await B.evaluate(() => document.querySelector('form fieldset')?.hasAttribute('disabled') && document.querySelector('form input[type=date]')?.matches(':disabled')));
+  const r = await api(B, 'PATCH', `/employees/${emp().id}`, { justification: 'x' });
+  check('servidor recusa alteração do próprio bloqueado', r.status === 403);
+  await unlockSecurity(P, 'Admin@456'); await tab(P, 'Usuários');
+  await P.locator('tr', { hasText: 'Bruno Costa' }).locator('button[title="Liberar Manualmente"]').click(); await P.waitForTimeout(800);
+});
+saveResults(`${QA}/r6.json`);
+await browser.close();

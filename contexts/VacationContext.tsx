@@ -343,7 +343,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       data = await api.post('/suggestions', payload);
     } catch (error) {
       console.error('Error adding suggestion:', error);
-      throw new Error((error instanceof Error && error.message) || 'Nao foi possivel enviar a sugestao.');
+      throw new Error((error instanceof Error && error.message) || 'Não foi possível enviar a sugestão.');
     }
 
     if (data) {
@@ -365,7 +365,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       await api.delete(`/suggestions/${id}`);
     } catch (error) {
       console.error('Error deleting suggestion:', error);
-      throw new Error((error instanceof Error && error.message) || 'Nao foi possivel excluir a sugestao.');
+      throw new Error((error instanceof Error && error.message) || 'Não foi possível excluir a sugestão.');
     }
 
     setSuggestions(prev => prev.filter(item => item.id !== id));

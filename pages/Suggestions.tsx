@@ -36,7 +36,7 @@ const Suggestions: React.FC = () => {
       setSuccess(true);
       setTimeout(() => navigate('/home'), 1500);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Nao foi possivel enviar a sugestao.');
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível enviar a sugestão.');
     } finally {
       setLoading(false);
     }

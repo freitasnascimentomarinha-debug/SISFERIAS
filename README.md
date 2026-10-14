@@ -69,7 +69,11 @@ Os dados ficam em `./data`. Para ver a senha inicial, use `docker compose logs s
 - **Firewall:** o computador servidor precisa aceitar conexões na porta **3000**. No Windows, na primeira execução, permita o acesso quando o Firewall perguntar. Se não perguntar, crie uma regra de entrada TCP para a porta 3000.
 - **Endereço fixo:** peça à TI um **IP fixo** (ou nome DNS) para o servidor, para que o endereço não mude.
 - **Outra porta:** se a 3000 estiver ocupada, defina a variável `PORT` antes de iniciar (no Windows, `set PORT=8080` e depois `iniciar.bat`).
-- **Iniciar com o Windows:** coloque um atalho de `iniciar.bat` em `shell:startup`, ou peça à TI para registrá-lo como serviço (por exemplo, com NSSM).
+- **Iniciar com o Windows, como serviço:** execute `instalar-servico.bat`, que pede a permissão de administrador sozinho.
+  - Cria uma tarefa do Agendador de Tarefas que roda como SISTEMA na inicialização, sem janela e sem limite de tempo.
+  - Usa o modo `node server/start.js servico`, que reinicia o servidor se ele cair e grava o log em `data/logs/sisferias.log`.
+  - Para remover: `remover-servico.bat`.
+  - No Linux: `sudo node scripts/servico.js instalar` (systemd). Os comandos disponíveis são `instalar`, `remover`, `iniciar`, `parar` e `status`; acrescente `--simular` para só ver o que seria feito.
 
 ---
 
@@ -115,7 +119,11 @@ Outros detalhes:
 
 O sistema mantém os 30 backups mais recentes. Para mudar a quantidade, use a variável `KEEP_BACKUPS`.
 
-**Guarde cópias fora do servidor** (pasta de rede, pen drive). Se o disco do servidor falhar, só restam essas cópias.
+**Guarde cópias fora do servidor.** Em **Segurança → Dados e Backup**, configure uma pasta extra (rede ou outro disco).
+- **Funcionamento:** todo backup também é copiado para essa pasta, mantendo a mesma quantidade (`KEEP_BACKUPS`).
+- **Teste:** ao salvar, o sistema testa a gravação.
+- **Acompanhamento:** a tela mostra o resultado da última cópia.
+- **Importação:** a pasta configurada não é importada junto com backups de outro servidor.
 
 ### Restaurar
 
@@ -225,6 +233,7 @@ O último administrador não pode ser rebaixado, e o admin não pode excluir a p
 
 Outras regras do servidor:
 - **Prazo final de lançamento:** fica em `system_settings.vacation_deadline` (`server/deadline.js`). É verificado ao iniciar e a cada 10 minutos. Quando vence, bloqueia todos uma única vez por prazo, o que preserva as liberações manuais. Contas novas nascem bloqueadas enquanto o prazo vencido estiver em vigor.
+- **Senhas:** mínimo de 6 caracteres em todo o sistema (cadastro, troca pelo próprio usuário, redefinição pelo admin e `npm run admin`). Para trocar a própria senha, fora da área de Segurança, é preciso informar a atual.
 - **Auditoria:** o autor é sempre o usuário da sessão; o nome enviado pela tela é ignorado.
 - **Telas:** buscam os dados de novo ao trocar de tela, ao voltar para a janela e a cada 60 s. Registros sem mudança mantêm o mesmo objeto, para não reiniciar formulários abertos.
 - **"Quadro/Esp.":** gravado em `print_preferences.specialization` no cadastro e no formulário de férias.
@@ -259,6 +268,11 @@ npm run dev          # interface em http://localhost:5173 (repassa /api para a 3
 | `npm run backup` | Cria um backup manual |
 | `npm run admin -- --senha X` | Redefine a senha do administrador |
 | `npm run pacote` | Gera `pacote/sisferias` pronto para rodar sem internet |
+| `npm run servico -- instalar` | Instala como serviço (Windows/Linux); também `remover`, `parar`, `status` |
+| `npm test` | Testes do servidor (API, permissões, prazo, backups, persistência) em segundos, sem navegador |
+| `npm run test:e2e` | Testes completos no navegador com 5 contas. Requer uma vez: `npm install --no-save playwright && npx playwright install chromium` |
+
+Rode `npm test` antes de publicar qualquer mudança. Os testes de navegador cobrem as telas de ponta a ponta, inclusive a papeleta, o reinício do servidor e as gravações simultâneas.
 
 ### Publicar uma versão (pacote pronto no GitHub)
 
@@ -277,6 +291,7 @@ Para mudar o esquema, acrescente uma nova migração ao final de `MIGRATIONS` em
 
 ### Diagnóstico
 
+- **"A porta 3000 já está em uso":** o SISFERIAS já está rodando, provavelmente como serviço. Basta abrir o endereço no navegador.
 - **A janela fecha logo ao abrir:** confira a versão do Node com `node -v` (precisa ser 22.13 ou mais recente).
 - **Outros computadores não acessam:** verifique o firewall (porta 3000) e se estão usando o IP mostrado em "Na rede".
 - **"Esta conta ainda não tem senha definida":** o admin precisa definir a senha em Gestão de Contas.

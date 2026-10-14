@@ -10,7 +10,7 @@ import {
 } from './auth.js';
 import { TABLES } from './schema.js';
 import { previewImport, applyImport, exportAll, exportTableCsv, countAll } from './importer.js';
-import { createBackup, listBackups } from './backup.js';
+import { createBackup, listBackups, getBackupCopyDir, getBackupCopyStatus, setBackupCopyDir, copyToExtraFolder } from './backup.js';
 import { config } from './config.js';
 import { setDeadline, deadlineInForce } from './deadline.js';
 
@@ -30,6 +30,12 @@ const h = (fn) => (req, res, next) => {
     if (result && typeof result.catch === 'function') result.catch(next);
   } catch (err) { next(err); }
 };
+
+function checkPasswordRule(password) {
+  if (password.length < config.minPasswordLength) {
+    fail(400, `A senha deve ter pelo menos ${config.minPasswordLength} caracteres.`);
+  }
+}
 
 const pick = (obj, keys) => Object.fromEntries(keys.filter(k => obj?.[k] !== undefined).map(k => [k, obj[k]]));
 const isAdmin = (req) => req.user?.role === 'admin';
@@ -114,7 +120,7 @@ api.post('/auth/register', h((req, res) => {
   const nip = String(b.nip || '').trim();
   if (!name || !email || !password) fail(400, 'Nome, e-mail e senha são obrigatórios.');
   if (!/^[^\s@]+@[^\s@]+$/.test(email)) fail(400, 'E-mail inválido.');
-  if (password.length < 6) fail(400, 'A senha deve ter pelo menos 6 caracteres.');
+  checkPasswordRule(password);
   if (db.prepare('SELECT 1 FROM auth_users WHERE email = ?').get(email)) {
     fail(409, 'Este e-mail já está cadastrado.');
   }
@@ -144,7 +150,7 @@ api.post('/auth/register', h((req, res) => {
 
 api.post('/auth/password', requireAuth, h((req, res) => {
   const password = String(req.body?.password || '');
-  if (password.length < 4) fail(400, 'A senha deve ter pelo menos 4 caracteres.');
+  checkPasswordRule(password);
   // A senha atual só é dispensada logo após confirmá-la na área de Segurança.
   if (!isElevated(req)) {
     const auth = db.prepare('SELECT password_hash FROM auth_users WHERE id = ?').get(req.user.id);
@@ -225,7 +231,7 @@ api.post('/admin/reset-password', requireElevated, h((req, res) => {
   const email = String(req.body?.email || '').trim();
   const userId = String(req.body?.userId || '').trim();
   const password = String(req.body?.password || '');
-  if (password.length < 4) fail(400, 'A senha deve ter pelo menos 4 caracteres.');
+  checkPasswordRule(password);
   const profile = userId
     ? db.prepare('SELECT id, email FROM profiles WHERE id = ?').get(userId)
     : db.prepare('SELECT id, email FROM profiles WHERE email = ?').get(email);
@@ -454,7 +460,13 @@ api.put('/print-preferences/:userId', requireAuth, h((req, res) => {
 // ---------------------------------------------------------------------------
 
 api.get('/admin/stats', requireElevated, (_req, res) => {
-  res.json({ counts: countAll(), dbFile: config.dbFile, backups: listBackups().slice(0, 10) });
+  res.json({
+    counts: countAll(),
+    dbFile: config.dbFile,
+    backups: listBackups().slice(0, 10),
+    backupCopyDir: getBackupCopyDir(),
+    backupCopyStatus: getBackupCopyStatus(),
+  });
 });
 
 api.post('/admin/import/preview', requireElevated, h((req, res) => {
@@ -493,6 +505,24 @@ api.get('/admin/export/:table', requireElevated, h((req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${table}.csv"`);
   res.send(exportTableCsv(table));
+}));
+
+// Pasta extra para onde cada backup também é copiado (rede, outro disco).
+api.put('/admin/backup-copy', requireElevated, h(async (req, res) => {
+  const dir = String(req.body?.dir || '').trim() || null;
+  let saved;
+  try {
+    saved = await setBackupCopyDir(dir);
+  } catch (err) {
+    fail(400, `Não foi possível gravar na pasta: ${err.message}`);
+  }
+  upsertRow('audit_logs', {
+    id: newId(), timestamp: nowIso(), user_name: req.user.name, action: 'Alteração',
+    field: 'Pasta de cópia dos backups', old_value: '-', new_value: saved || 'Removida',
+  });
+  // Faz uma cópia imediata para confirmar que está funcionando.
+  if (saved) await copyToExtraFolder(createBackup('manual', { copy: false }));
+  res.json({ backupCopyDir: saved, backupCopyStatus: getBackupCopyStatus() });
 }));
 
 api.get('/admin/backups', requireElevated, (_req, res) => res.json(listBackups()));

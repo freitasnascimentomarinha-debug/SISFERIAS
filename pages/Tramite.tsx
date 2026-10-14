@@ -132,7 +132,7 @@ const Tramite: React.FC = () => {
       setEditingRowKey(null);
       setEditingNup('');
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Nao foi possivel salvar o NUP.');
+      setActionError(error instanceof Error ? error.message : 'Não foi possível salvar o NUP.');
     } finally {
       setSavingRowKey(null);
     }
@@ -181,9 +181,9 @@ const Tramite: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
         <StatCard
-          title="Parcelas Visiveis"
+          title="Parcelas Visíveis"
           value={stats.total}
-          subtitle="dentro da sua permissao"
+          subtitle="dentro da sua permissão"
           icon={<ShieldCheck size={22} />}
           color="bg-orange-50 text-orange-600"
         />
@@ -283,7 +283,7 @@ const Tramite: React.FC = () => {
                       <p className="font-bold text-slate-800">{row.rank} {row.warName || row.employeeName}</p>
                       <p className="text-[10px] text-slate-500 font-semibold uppercase">{row.employeeName}</p>
                     </td>
-                    <td className="py-4 px-4 font-semibold text-slate-700">{row.sector || 'Nao definido'}</td>
+                    <td className="py-4 px-4 font-semibold text-slate-700">{row.sector || 'Não definido'}</td>
                     <td className="py-4 px-4 font-bold text-slate-700">{row.planningYear}</td>
                     <td className="py-4 px-4 font-semibold text-slate-700">{row.parcelLabel} ({row.days} dias)</td>
                     <td className="py-4 px-4 text-slate-600 text-[12px]">

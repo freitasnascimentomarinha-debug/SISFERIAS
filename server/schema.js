@@ -63,6 +63,8 @@ export const TABLES = {
       staff_json: 'json',
       vacation_deadline: 'text',
       deadline_applied_for: 'text',
+      backup_copy_dir: 'text',
+      backup_copy_status: 'json',
       created_at: 'text',
       updated_at: 'text',
     },
@@ -272,5 +274,11 @@ export const MIGRATIONS = [
     name: 'prazo final de lançamento controlado pelo servidor',
     sql: `ALTER TABLE system_settings ADD COLUMN vacation_deadline TEXT;
           ALTER TABLE system_settings ADD COLUMN deadline_applied_for TEXT;`,
+  },
+  {
+    version: 4,
+    name: 'cópia dos backups para outra pasta',
+    sql: `ALTER TABLE system_settings ADD COLUMN backup_copy_dir TEXT;
+          ALTER TABLE system_settings ADD COLUMN backup_copy_status TEXT;`,
   },
 ];

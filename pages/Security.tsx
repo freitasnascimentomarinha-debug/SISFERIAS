@@ -5,7 +5,7 @@ import { useVacation } from '../contexts/VacationContext';
 import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save, Lightbulb, Database } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
+import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, MIN_PASSWORD_LENGTH } from '../types';
 import { api, REAUTH_EVENT } from '../lib/api';
 import DataManagement from '../components/DataManagement';
 import { normalizeText } from '../lib/textUtils';
@@ -65,6 +65,27 @@ const Security: React.FC = () => {
     if (settings.viceDiretor) setStaffViceDiretor(settings.viceDiretor);
     if (settings.encPessoal) setStaffEncPessoal(settings.encPessoal);
   }, [settings.diretor, settings.viceDiretor, settings.encPessoal]);
+
+  // Nome institucional e efetivo: grava quando a pessoa para de digitar
+  // (0,8 s) ou sai do campo, em vez de a cada letra.
+  const [institutionDraft, setInstitutionDraft] = useState(settings.institutionName);
+  const [manpowerDraft, setManpowerDraft] = useState(String(settings.totalManpower ?? ''));
+  const identityFocused = useRef(false);
+  useEffect(() => {
+    if (identityFocused.current) return;
+    setInstitutionDraft(settings.institutionName);
+    setManpowerDraft(String(settings.totalManpower ?? ''));
+  }, [settings.institutionName, settings.totalManpower]);
+  const saveIdentity = () => {
+    const name = institutionDraft.trim();
+    const manpower = parseInt(manpowerDraft, 10) || 0;
+    if (!name || (name === settings.institutionName && manpower === settings.totalManpower)) return;
+    void updateSettings({ ...settings, institutionName: name, totalManpower: manpower });
+  };
+  useEffect(() => {
+    const timer = window.setTimeout(saveIdentity, 800);
+    return () => window.clearTimeout(timer);
+  }, [institutionDraft, manpowerDraft]);
 
   // Prazo final de lançamento: gravado no servidor, vale para todos os
   // administradores. O servidor bloqueia todos quando o prazo vence.
@@ -233,7 +254,7 @@ const Security: React.FC = () => {
       await deleteSuggestion(suggestionId);
       addAuditLog({ userName: user?.name || 'Admin', action: 'Exclusão', field: 'Sugestão', oldValue: suggestionTitle, newValue: '-' });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Nao foi possivel excluir a sugestao.');
+      alert(error instanceof Error ? error.message : 'Não foi possível excluir a sugestão.');
     }
   };
 
@@ -256,7 +277,7 @@ const Security: React.FC = () => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Sugestoes - SISFERIAS</title>
+          <title>Sugestões - SISFERIAS</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
             h1 { margin: 0 0 6px; font-size: 22px; }
@@ -268,7 +289,7 @@ const Security: React.FC = () => {
           </style>
         </head>
         <body onload="window.print()">
-          <h1>Sugestoes Enviadas</h1>
+          <h1>Sugestões Enviadas</h1>
           <p>Relatorio gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} | Total: ${filteredSuggestions.length}</p>
           <table>
             <thead>
@@ -280,7 +301,7 @@ const Security: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              ${rowsHtml || '<tr><td colspan="4">Nenhuma sugestao encontrada.</td></tr>'}
+              ${rowsHtml || '<tr><td colspan="4">Nenhuma sugestão encontrada.</td></tr>'}
             </tbody>
           </table>
         </body>
@@ -324,8 +345,8 @@ const Security: React.FC = () => {
   };
 
   const handleExecutePassChange = async () => {
-    if (!newPass || newPass.length < 4) {
-      setModalError('A senha deve ter pelo menos 4 caracteres.');
+    if (!newPass || newPass.length < MIN_PASSWORD_LENGTH) {
+      setModalError(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
       return;
     }
     if (newPass !== confirmPass) {
@@ -535,7 +556,7 @@ const Security: React.FC = () => {
                   <input
                     type="password"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                    placeholder="Mínimo 4 caracteres"
+                    placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                     value={newPass}
                     onChange={e => setNewPass(e.target.value)}
                   />
@@ -688,8 +709,10 @@ const Security: React.FC = () => {
                             <input
                               type="text"
                               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                              value={settings.institutionName}
-                              onChange={e => updateSettings({ ...settings, institutionName: e.target.value })}
+                              value={institutionDraft}
+                              onChange={e => setInstitutionDraft(e.target.value)}
+                              onFocus={() => { identityFocused.current = true; }}
+                              onBlur={() => { identityFocused.current = false; saveIdentity(); }}
                             />
                           </div>
                           <div className="space-y-1">
@@ -697,8 +720,10 @@ const Security: React.FC = () => {
                             <input
                               type="number"
                               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
-                              value={settings.totalManpower}
-                              onChange={e => updateSettings({ ...settings, totalManpower: parseInt(e.target.value) || 0 })}
+                              value={manpowerDraft}
+                              onChange={e => setManpowerDraft(e.target.value)}
+                              onFocus={() => { identityFocused.current = true; }}
+                              onBlur={() => { identityFocused.current = false; saveIdentity(); }}
                             />
                             <p className="text-[10px] text-slate-400 font-medium">Usado para cálculo de % da força de trabalho.</p>
                           </div>

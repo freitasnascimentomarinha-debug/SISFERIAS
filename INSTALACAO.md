@@ -185,6 +185,7 @@ Proteções contra ficar sem administrador:
 | A conta `admin` existe, mas foi rebaixada ou está sem senha, e não há outro administrador | A janela do servidor mostra um **aviso em destaque**. Use o comando abaixo |
 | O administrador esqueceu a senha | Outro administrador redefine em **Gestão de Contas**. Se não houver outro, use o comando abaixo |
 | Um usuário comum esqueceu a senha | Um administrador redefine em **Segurança → Gestão de Contas** |
+| Alguém quer trocar a própria senha | Ícone de **chave** no canto superior direito (pede a senha atual) |
 
 ### Comando de recuperação
 
@@ -238,8 +239,14 @@ Não envie esses CSVs para o GitHub nem por e-mail aberto, pois contêm dados pe
 | **Manual** | **Segurança → Dados e Backup → Criar backup agora** |
 
 - **Onde ficam:** pasta `data\backups`. O sistema guarda os 30 mais recentes.
-- **Recomendação:** copie a pasta `data` para fora do servidor (pasta de rede ou pen drive)
-  pelo menos uma vez por semana. Se o disco do servidor falhar, só essas cópias salvam os dados.
+- **Cópia automática para outro lugar (recomendado):** em **Segurança → Dados e Backup**, no campo
+  "Copiar cada backup também para esta pasta", informe uma pasta de rede (ex.: `\\servidor\backups\sisferias`)
+  ou outro disco (ex.: `D:\Backups\SISFERIAS`) e clique em **Salvar e testar**. A partir daí, todo backup
+  é copiado para lá também, e a tela mostra se a última cópia deu certo. Se o disco do servidor falhar,
+  essas cópias salvam os dados.
+- **Atenção com o serviço do Windows:** como o serviço roda com a conta do sistema, use o caminho de rede
+  completo (`\\servidor\pasta`), não uma letra de unidade mapeada, e peça à TI para liberar a gravação
+  na pasta compartilhada para a conta do computador servidor.
 
 Para **trocar de computador**: feche o SISFERIAS, copie a pasta inteira (com a `data`) para o
 novo servidor e execute `iniciar.bat` lá.
@@ -248,9 +255,19 @@ novo servidor e execute `iniciar.bat` lá.
 
 ## 9. Uso no dia a dia
 
-- **Iniciar junto com o Windows:** pressione `Win + R`, digite `shell:startup`, Enter, e
-  coloque nessa pasta um **atalho** para o `iniciar.bat`.
-- **Desligar o sistema:** feche a janela preta, ou pressione `Ctrl + C` dentro dela.
+- **Iniciar junto com o Windows, sem janela (recomendado):** dê dois cliques em **`instalar-servico.bat`**
+  e confirme a permissão de administrador. O SISFERIAS passa a rodar como serviço:
+  - inicia sozinho quando o computador liga, mesmo sem ninguém fazer login;
+  - não tem janela para alguém fechar por engano;
+  - volta sozinho se parar por algum erro;
+  - registra o funcionamento em `data\logs\sisferias.log`.
+
+  Para voltar ao modo com janela, execute **`remover-servico.bat`**.
+- **Desligar o sistema:** no modo com janela, feche a janela preta ou pressione `Ctrl + C`.
+  No modo serviço, execute `remover-servico.bat` (ou, para só parar até o próximo
+  reinício do computador, `node scripts\servico.js parar` como administrador).
+- **Trocar a própria senha:** qualquer usuário clica no ícone de **chave**, no canto superior direito,
+  ao lado de "Sair". O sistema pede a senha atual e a nova (mínimo de **6 caracteres**).
 - **Atualizar para uma versão nova:**
   1. Faça um backup.
   2. Substitua os arquivos do sistema **mantendo a pasta `data`**.
@@ -267,6 +284,10 @@ apaga nada.
 
 **Quantas pessoas podem usar ao mesmo tempo?**
 Centenas, sem dificuldade.
+
+**Aparece "A porta 3000 já está em uso".**
+O SISFERIAS já está rodando neste computador, provavelmente como serviço. Basta abrir o endereço no
+navegador; não é preciso executar o `iniciar.bat`.
 
 **A janela fechou logo ao abrir.**
 Verifique a versão do Node.js: abra o Prompt de Comando e digite `node -v`. Precisa ser

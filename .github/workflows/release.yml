@@ -21,6 +21,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run pacote
       - name: Compactar
         run: cd pacote && zip -rq "../sisferias-${GITHUB_REF_NAME}.zip" sisferias

@@ -16,6 +16,8 @@ export const config = {
   adminEmail: process.env.ADMIN_EMAIL || 'admin@sisferias.local',
   adminPassword: process.env.ADMIN_PASSWORD || '',
   sessionDays: Number(process.env.SESSION_DAYS) || 7,
+  // Tamanho mínimo de senha em todo o sistema.
+  minPasswordLength: 6,
   // Minutos de inatividade até a área de Segurança pedir a senha de novo.
   elevationMinutes: Number(process.env.ELEVATION_MINUTES) || 15,
   // Quantidade de backups automáticos mantidos (os mais antigos são apagados).
