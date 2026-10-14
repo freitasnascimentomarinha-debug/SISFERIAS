@@ -3,9 +3,9 @@ import { chromium, check, step, setSection, db, newSession, login, api, nav, sho
 
 const browser = await chromium.launch();
 const A = {
-  bruno: { nip: '20000002', pass: 'Bruno@123', email: 'bruno@mb.mil.br' },
-  carla: { nip: '30000003', pass: 'Carla@123', email: 'carla@mb.mil.br' },
-  davi:  { nip: '40000004', pass: 'Davi@1234', email: 'davi@mb.mil.br' },
+  bruno: { nip: '20000002', pass: 'Bruno@12345', email: 'bruno@mb.mil.br' },
+  carla: { nip: '30000003', pass: 'Carla@12345', email: 'carla@mb.mil.br' },
+  davi:  { nip: '40000004', pass: 'Davi@123456', email: 'davi@mb.mil.br' },
 };
 const uid = (email) => db('SELECT id FROM profiles WHERE email = ?', email)[0].id;
 const emp = (email) => {

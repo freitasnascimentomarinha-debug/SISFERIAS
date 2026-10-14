@@ -4,13 +4,13 @@ import { chromium, check, step, setSection, db, newSession, login, api, nav, unl
 import { BASE } from './lib.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@456' };
+const ADMIN = { login: 'admin', pass: 'Admin@45678' };
 const uid = (email) => db('SELECT id FROM profiles WHERE email = ?', email)[0]?.id;
 
 const S = { admin: await newSession(browser, 'admin'), bruno: await newSession(browser, 'bruno'), carla: await newSession(browser, 'carla') };
 await login(S.admin.page, ADMIN.login, ADMIN.pass);
-await login(S.bruno.page, '20000002', 'Bruno@123');
-await login(S.carla.page, '30000003', 'Carla@123');
+await login(S.bruno.page, '20000002', 'Bruno@12345');
+await login(S.carla.page, '30000003', 'Carla@12345');
 const P = S.admin.page;
 
 setSection('Item 1 — Papeleta sem internet');
@@ -52,13 +52,13 @@ await step('prazo definido por um admin vale para todos', async () => {
   // Ana volta a ser admin para o teste
   await unlockSecurity(P, ADMIN.pass);
   await api(P, 'PATCH', `/profiles/${uid('ana@mb.mil.br')}`, { role: 'admin', view_all_sectors: true });
-  const { page: ana } = await newSession(browser, 'ana'); await login(ana, '10000001', 'Ana@1234');
+  const { page: ana } = await newSession(browser, 'ana'); await login(ana, '10000001', 'Ana@123456');
 
   await tab(P, 'Usuários');
   await P.fill('input[type=date]', '2099-12-31'); await P.waitForTimeout(1500);
   check('prazo futuro gravado no servidor', db('SELECT vacation_deadline d FROM system_settings')[0].d === '2099-12-31');
   check('prazo futuro não bloqueia ninguém', db('SELECT COUNT(*) c FROM profiles WHERE is_blocked = 1')[0].c === 0);
-  await unlockSecurity(ana, 'Ana@1234'); await tab(ana, 'Usuários');
+  await unlockSecurity(ana, 'Ana@123456'); await tab(ana, 'Usuários');
   check('outro admin (Ana, outro navegador) vê o mesmo prazo', (await ana.inputValue('input[type=date]')) === '2099-12-31');
 
   await P.fill('input[type=date]', '2020-01-01'); await P.waitForTimeout(1500);
@@ -73,7 +73,7 @@ await step('prazo definido por um admin vale para todos', async () => {
   check('liberação manual após o prazo é respeitada (não é bloqueado de novo)', db('SELECT is_blocked b FROM profiles WHERE email = ?', 'bruno@mb.mil.br')[0].b === 0);
 
   // Conta nova criada depois do prazo já nasce bloqueada
-  const r = await api(S.carla.page, 'POST', '/auth/register', { name: 'Eva Nova', email: 'eva@mb.mil.br', password: 'Eva@1234', nip: '50000005', sector: '20' });
+  const r = await api(S.carla.page, 'POST', '/auth/register', { name: 'Eva Nova', email: 'eva@mb.mil.br', password: 'Eva@123456', nip: '50000005', sector: '20' });
   check('conta nova após o prazo nasce bloqueada', r.status === 201 && db('SELECT is_blocked b FROM profiles WHERE email = ?', 'eva@mb.mil.br')[0].b === 1);
 
   await P.click('button[title="Limpar prazo e liberar todos"]'); await P.waitForTimeout(1500);
@@ -148,13 +148,13 @@ await step('cadastro com Quadro/Esp.', async () => {
   await reg.fill('input[placeholder="Opcional"]', 'ma');
   await reg.fill('input[placeholder="seu@email.com"]', 'fabio@mb.mil.br');
   const pw = reg.locator('input[placeholder="********"]');
-  await pw.nth(0).fill('Fabio@123'); await pw.nth(1).fill('Fabio@123');
+  await pw.nth(0).fill('Fabio@12345'); await pw.nth(1).fill('Fabio@12345');
   await reg.click('button[type=submit]'); await reg.waitForTimeout(1500);
   const pref = db('SELECT specialization s FROM print_preferences WHERE user_id = ?', uid('fabio@mb.mil.br'))[0];
   check('Quadro/Esp. do cadastro gravado no servidor', pref?.s === 'MA', pref?.s);
   // abre em OUTRO navegador (sem o valor guardado localmente)
   const { page: f } = await newSession(browser, 'fabio-outro-pc');
-  await login(f, '60000006', 'Fabio@123');
+  await login(f, '60000006', 'Fabio@12345');
   await nav(f, 'Minhas Férias'); await f.waitForTimeout(1500);
   check('em outro computador, o formulário mostra o Quadro/Esp. do cadastro', (await f.locator('input[placeholder="Opcional"]').inputValue()) === 'MA');
   await f.fill('input[placeholder="Opcional"]', 'AA');
@@ -164,7 +164,7 @@ await step('cadastro com Quadro/Esp.', async () => {
   await f.click('button[type=submit]:has-text("Salvar")'); await f.waitForTimeout(1500);
   check('alterar o Quadro/Esp. no formulário grava no servidor', db('SELECT specialization s FROM print_preferences WHERE user_id = ?', uid('fabio@mb.mil.br'))[0]?.s === 'AA');
   const { page: f2 } = await newSession(browser, 'fabio-terceiro-pc');
-  await login(f2, '60000006', 'Fabio@123'); await nav(f2, 'Impressão'); await f2.waitForTimeout(1800);
+  await login(f2, '60000006', 'Fabio@12345'); await nav(f2, 'Impressão'); await f2.waitForTimeout(1800);
   check('papeleta usa o Quadro/Esp. gravado (em outro computador)', (await f2.locator('input[placeholder="Opcional"]').inputValue()) === 'AA');
 });
 

@@ -1,12 +1,43 @@
+# Alternativa ao iniciar.bat/iniciar.sh: docker compose up -d
+#
+# Antes da primeira execução, crie o arquivo .env nesta pasta (veja
+# .env.exemplo) com duas senhas fortes, só com letras e números.
+#
+# Dois contêineres: o PostgreSQL (dados em ./data/postgres-docker) e o
+# SISFERIAS (chave, backups e certificados em ./data). O banco não fica
+# exposto na rede: só o SISFERIAS o acessa.
 services:
+  banco:
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    container_name: sisferias-banco
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=sisferias
+      - POSTGRES_USER=sisferias_dono
+      - POSTGRES_PASSWORD=${SISFERIAS_DONO_SENHA:?defina SISFERIAS_DONO_SENHA no arquivo .env}
+      - SISFERIAS_APP_SENHA=${SISFERIAS_APP_SENHA:?defina SISFERIAS_APP_SENHA no arquivo .env}
+    volumes:
+      - ./data/postgres-docker:/var/lib/postgresql/data
+      - ./docker/init-banco.sh:/docker-entrypoint-initdb.d/init-banco.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sisferias_dono -d sisferias"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   sisferias:
     build: .
     container_name: sisferias
     restart: unless-stopped
+    depends_on:
+      banco:
+        condition: service_healthy
     ports:
       - "3000:3000"
     volumes:
-      # Banco de dados e backups ficam nesta pasta, fora do container.
+      # Chave dos dados, backups e certificados ficam nesta pasta, fora do container.
       - ./data:/app/data
     environment:
       - TZ=America/Sao_Paulo
+      - DATABASE_URL=postgres://sisferias_app:${SISFERIAS_APP_SENHA}@banco:5432/sisferias
+      - DATABASE_OWNER_URL=postgres://sisferias_dono:${SISFERIAS_DONO_SENHA}@banco:5432/sisferias

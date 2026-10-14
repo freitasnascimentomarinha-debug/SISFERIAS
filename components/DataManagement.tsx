@@ -41,7 +41,10 @@ interface ImportResult {
 
 interface Stats {
   counts: Record<string, number>;
-  dbFile: string;
+  database: string;
+  leastPrivilege: boolean;
+  https: boolean;
+  environment: string;
   backups: { file: string; size: number; createdAt: string }[];
   backupCopyDir: string | null;
   backupCopyStatus: { ok: boolean; at: string; file: string; message?: string } | null;
@@ -201,7 +204,10 @@ const DataManagement: React.FC = () => {
               ))}
             </div>
             <p className="text-xs text-slate-500">
-              Arquivo do banco no servidor: <code className="bg-slate-100 px-1.5 py-0.5 rounded">{stats.dbFile}</code>
+              Banco de dados: <code className="bg-slate-100 px-1.5 py-0.5 rounded">{stats.database}</code>
+              {' · '}Dados pessoais cifrados (AES-256)
+              {' · '}{stats.leastPrivilege ? 'Usuário de banco com privilégio mínimo' : 'Atenção: aplicação usa o usuário dono do banco'}
+              {' · '}{stats.https ? 'HTTPS ativo' : 'Atenção: HTTPS desativado'}
             </p>
           </>
         )}
@@ -214,7 +220,9 @@ const DataManagement: React.FC = () => {
         </h3>
         <p className="text-sm text-slate-500 mb-4">
           O servidor faz um backup automático por dia e antes de cada importação ou exclusão de usuário.
-          Guarde cópias periódicas fora deste computador (pen drive, pasta de rede).
+          Guarde cópias periódicas fora deste computador (pen drive, pasta de rede). Os dados pessoais ficam
+          cifrados nos backups: para restaurá-los (Importar &gt; arquivo .json do backup &gt; Substituir) é preciso
+          a mesma chave <code className="bg-slate-100 px-1 rounded">data/chave-dados.key</code> — guarde uma cópia dela em local seguro.
         </p>
         <div className="flex flex-wrap gap-3 mb-4">
           <button
@@ -230,7 +238,7 @@ const DataManagement: React.FC = () => {
             Copiar cada backup também para esta pasta (rede, outro disco ou pen drive)
           </label>
           <div className="flex flex-col md:flex-row gap-3">
-            <input
+            <input autoComplete="off"
               type="text"
               value={copyDir}
               onChange={e => setCopyDir(e.target.value)}

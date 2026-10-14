@@ -132,12 +132,13 @@ function windowsIsAdmin() {
   try { execFileSync('net', ['session'], { stdio: 'ignore' }); return true; } catch { return false; }
 }
 
-/** Encerra os processos node do SISFERIAS desta pasta (serviço e servidor). */
+/** Encerra os processos node do SISFERIAS desta pasta (serviço e servidor) e o PostgreSQL embutido. */
 function windowsKillProcesses() {
   const pattern = START.replace(/'/g, "''");
   run('powershell', ['-NoProfile', '-Command',
     `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*${pattern}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`,
   ], { ignoreError: true });
+  run(NODE, [START, 'banco', 'parar'], { ignoreError: true });
 }
 
 const windows = {

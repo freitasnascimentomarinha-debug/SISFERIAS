@@ -5,7 +5,10 @@ import { useVacation } from '../contexts/VacationContext';
 import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unlock, Edit, Calendar, Filter, AlertCircle, Printer, UserCog, X, Settings, Megaphone, Plus, Camera, Building, Pin, ShieldCheck, CheckCircle2, Eye, EyeOff, Download, Save, Lightbulb, Database } from 'lucide-react';
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, MIN_PASSWORD_LENGTH } from '../types';
+import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
+import { passwordRuleMessage } from '../lib/password';
+import PasswordRules from '../components/PasswordRules';
+import OperationLog from '../components/OperationLog';
 import { api, REAUTH_EVENT } from '../lib/api';
 import DataManagement from '../components/DataManagement';
 import { normalizeText } from '../lib/textUtils';
@@ -19,7 +22,7 @@ const Security: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [elevationMinutes, setElevationMinutes] = useState(15);
-  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'suggestions' | 'data'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'operations' | 'settings' | 'visibility' | 'suggestions' | 'data'>('users');
 
   const [userSearch, setUserSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
@@ -51,7 +54,7 @@ const Security: React.FC = () => {
   const [accountPassError, setAccountPassError] = useState(false);
 
   const navigate = useNavigate();
-  const { user, users, changeUserPassword, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility } = useAuth();
+  const { user, users, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility, unlockUser, fetchAllUsers } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, setVacationDeadline, addNotice, deleteNotice, togglePinNotice, suggestions, deleteSuggestion, refreshData } = useVacation();
 
   const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
@@ -348,8 +351,9 @@ const Security: React.FC = () => {
   };
 
   const handleExecutePassChange = async () => {
-    if (!newPass || newPass.length < MIN_PASSWORD_LENGTH) {
-      setModalError(`A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+    const ruleError = passwordRuleMessage(newPass);
+    if (ruleError) {
+      setModalError(ruleError);
       return;
     }
     if (newPass !== confirmPass) {
@@ -358,13 +362,19 @@ const Security: React.FC = () => {
     }
 
     if (targetUser) {
-      const success = await changeUserPassword(targetUser.email, newPass);
-      if (success) {
-        addAuditLog({ userName: user?.name || 'Admin', action: 'Senha', field: 'Senha do Usuário', oldValue: '********', newValue: 'Alterada via Gestão' });
+      const self = targetUser.id === user?.id;
+      try {
+        if (self) await api.post('/auth/password', { password: newPass });
+        else await api.post('/admin/reset-password', { userId: targetUser.id, password: newPass });
+        addAuditLog({
+          userName: user?.name || 'Admin', action: 'Senha', field: `Senha do Usuário (${targetUser.name})`, oldValue: '********',
+          newValue: self ? 'Alterada via Gestão' : 'Redefinida via Gestão (provisória: troca obrigatória no 1º acesso)',
+        });
+        void fetchAllUsers();
         setIsPassModalOpen(false);
         setTargetUser(null);
-      } else {
-        setModalError('Erro ao alterar senha. Verifique as permissões.');
+      } catch (error) {
+        setModalError(error instanceof Error ? error.message : 'Erro ao alterar senha.');
       }
     }
   };
@@ -450,11 +460,11 @@ const Security: React.FC = () => {
         <p className="text-slate-500 mb-8">
           Por segurança, confirme a <b>sua senha de login</b>{user?.name ? <> ({user.name})</> : null} para acessar as configurações críticas.
         </p>
-        <form onSubmit={handleAdminAuth} className="space-y-4">
+        <form autoComplete="off" onSubmit={handleAdminAuth} className="space-y-4">
           <input
             type="password"
             placeholder="Sua senha"
-            autoComplete="current-password"
+            autoComplete="off"
             className={`w-full px-4 py-3 bg-slate-50 border ${authError ? 'border-red-500' : 'border-slate-200'} rounded-xl outline-none focus:ring-2 focus:ring-orange-500`}
             value={adminPass}
             onChange={e => { setAdminPass(e.target.value); setAuthError(''); }}
@@ -488,21 +498,26 @@ const Security: React.FC = () => {
             </div>
             <div className="p-8 space-y-6">
               <p className="text-sm text-slate-500">Defina uma nova senha para o usuário <span className="font-bold text-slate-900">{targetUser.name}</span>.</p>
+              {targetUser.id !== user?.id && (
+                <p className="text-xs font-bold text-orange-700 bg-orange-50 border border-orange-100 rounded-xl p-3">
+                  A senha será provisória: no primeiro acesso o usuário deverá cadastrar uma senha pessoal. A conta também é desbloqueada.
+                </p>
+              )}
 
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nova Senha</label>
-                  <input
+                  <input autoComplete="off"
                     type="password"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                    placeholder={`Mínimo ${MIN_PASSWORD_LENGTH} caracteres`}
                     value={newPass}
                     onChange={e => setNewPass(e.target.value)}
                   />
                 </div>
+                <PasswordRules password={newPass} />
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirmar Nova Senha</label>
-                  <input
+                  <input autoComplete="off"
                     type="password"
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
                     placeholder="Repita a senha"
@@ -611,6 +626,7 @@ const Security: React.FC = () => {
         <TabButton icon={<Lightbulb size={18} />} label="Sugestões" active={activeTab === 'suggestions'} onClick={() => setActiveTab('suggestions')} />
         <TabButton icon={<Settings size={18} />} label="Sistema" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         <TabButton icon={<History size={18} />} label="Auditoria Detalhada" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+        <TabButton icon={<FileText size={18} />} label="Registro de Operações" active={activeTab === 'operations'} onClick={() => setActiveTab('operations')} />
         {user?.role === 'admin' && (
           <TabButton icon={<Database size={18} />} label="Dados e Backup" active={activeTab === 'data'} onClick={() => setActiveTab('data')} />
         )}
@@ -618,6 +634,7 @@ const Security: React.FC = () => {
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         {activeTab === 'data' && user?.role === 'admin' && <DataManagement />}
+        {activeTab === 'operations' && <OperationLog />}
 
         {activeTab === 'settings' && (
           <div className="p-8 animate-in fade-in duration-300">
@@ -645,7 +662,7 @@ const Security: React.FC = () => {
                         <div className="flex-1 space-y-4">
                           <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome Institucional</label>
-                            <input
+                            <input autoComplete="off"
                               type="text"
                               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
                               value={institutionDraft}
@@ -656,7 +673,7 @@ const Security: React.FC = () => {
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lotação Total (Efetivo)</label>
-                            <input
+                            <input autoComplete="off"
                               type="number"
                               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
                               value={manpowerDraft}
@@ -708,14 +725,14 @@ const Security: React.FC = () => {
                           <Shield size={14} className="text-orange-500" />
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{labels[role]}</span>
                         </div>
-                        <input
+                        <input autoComplete="off"
                           className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
                           placeholder="Nome Completo"
                           value={member.name}
                           onChange={e => setMember({ ...member, name: e.target.value })}
                         />
                         <div className="grid grid-cols-2 gap-2">
-                          <input
+                          <input autoComplete="off"
                             className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
                             placeholder="NIP"
                             value={member.nip}
@@ -740,7 +757,7 @@ const Security: React.FC = () => {
                             <option value="">Patente</option>
                             {catRanks.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
-                          <input
+                          <input autoComplete="off"
                             className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
                             placeholder="Função"
                             value={member.function}
@@ -768,7 +785,7 @@ const Security: React.FC = () => {
                   <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-4 mb-8">
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Título do Aviso</label>
-                      <input
+                      <input autoComplete="off"
                         type="text"
                         className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:ring-2 focus:ring-orange-500"
                         placeholder="Ex: Novo prazo de entrega"
@@ -778,7 +795,7 @@ const Security: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conteúdo</label>
-                      <textarea
+                      <textarea autoComplete="off"
                         className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 min-h-[100px]"
                         placeholder="Escreva o comunicado aqui..."
                         value={noticeContent}
@@ -841,7 +858,7 @@ const Security: React.FC = () => {
             <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-8">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
+                <input autoComplete="off"
                   type="text"
                   placeholder="Filtrar usuários por nome ou e-mail..."
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
@@ -853,7 +870,7 @@ const Security: React.FC = () => {
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prazo Final de Lançamento</label>
                   <div className="flex items-center gap-2">
-                    <input
+                    <input autoComplete="off"
                       type="date"
                       className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500"
                       value={deadline}
@@ -933,7 +950,7 @@ const Security: React.FC = () => {
               <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2"><UserCog className="text-orange-500" size={24} /> Gestão de Contas</h3>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
+                <input autoComplete="off"
                   type="text"
                   placeholder="Pesquisar por nome ou e-mail..."
                   className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-80"
@@ -967,10 +984,34 @@ const Security: React.FC = () => {
                               Sem senha — defina uma para liberar o acesso
                             </span>
                           )}
+                          {u.accountLocked && (
+                            <span className="text-[10px] font-black uppercase tracking-widest mt-0.5 text-red-600" data-testid="conta-bloqueada">
+                              Conta bloqueada por tentativas inválidas de senha
+                            </span>
+                          )}
+                          {u.mustChangePassword && !u.accountLocked && (
+                            <span className="text-[10px] font-black uppercase tracking-widest mt-0.5 text-amber-600">
+                              Senha provisória — troca no próximo acesso
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="py-5 px-4 text-slate-500">
                         <div className="flex items-center justify-center gap-3">
+                          {u.accountLocked && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await unlockUser(u.id);
+                                } catch (error) {
+                                  alert(error instanceof Error ? error.message : 'Não foi possível desbloquear a conta.');
+                                }
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 hover:bg-green-600 hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                            >
+                              <Unlock size={14} /> Desbloquear
+                            </button>
+                          )}
                           <button
                             onClick={async () => {
                               await toggleUserRole(u.id);
@@ -1022,7 +1063,7 @@ const Security: React.FC = () => {
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
+                <input autoComplete="off"
                   type="text"
                   placeholder="Pesquisar administrador..."
                   className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500 w-full md:w-80"
@@ -1085,15 +1126,15 @@ const Security: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input type="text" placeholder="Pesquisar logs..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" value={logSearch} onChange={e => setLogSearch(e.target.value)} />
+                <input autoComplete="off" type="text" placeholder="Pesquisar logs..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" value={logSearch} onChange={e => setLogSearch(e.target.value)} />
               </div>
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input type="date" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logStart} onChange={e => setLogStart(e.target.value)} />
+                  <input autoComplete="off" type="date" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logStart} onChange={e => setLogStart(e.target.value)} />
                 </div>
                 <div className="relative flex-1">
-                  <input type="date" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logEnd} onChange={e => setLogEnd(e.target.value)} />
+                  <input autoComplete="off" type="date" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logEnd} onChange={e => setLogEnd(e.target.value)} />
                 </div>
                 <button onClick={() => { setLogStart(''); setLogEnd(''); setLogSearch(''); }} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-all" title="Limpar filtros"><Filter size={18} /></button>
               </div>
@@ -1179,7 +1220,7 @@ const Security: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                 <div className="relative w-full md:w-96">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
+                  <input autoComplete="off"
                     type="text"
                     placeholder="Pesquisar por nome de guerra, título, descrição ou usuário..."
                     className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"

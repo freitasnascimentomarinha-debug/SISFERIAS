@@ -1,7 +1,7 @@
 {
   "name": "sisferias",
   "private": true,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "SISFERIAS - sistema de planejamento e controle de férias para rede interna",
   "type": "module",
   "engines": {
@@ -20,12 +20,16 @@
     "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
     "test:e2e": "node tests/e2e/run.mjs",
     "typecheck": "tsc --noEmit",
-    "https": "node scripts/https.js"
+    "https": "node scripts/https.js",
+    "restaurar": "node server/start.js restaurar",
+    "banco": "node server/start.js banco",
+    "dados-ficticios": "node server/start.js dados-ficticios"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "express": "^5.3.0",
-    "node-forge": "^1.4.0"
+    "node-forge": "^1.4.0",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -45,5 +49,12 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "write-excel-file": "^4.1.1"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/darwin-arm64": "^17.10.0-beta.17",
+    "@embedded-postgres/darwin-x64": "^17.10.0-beta.17",
+    "@embedded-postgres/linux-arm64": "^17.10.0-beta.17",
+    "@embedded-postgres/linux-x64": "^17.10.0-beta.17",
+    "@embedded-postgres/windows-x64": "^17.10.0-beta.17"
   }
 }

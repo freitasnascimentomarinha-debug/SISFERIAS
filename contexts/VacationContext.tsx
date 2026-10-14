@@ -76,7 +76,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Atualização automática: ao voltar para a aba do navegador e a cada minuto.
   const refreshRef = useRef<() => void>(() => {});
   refreshRef.current = () => {
-    if (!user || document.visibilityState !== 'visible') return;
+    if (!user || user.mustChangePassword || document.visibilityState !== 'visible') return;
     void fetchData();
     void fetchAllUsers();
   };
@@ -93,7 +93,8 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   const fetchData = async () => {
-    if (!user) return;
+    // Com senha provisória nada é carregado até a troca obrigatória.
+    if (!user || user.mustChangePassword) return;
 
     // Cada consulta é independente: a falha de uma (ex.: auditoria, restrita
     // a administradores) não impede o carregamento das demais.

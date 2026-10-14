@@ -1,22 +1,52 @@
+// Backups do banco de dados.
+//
+// Cada backup é um arquivo JSON com todas as tabelas, no mesmo formato da
+// exportação (pode ser restaurado em Segurança > Dados > Importar). Os dados
+// pessoais permanecem CIFRADOS no arquivo: para restaurá-lo é preciso a mesma
+// chave de criptografia (data/chave-dados.key).
 import fs from 'node:fs';
 import path from 'node:path';
-import { db } from './db.js';
+import { q, one, run, nowIso } from './db.js';
 import { config } from './config.js';
+import { TABLES, TABLE_ORDER } from './schema.js';
+import { keyFingerprint } from './crypto.js';
 
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+const BACKUP_RE = /^sisferias_.*\.json$/;
+
+/** Todas as tabelas como estão no banco (dados pessoais cifrados). */
+export async function rawDump() {
+  const tables = {};
+  for (const table of TABLE_ORDER) {
+    const cols = [...Object.keys(TABLES[table].columns), 'extra_json'];
+    tables[table] = await q(`SELECT ${cols.map(c => `"${c}"`).join(', ')} FROM ${table}`);
+  }
+  const authUsers = await q(`SELECT id, email, password_hash, must_change_password, failed_attempts,
+    locked_at, password_changed_at, created_at FROM auth_users`);
+  return {
+    format: 'sisferias-backup',
+    version: 2,
+    encrypted: true,
+    key_fingerprint: keyFingerprint(),
+    exported_at: nowIso(),
+    tables,
+    auth_users: authUsers,
+  };
+}
 
 /**
- * Cria uma cópia consistente do banco (mesmo com o sistema em uso) em
- * data/backups/. Retorna o caminho do arquivo criado.
+ * Cria um backup consistente (mesmo com o sistema em uso) em data/backups/.
+ * Retorna o caminho do arquivo criado.
  */
-export function createBackup(reason = 'manual', { copy = true } = {}) {
+export async function createBackup(reason = 'manual', { copy = true } = {}) {
   fs.mkdirSync(config.backupDir, { recursive: true });
   const safeReason = reason.replace(/[^a-z0-9-]/gi, '');
-  let file = path.join(config.backupDir, `sisferias_${stamp()}_${safeReason}.db`);
+  let file = path.join(config.backupDir, `sisferias_${stamp()}_${safeReason}.json`);
   for (let n = 2; fs.existsSync(file); n += 1) {
-    file = path.join(config.backupDir, `sisferias_${stamp()}_${safeReason}-${n}.db`);
+    file = path.join(config.backupDir, `sisferias_${stamp()}_${safeReason}-${n}.json`);
   }
-  db.prepare('VACUUM INTO ?').run(file);
+  const dump = await rawDump();
+  await fs.promises.writeFile(file, JSON.stringify(dump), { mode: 0o600 });
   pruneBackups();
   if (copy) void copyToExtraFolder(file); // em segundo plano
   return file;
@@ -26,17 +56,14 @@ export function createBackup(reason = 'manual', { copy = true } = {}) {
 // Cópia extra dos backups (pasta de rede, outro disco, pen drive...)
 // ---------------------------------------------------------------------------
 
-export const getBackupCopyDir = () =>
-  db.prepare('SELECT backup_copy_dir d FROM system_settings WHERE id = 1').get()?.d || null;
+export const getBackupCopyDir = async () =>
+  (await one('SELECT backup_copy_dir d FROM system_settings WHERE id = 1'))?.d || null;
 
-function setCopyStatus(status) {
-  db.prepare('UPDATE system_settings SET backup_copy_status = ? WHERE id = 1').run(JSON.stringify(status));
-}
+const setCopyStatus = (status) =>
+  run('UPDATE system_settings SET backup_copy_status = ? WHERE id = 1', [JSON.stringify(status)]);
 
-export function getBackupCopyStatus() {
-  const raw = db.prepare('SELECT backup_copy_status s FROM system_settings WHERE id = 1').get()?.s;
-  try { return raw ? JSON.parse(raw) : null; } catch { return null; }
-}
+export const getBackupCopyStatus = async () =>
+  (await one('SELECT backup_copy_status s FROM system_settings WHERE id = 1'))?.s || null;
 
 const COPY_TIMEOUT_MS = 15_000;
 
@@ -65,22 +92,23 @@ export async function testCopyDir(dir) {
  * derruba o backup principal. Retorna uma promessa que sempre se resolve.
  */
 export async function copyToExtraFolder(file) {
-  const dir = getBackupCopyDir();
+  let dir;
+  try { dir = await getBackupCopyDir(); } catch { return; }
   if (!dir) return;
   try {
     await withTimeout((async () => {
       await fs.promises.mkdir(dir, { recursive: true });
       await fs.promises.copyFile(file, path.join(dir, path.basename(file)));
       // Mantém na pasta extra a mesma quantidade de backups da pasta principal.
-      const names = (await fs.promises.readdir(dir)).filter(f => /^sisferias_.*\.db$/.test(f));
+      const names = (await fs.promises.readdir(dir)).filter(f => BACKUP_RE.test(f));
       const copies = await Promise.all(names.map(async f => ({ f, t: (await fs.promises.stat(path.join(dir, f))).mtimeMs })));
       copies.sort((a, b) => b.t - a.t);
       await Promise.all(copies.slice(config.keepBackups).map(old => fs.promises.rm(path.join(dir, old.f), { force: true })));
     })(), COPY_TIMEOUT_MS * 4, 'cópia do backup');
-    setCopyStatus({ ok: true, at: new Date().toISOString(), file: path.basename(file) });
+    await setCopyStatus({ ok: true, at: new Date().toISOString(), file: path.basename(file) });
   } catch (err) {
-    setCopyStatus({ ok: false, at: new Date().toISOString(), file: path.basename(file), message: err.message });
     console.error(`[backup] falha ao copiar para ${dir}: ${err.message}`);
+    await setCopyStatus({ ok: false, at: new Date().toISOString(), file: path.basename(file), message: err.message }).catch(() => {});
   }
 }
 
@@ -90,9 +118,9 @@ export async function setBackupCopyDir(dir) {
     const resolved = path.resolve(dir);
     if (path.resolve(config.backupDir) === resolved) throw new Error('escolha uma pasta diferente da pasta principal de backups.');
     await testCopyDir(resolved);
-    db.prepare('UPDATE system_settings SET backup_copy_dir = ?, backup_copy_status = NULL WHERE id = 1').run(resolved);
+    await run('UPDATE system_settings SET backup_copy_dir = ?, backup_copy_status = NULL WHERE id = 1', [resolved]);
   } else {
-    db.prepare('UPDATE system_settings SET backup_copy_dir = NULL, backup_copy_status = NULL WHERE id = 1').run();
+    await run('UPDATE system_settings SET backup_copy_dir = NULL, backup_copy_status = NULL WHERE id = 1');
   }
   return getBackupCopyDir();
 }
@@ -100,7 +128,7 @@ export async function setBackupCopyDir(dir) {
 export function listBackups() {
   if (!fs.existsSync(config.backupDir)) return [];
   return fs.readdirSync(config.backupDir)
-    .filter(f => f.endsWith('.db'))
+    .filter(f => BACKUP_RE.test(f))
     .map(f => {
       const st = fs.statSync(path.join(config.backupDir, f));
       return { file: f, size: st.size, createdAt: st.mtime.toISOString() };
@@ -117,18 +145,18 @@ function pruneBackups() {
 
 /** Backup diário automático enquanto o servidor estiver ligado. */
 export function scheduleDailyBackup() {
-  const run = () => {
+  const daily = async () => {
     const today = new Date().toISOString().slice(0, 10);
-    const already = listBackups().some(b => b.file.includes(today) && b.file.endsWith('_diario.db'));
+    const already = listBackups().some(b => b.file.includes(today) && b.file.endsWith('_diario.json'));
     if (!already) {
       try {
-        const file = createBackup('diario');
+        const file = await createBackup('diario');
         console.log(`[backup] backup diário criado: ${path.basename(file)}`);
       } catch (err) {
         console.error('[backup] falha no backup diário:', err.message);
       }
     }
   };
-  run();
-  setInterval(run, 60 * 60_000).unref();
+  void daily();
+  setInterval(daily, 60 * 60_000).unref();
 }

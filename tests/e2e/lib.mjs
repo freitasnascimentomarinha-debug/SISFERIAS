@@ -2,7 +2,8 @@
 // Executados por tests/e2e/run.mjs, que sobe um servidor isolado e informa
 // o endereço (E2E_BASE) e a pasta de trabalho (E2E_DIR).
 import { createRequire } from 'module';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
+import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
 
@@ -25,7 +26,6 @@ export const chromium = pw.chromium || pw.default?.chromium;
 
 export const BASE = process.env.E2E_BASE || 'http://localhost:3999';
 export const QA = process.env.E2E_DIR || path.resolve('e2e-resultados');
-export const DB_FILE = path.join(QA, 'data', 'sisferias.db');
 export const SHOTS = path.join(QA, 'capturas');
 fs.mkdirSync(SHOTS, { recursive: true });
 
@@ -44,9 +44,25 @@ export async function step(name, fn) {
   }
 }
 
+/**
+ * Consulta o que está gravado no banco. Os dados ficam no PostgreSQL, com os
+ * dados pessoais cifrados; aqui eles são lidos já decifrados (dump.mjs) e
+ * carregados num SQLite em memória, para os testes usarem SQL simples.
+ */
+const DUMP = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dump.mjs');
+const { TABLES } = await import('../../server/schema.js');
 export function db(sql, ...params) {
-  const d = new DatabaseSync(DB_FILE, { readOnly: true });
-  try { return d.prepare(sql).all(...params); } finally { d.close(); }
+  const data = JSON.parse(execFileSync(process.execPath, [DUMP], { env: process.env, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }));
+  const d = new DatabaseSync(':memory:');
+  try {
+    for (const [table, rows] of Object.entries(data)) {
+      const cols = Object.keys(TABLES[table].columns);
+      d.exec(`CREATE TABLE ${table} (${cols.map(c => `"${c}"`).join(', ')})`);
+      const insert = d.prepare(`INSERT INTO ${table} VALUES (${cols.map(() => '?').join(', ')})`);
+      for (const r of rows) insert.run(...cols.map(c => r[c] ?? null));
+    }
+    return d.prepare(sql).all(...params);
+  } finally { d.close(); }
 }
 
 export async function newSession(browser, label) {

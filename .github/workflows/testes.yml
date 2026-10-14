@@ -21,23 +21,30 @@ jobs:
       - run: npm run build
       - run: npm run typecheck
 
-  # Confere a instalação por Docker: monta a imagem, sobe o container e
-  # verifica se o sistema responde e cria o administrador inicial.
+  # Confere a instalação por Docker: sobe o PostgreSQL e o SISFERIAS pelo
+  # docker-compose e verifica HTTPS, login, privilégio mínimo e cifragem.
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Montar a imagem
-        run: docker build -t sisferias:ci .
-      - name: Subir o container e testar
+      - name: Criar o arquivo .env de teste
         run: |
-          docker run -d --name sisferias -p 3000:3000 -e ADMIN_PASSWORD=Teste@123 -v "$PWD/dados-ci:/app/data" sisferias:ci
-          for i in $(seq 1 30); do curl -fs http://localhost:3000/api/health && break; sleep 1; done
-          curl -fs http://localhost:3000/api/health
-          curl -fs http://localhost:3000/ | grep -q '<div id="root">'
-          curl -fs -H 'X-Requested-With: sisferias' -H 'Content-Type: application/json' \
-            -d '{"login":"admin","password":"Teste@123"}' http://localhost:3000/api/auth/login | grep -q '"role":"admin"'
-          test -f dados-ci/sisferias.db
-          docker logs sisferias
+          printf 'SISFERIAS_DONO_SENHA=DonoTesteCi2026\nSISFERIAS_APP_SENHA=AppTesteCi2026\n' > .env
       - name: Conferir o docker-compose.yml
         run: docker compose config -q
+      - name: Subir os contêineres
+        run: docker compose up -d --build
+      - name: Testar
+        run: |
+          for i in $(seq 1 60); do curl -fsk https://localhost:3000/api/health && break; sleep 2; done
+          curl -fsk https://localhost:3000/api/health
+          curl -fsk https://localhost:3000/ | grep -q '<div id="root">'
+          sudo test -f data/chave-dados.key
+          SENHA=$(sudo sed -n 's/^Senha provisória: //p' data/ADMIN_INICIAL.txt)
+          curl -fsk -H 'X-Requested-With: sisferias' -H 'Content-Type: application/json' \
+            -d "{\"login\":\"admin\",\"password\":\"$SENHA\"}" https://localhost:3000/api/auth/login | grep -q '"must_change_password":true'
+          # Dados pessoais cifrados no banco
+          docker exec sisferias-banco psql -U sisferias_dono -d sisferias -Atc "SELECT name FROM profiles" | grep -q '^enc:v1:'
+          # Usuário da aplicação não apaga o registro de operações
+          ! docker exec -e PGPASSWORD=AppTesteCi2026 sisferias-banco psql -h localhost -U sisferias_app -d sisferias -c "DELETE FROM operation_log"
+          docker logs sisferias

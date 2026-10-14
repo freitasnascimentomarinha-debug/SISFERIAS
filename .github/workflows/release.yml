@@ -38,9 +38,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run pacote
-      - name: Compactar
-        run: cd pacote && zip -rq "../sisferias-${VERSAO}.zip" sisferias
+      - name: Pacote para Windows
+        run: |
+          npm run pacote -- --plataforma windows
+          cd pacote && zip -rq "../sisferias-${VERSAO}-windows.zip" sisferias
+      - name: Pacote para Linux
+        run: |
+          npm run pacote -- --plataforma linux
+          cd pacote && zip -rqy "../sisferias-${VERSAO}-linux.zip" sisferias
       - uses: actions/upload-artifact@v4
         with:
           name: sisferias-${{ env.VERSAO }}
@@ -55,10 +60,15 @@ jobs:
           body: |
             ## Como instalar (Windows)
             1. Instale o **Node.js LTS** (22.13 ou mais recente): https://nodejs.org
-            2. Baixe **sisferias-${{ env.VERSAO }}.zip** abaixo e extraia em uma pasta fixa (ex.: `C:\SISFERIAS`).
+            2. Baixe **sisferias-${{ env.VERSAO }}-windows.zip** abaixo e extraia em uma pasta fixa (ex.: `C:\SISFERIAS`).
+               (Em Linux, use o arquivo `-linux.zip` e o `iniciar.sh`.)
             3. Dê dois cliques em **iniciar.bat** (ou em **instalar-servico.bat** para iniciar junto com o Windows, sem janela).
             4. Abra no navegador o endereço mostrado em "Na rede".
 
-            Não é preciso internet para instalar. O guia completo está no arquivo **INSTALACAO.md** dentro do pacote.
+            O banco de dados é o **PostgreSQL** (já incluído no pacote, sem instalação separada) ou um PostgreSQL externo do CLTI.
+            Não é preciso internet para instalar. O guia completo está no arquivo **INSTALACAO.md** e a relação com as normas
+            da DCTIM em **CONFORMIDADE.md**, dentro do pacote.
 
             **Atualizando uma instalação existente:** faça um backup, substitua os arquivos **mantendo a pasta `data`** e inicie de novo.
+            Vindo da versão 2.x, os dados do arquivo `data/sisferias.db` são migrados automaticamente para o PostgreSQL na primeira execução.
+            **Guarde uma cópia do arquivo `data/chave-dados.key`** (chave dos dados cifrados) fora do servidor.

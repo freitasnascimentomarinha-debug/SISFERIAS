@@ -2,11 +2,11 @@ import { chromium, check, step, setSection, db, newSession, login, api, nav, unl
 const browser = await chromium.launch();
 const uid = (e) => db('SELECT id FROM profiles WHERE email = ?', e)[0].id;
 const emp = () => { const r = db('SELECT * FROM employees WHERE user_id = ? AND planning_year = 2025', uid('bruno@mb.mil.br'))[0]; r.parcels = JSON.parse(r.vacation_parcels); return r; };
-const { page: P } = await newSession(browser, 'admin'); await login(P, 'admin', 'Admin@456');
-const { page: B } = await newSession(browser, 'bruno'); await login(B, '20000002', 'Bruno@123');
+const { page: P } = await newSession(browser, 'admin'); await login(P, 'admin', 'Admin@45678');
+const { page: B } = await newSession(browser, 'bruno'); await login(B, '20000002', 'Bruno@12345');
 setSection('Admin edita lançamento de usuário bloqueado');
 await step('admin edita bloqueado', async () => {
-  await unlockSecurity(P, 'Admin@456'); await tab(P, 'Usuários');
+  await unlockSecurity(P, 'Admin@45678'); await tab(P, 'Usuários');
   const row = P.locator('tr', { hasText: 'Bruno Costa' });
   if (await row.locator('button[title="Bloquear Manualmente"]').count()) await row.locator('button[title="Bloquear Manualmente"]').click();
   await P.waitForTimeout(900);
@@ -29,7 +29,7 @@ await step('Bruno continua sem poder editar', async () => {
   check('formulário do Bruno desabilitado', await B.evaluate(() => document.querySelector('form fieldset')?.hasAttribute('disabled') && document.querySelector('form input[type=date]')?.matches(':disabled')));
   const r = await api(B, 'PATCH', `/employees/${emp().id}`, { justification: 'x' });
   check('servidor recusa alteração do próprio bloqueado', r.status === 403);
-  await unlockSecurity(P, 'Admin@456'); await tab(P, 'Usuários');
+  await unlockSecurity(P, 'Admin@45678'); await tab(P, 'Usuários');
   await P.locator('tr', { hasText: 'Bruno Costa' }).locator('button[title="Liberar Manualmente"]').click(); await P.waitForTimeout(800);
 });
 saveResults(`${QA}/r6.json`);

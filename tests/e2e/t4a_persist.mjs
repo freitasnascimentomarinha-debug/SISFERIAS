@@ -3,11 +3,11 @@ import fs from 'fs';
 import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, saveResults, QA } from './lib.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@456' };
+const ADMIN = { login: 'admin', pass: 'Admin@45678' };
 const users = [
-  { nip: '20000002', pass: 'Bruno@123', email: 'bruno@mb.mil.br' },
-  { nip: '30000003', pass: 'Carla@123', email: 'carla@mb.mil.br' },
-  { nip: '10000001', pass: 'Ana@1234', email: 'ana@mb.mil.br' },
+  { nip: '20000002', pass: 'Bruno@12345', email: 'bruno@mb.mil.br' },
+  { nip: '30000003', pass: 'Carla@12345', email: 'carla@mb.mil.br' },
+  { nip: '10000001', pass: 'Ana@123456', email: 'ana@mb.mil.br' },
 ];
 const S = { admin: await newSession(browser, 'admin') };
 await login(S.admin.page, ADMIN.login, ADMIN.pass);

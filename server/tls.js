@@ -1,7 +1,9 @@
 // Certificado para HTTPS.
 //
-// Se a TI fornecer um certificado (cert/key em data/config.json), ele é usado.
-// Senão, o sistema gera um certificado próprio em data/certs/, válido para
+// DCTIMBOTEC 31/002/2020, item 3.1.c: na RECIM, o certificado do servidor
+// deve ser emitido pelo CTIM. Ele é configurado com "npm run https -- ativar"
+// (arquivos .crt/.key em PEM ou um arquivo .pfx/.p12 com senha).
+// Enquanto isso, o sistema gera um certificado PROVISÓRIO em data/certs/, válido para
 // "localhost", para o nome do computador e para todos os seus endereços IP.
 // Se o servidor ganhar um IP novo, o certificado é refeito na próxima
 // inicialização.
@@ -62,16 +64,24 @@ function certificateIps(pem) {
 }
 
 /**
- * Devolve { cert, key, file, generated } para o servidor HTTPS, gerando o
- * certificado automático se necessário.
+ * Devolve { options, file, generated, institutional } para o servidor HTTPS,
+ * gerando o certificado provisório se necessário.
  */
 export function loadOrCreateCertificate({ force = false } = {}) {
+  if (config.https.pfx) {
+    return {
+      options: { pfx: fs.readFileSync(config.https.pfx), passphrase: config.https.passphrase || undefined },
+      file: config.https.pfx,
+      generated: false,
+      institutional: true,
+    };
+  }
   if (config.https.cert && config.https.key) {
     return {
-      cert: fs.readFileSync(config.https.cert, 'utf8'),
-      key: fs.readFileSync(config.https.key, 'utf8'),
+      options: { cert: fs.readFileSync(config.https.cert, 'utf8'), key: fs.readFileSync(config.https.key, 'utf8') },
       file: config.https.cert,
       generated: false,
+      institutional: true,
     };
   }
   const ips = localAddresses();
@@ -81,7 +91,7 @@ export function loadOrCreateCertificate({ force = false } = {}) {
   if (!force && fs.existsSync(certFile) && fs.existsSync(keyFile)) {
     const cert = fs.readFileSync(certFile, 'utf8');
     const missing = ips.filter(ip => !certificateIps(cert).includes(ip));
-    if (!missing.length) return { cert, key: fs.readFileSync(keyFile, 'utf8'), file: certFile, generated: false };
+    if (!missing.length) return { options: { cert, key: fs.readFileSync(keyFile, 'utf8') }, file: certFile, generated: false, institutional: false };
     console.log(`[https] novo endereço de rede (${missing.join(', ')}): gerando um novo certificado.`);
   }
   console.log('[https] gerando certificado do servidor (pode levar alguns segundos)...');
@@ -89,5 +99,5 @@ export function loadOrCreateCertificate({ force = false } = {}) {
   fs.mkdirSync(config.certDir, { recursive: true });
   fs.writeFileSync(certFile, cert);
   fs.writeFileSync(keyFile, key, { mode: 0o600 });
-  return { cert, key, file: certFile, generated: true };
+  return { options: { cert, key }, file: certFile, generated: true, institutional: false };
 }

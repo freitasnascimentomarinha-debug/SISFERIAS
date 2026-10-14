@@ -23,7 +23,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "node_modules\express" (
+if not exist "node_modules\pg" (
   echo Instalando dependencias - somente na primeira vez...
   call npm install
   if errorlevel 1 goto erro

@@ -1,16 +1,18 @@
 // Importação e exportação de dados.
 //
 // Aceita:
-//  - o arquivo de backup do próprio SISFERIAS (.json, gerado em "Exportar");
+//  - o arquivo de backup do próprio SISFERIAS (.json, gerado em "Exportar"
+//    ou um backup automático, que vem com os dados pessoais cifrados);
 //  - CSVs, um por tabela, com os nomes das colunas na primeira linha;
 //  - um CSV de usuários (id, email, password_hash ou encrypted_password)
 //    que preserva as senhas dos usuários (hash bcrypt).
 //
 // O fluxo é sempre: preview (nada é gravado) -> apply (tudo em uma transação).
 
-import { db, toDb, newId, nowIso, upsertRow, transaction } from './db.js';
-import { TABLES, TABLE_ORDER } from './schema.js';
+import { q, one, run, toDbType, newId, nowIso, upsertRow, transaction, rowOut } from './db.js';
+import { TABLES, TABLE_ORDER, APPEND_ONLY_TABLES } from './schema.js';
 import { createBackup } from './backup.js';
+import { encrypt, decrypt, blindIndex, keyFingerprint, isValidHashFormat } from './crypto.js';
 
 export const AUTH_USERS = 'auth_users';
 const AUTH_COLUMNS = ['id', 'email', 'encrypted_password', 'password_hash', 'created_at'];
@@ -111,6 +113,7 @@ function readFiles(files, overrides = {}) {
       if (lower.endsWith('.json')) {
         const parsed = JSON.parse(file.content);
         if (parsed && parsed.format === 'sisferias-backup' && parsed.tables) {
+          if (parsed.encrypted) decryptBackup(parsed);
           for (const [table, rows] of Object.entries(parsed.tables)) {
             if (table in TABLES && Array.isArray(rows)) sources.push({ file: file.name, table, rows });
           }
@@ -165,9 +168,9 @@ function prepareRow(table, raw) {
     const type = spec.columns[col];
     let v = TIMESTAMP_COLUMNS.has(col) ? normalizeTimestamp(value) : value;
     try {
-      toDb(type, v);
-    } catch {
-      throw new Error(`coluna "${col}" não contém JSON válido`);
+      toDbType(type, v);
+    } catch (err) {
+      throw new Error(type === 'json' ? `coluna "${col}" não contém JSON válido` : `coluna "${col}": ${err.message}`);
     }
     data[col] = v;
   }
@@ -201,21 +204,37 @@ function prepareAuthRow(raw) {
   if (!id) throw new Error('coluna obrigatória "id" está vazia');
   if (!email) throw new Error('coluna obrigatória "email" está vazia');
   const hash = (raw.password_hash || raw.encrypted_password || '').trim() || null;
-  if (hash && !/^\$2[aby]\$\d{2}\$/.test(hash)) throw new Error('senha não está no formato bcrypt');
+  if (hash && !isValidHashFormat(hash)) throw new Error('senha não está no formato bcrypt');
   return { id, email, password_hash: hash, created_at: normalizeTimestamp(raw.created_at) || nowIso() };
 }
 
-function exists(table, data) {
+async function exists(table, data) {
   const spec = TABLES[table];
-  return !!db.prepare(`SELECT 1 FROM ${table} WHERE ${spec.key.map(k => `"${k}" = ?`).join(' AND ')}`)
-    .get(...spec.key.map(k => String(data[k])));
+  return !!await one(`SELECT 1 FROM ${table} WHERE ${spec.key.map(k => `"${k}"::text = ?`).join(' AND ')}`,
+    spec.key.map(k => String(data[k])));
+}
+
+/** Backup automático: confere a chave e decifra os dados pessoais. */
+function decryptBackup(parsed) {
+  if (parsed.key_fingerprint !== keyFingerprint()) {
+    throw new Error('Este backup foi cifrado com outra chave de criptografia. Restaure-o no servidor de origem ou use a chave original (data/chave-dados.key).');
+  }
+  for (const [table, rows] of Object.entries(parsed.tables)) {
+    if (!(table in TABLES) || !Array.isArray(rows)) continue;
+    for (const row of rows) {
+      for (const col of TABLES[table].encrypted || []) {
+        if (row[col] !== null && row[col] !== undefined) row[col] = decrypt(row[col]);
+      }
+    }
+  }
+  for (const a of parsed.auth_users || []) a.email = decrypt(a.email);
 }
 
 // ---------------------------------------------------------------------------
 // Análise (preview) e aplicação
 // ---------------------------------------------------------------------------
 
-function analyze(files, overrides) {
+async function analyze(files, overrides) {
   const { sources, problems } = readFiles(files, overrides);
   const report = {
     files: [],
@@ -259,52 +278,54 @@ function analyze(files, overrides) {
       tr.unmappedColumns = [...new Set([...tr.unmappedColumns, ...unmapped])];
     }
 
-    source.rows.forEach((raw, idx) => {
+    for (const [idx, raw] of source.rows.entries()) {
       tr.total += 1;
       const line = idx + 2; // linha 1 é o cabeçalho
       try {
         if (source.table === AUTH_USERS) {
           const row = prepareAuthRow(raw);
-          const sameEmail = db.prepare('SELECT id FROM auth_users WHERE email = ?').get(row.email);
+          const sameEmail = await one('SELECT id FROM auth_users WHERE email_hash = ?', [blindIndex(row.email)]);
           if (sameEmail && sameEmail.id !== row.id) throw new Error(`e-mail ${row.email} já pertence a outra conta neste sistema`);
           const dupe = authEmailsInFile.get(row.email.toLowerCase());
           if (dupe && dupe !== row.id) throw new Error(`e-mail ${row.email} repetido no arquivo`);
           authEmailsInFile.set(row.email.toLowerCase(), row.id);
           authIdsInFile.add(row.id);
-          const already = !!db.prepare('SELECT 1 FROM auth_users WHERE id = ?').get(row.id);
+          const already = !!await one('SELECT 1 FROM auth_users WHERE id = ?', [row.id]);
           tr[already ? 'update' : 'insert'] += 1;
           plan.push({ table: AUTH_USERS, data: row });
-          return;
+          continue;
         }
 
         const { data, extra } = prepareRow(source.table, raw);
         if (source.table === 'employees' && data.user_id && data.planning_year) {
           const k = `${data.user_id}|${parseInt(data.planning_year, 10)}`;
-          const other = db.prepare('SELECT id FROM employees WHERE user_id = ? AND planning_year = ?')
-            .get(data.user_id, parseInt(data.planning_year, 10));
+          const other = await one('SELECT id FROM employees WHERE user_id = ? AND planning_year = ?',
+            [data.user_id, parseInt(data.planning_year, 10)]);
           if (other && other.id !== data.id) throw new Error(`já existe outro lançamento para este usuário no ano ${data.planning_year}`);
           if (seenEmployeeKeys.has(k) && seenEmployeeKeys.get(k) !== data.id) throw new Error(`lançamento repetido para o ano ${data.planning_year}`);
           seenEmployeeKeys.set(k, data.id);
         }
-        const action = exists(source.table, data) ? 'update' : 'insert';
+        const action = await exists(source.table, data) ? 'update' : 'insert';
         tr[action] += 1;
         plan.push({ table: source.table, data, extra });
       } catch (err) {
         tr.errors.push({ file: source.file, line, error: err.message });
       }
-    });
+    }
   }
 
   // Perfis sem senha correspondente: o usuário só entra após o admin definir uma senha.
   const profileRows = plan.filter(p => p.table === 'profiles');
-  const withoutPassword = profileRows.filter(p => {
+  const withoutPassword = [];
+  for (const p of profileRows) {
     if (authIdsInFile.has(p.data.id)) {
       const auth = plan.find(a => a.table === AUTH_USERS && a.data.id === p.data.id);
-      return !auth?.data.password_hash;
+      if (!auth?.data.password_hash) withoutPassword.push(p);
+      continue;
     }
-    const row = db.prepare('SELECT password_hash FROM auth_users WHERE id = ?').get(p.data.id);
-    return !row?.password_hash;
-  });
+    const row = await one('SELECT password_hash FROM auth_users WHERE id = ?', [p.data.id]);
+    if (!row?.password_hash) withoutPassword.push(p);
+  }
   if (withoutPassword.length) {
     report.warnings.push(
       `${withoutPassword.length} perfil(is) ficará(ão) sem senha. Esses usuários só conseguirão entrar depois que um administrador definir uma senha em Segurança > Contas` +
@@ -320,53 +341,59 @@ function analyze(files, overrides) {
   return { report, plan };
 }
 
-export function previewImport(files, overrides) {
-  return analyze(files, overrides).report;
+export async function previewImport(files, overrides) {
+  return (await analyze(files, overrides)).report;
 }
 
-export function applyImport(files, overrides, { mode = 'merge' } = {}) {
-  const { report, plan } = analyze(files, overrides);
+export async function applyImport(files, overrides, { mode = 'merge' } = {}) {
+  const { report, plan } = await analyze(files, overrides);
   if (report.problems.length) {
     const err = new Error('Há arquivos com problemas. Corrija-os e gere a pré-visualização novamente.');
     err.report = report;
     throw err;
   }
 
-  const backupFile = createBackup('antes-importacao');
-  const before = countAll();
+  const backupFile = await createBackup('antes-importacao');
+  const before = await countAll();
 
-  transaction(() => {
+  await transaction(async () => {
     if (mode === 'replace') {
-      // Substitui apenas as tabelas presentes na importação.
+      // Substitui apenas as tabelas presentes na importação. A trilha de
+      // auditoria nunca é apagada: registros importados são acrescentados.
       const tables = new Set(plan.map(p => p.table));
-      for (const table of [...TABLE_ORDER].reverse()) if (tables.has(table)) db.exec(`DELETE FROM ${table}`);
+      for (const table of [...TABLE_ORDER].reverse()) {
+        if (tables.has(table) && !APPEND_ONLY_TABLES.includes(table)) await run(`DELETE FROM ${table}`);
+      }
     }
 
     for (const item of plan) {
       if (item.table === AUTH_USERS) {
-        db.prepare(`INSERT INTO auth_users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)
-          ON CONFLICT (id) DO UPDATE SET email = excluded.email,
-            password_hash = COALESCE(excluded.password_hash, auth_users.password_hash)`)
-          .run(item.data.id, item.data.email, item.data.password_hash, item.data.created_at);
+        await run(`INSERT INTO auth_users (id, email, email_hash, password_hash, created_at) VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT (id) DO UPDATE SET email = excluded.email, email_hash = excluded.email_hash,
+            password_hash = COALESCE(excluded.password_hash, auth_users.password_hash)`,
+        [item.data.id, encrypt(item.data.email), blindIndex(item.data.email), item.data.password_hash, item.data.created_at]);
       } else {
-        upsertRow(item.table, item.data, { extra: Object.keys(item.extra).length ? item.extra : undefined });
+        await upsertRow(item.table, item.data, { extra: Object.keys(item.extra).length ? item.extra : undefined });
       }
     }
 
     // Garante uma conta de acesso (ainda sem senha) para cada perfil importado.
-    const orphans = db.prepare(`SELECT p.id, p.email FROM profiles p
-      LEFT JOIN auth_users a ON a.id = p.id WHERE a.id IS NULL AND p.email <> ''`).all();
-    const insertAuth = db.prepare('INSERT OR IGNORE INTO auth_users (id, email, password_hash, created_at) VALUES (?, ?, NULL, ?)');
-    for (const o of orphans) insertAuth.run(o.id, o.email, nowIso());
+    const orphans = await q(`SELECT p.id, p.email FROM profiles p
+      LEFT JOIN auth_users a ON a.id = p.id WHERE a.id IS NULL AND p.email_hash IS NOT NULL`);
+    for (const o of orphans) {
+      const email = decrypt(o.email);
+      await run('INSERT INTO auth_users (id, email, email_hash, password_hash) VALUES (?, ?, ?, NULL) ON CONFLICT DO NOTHING',
+        [o.id, encrypt(email), blindIndex(email)]);
+    }
   });
 
-  const after = countAll();
+  const after = await countAll();
   return { report, backupFile, before, after };
 }
 
-export function countAll() {
-  const counts = { auth_users: db.prepare('SELECT COUNT(*) c FROM auth_users').get().c };
-  for (const t of TABLE_ORDER) counts[t] = db.prepare(`SELECT COUNT(*) c FROM ${t}`).get().c;
+export async function countAll() {
+  const counts = { auth_users: (await one('SELECT COUNT(*)::int c FROM auth_users')).c };
+  for (const t of TABLE_ORDER) counts[t] = (await one(`SELECT COUNT(*)::int c FROM ${t}`)).c;
   return counts;
 }
 
@@ -374,23 +401,21 @@ export function countAll() {
 // Exportação
 // ---------------------------------------------------------------------------
 
-function exportTableRows(table) {
-  const spec = TABLES[table];
-  return db.prepare(`SELECT * FROM ${table}`).all().map(row => {
-    const out = {};
-    for (const [col, type] of Object.entries(spec.columns)) {
-      const v = row[col];
-      out[col] = v === null ? null : type === 'bool' ? !!v : type === 'json' ? JSON.parse(v) : v;
-    }
-    if (row.extra_json) out.extra_json = JSON.parse(row.extra_json);
+async function exportTableRows(table) {
+  return (await q(`SELECT * FROM ${table}`)).map(row => {
+    const out = rowOut(table, row);
+    if (row.extra_json) out.extra_json = row.extra_json;
     return out;
   });
 }
 
-/** Backup completo em JSON, que pode ser reimportado em outro servidor. */
-export function exportAll({ includePasswords = true } = {}) {
+/**
+ * Exportação completa em JSON (dados decifrados), que pode ser reimportada
+ * em outro servidor. Contém dados pessoais: guarde o arquivo com cuidado.
+ */
+export async function exportAll({ includePasswords = true } = {}) {
   const tables = {};
-  for (const t of TABLE_ORDER) tables[t] = exportTableRows(t);
+  for (const t of TABLE_ORDER) tables[t] = await exportTableRows(t);
   const result = {
     format: 'sisferias-backup',
     version: 1,
@@ -398,11 +423,12 @@ export function exportAll({ includePasswords = true } = {}) {
     tables,
   };
   if (includePasswords) {
-    result.auth_users = db.prepare('SELECT id, email, password_hash, created_at FROM auth_users').all();
+    result.auth_users = (await q('SELECT id, email, password_hash, created_at FROM auth_users'))
+      .map(a => ({ ...a, email: decrypt(a.email) }));
   }
   return result;
 }
 
-export function exportTableCsv(table) {
-  return '﻿' + toCsv(exportTableRows(table));
+export async function exportTableCsv(table) {
+  return '﻿' + toCsv(await exportTableRows(table));
 }

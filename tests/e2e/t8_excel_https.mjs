@@ -6,7 +6,7 @@ import { chromium, check, step, setSection, db, newSession, login, nav, unlockSe
 import { startServer } from '../helpers.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@456' };
+const ADMIN = { login: 'admin', pass: 'Admin@45678' };
 const { ctx, page: P } = await newSession(browser, 'admin'); await login(P, ADMIN.login, ADMIN.pass);
 
 /** Gera no navegador uma imagem grande (como foto de celular) e devolve o arquivo. */
@@ -92,14 +92,14 @@ await step('telas abrem normalmente', async () => {
 setSection('Item 5 — HTTPS');
 await step('sistema completo em HTTPS', async () => {
   const dataDir = path.join(QA, 'https-data');
-  const srv = await startServer({ dataDir, env: { HTTPS: '1', ADMIN_PASSWORD: 'Https@123' } });
+  const srv = await startServer({ dataDir, env: { HTTPS: '1', ADMIN_PASSWORD: 'Https@12345' } });
   try {
     const hctx = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1400, height: 900 } });
     const hp = await hctx.newPage();
     hp.__errors = []; hp.on('pageerror', e => hp.__errors.push(e.message));
     hp.on('dialog', d => d.accept());
     await hp.goto(srv.base); await hp.waitForSelector('text=Entrar');
-    await hp.fill('input[type=text]', 'admin'); await hp.fill('input[type=password]', 'Https@123');
+    await hp.fill('input[type=text]', 'admin'); await hp.fill('input[type=password]', 'Https@12345');
     await hp.click('button[type=submit]'); await hp.waitForTimeout(1500);
     check('login funciona em HTTPS (cookie seguro)', await hp.isVisible('header >> text=Segurança'));
     const cookies = await hctx.cookies();

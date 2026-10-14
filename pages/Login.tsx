@@ -23,7 +23,7 @@ const Login: React.FC = () => {
     } catch (err) {
       setError(err instanceof Error && err.message
         ? err.message
-        : 'Credenciais inválidas. Verifique seu e-mail/NIP e senha.');
+        : 'Usuário e/ou senha inválidos.');
     }
     setLoading(false);
   };
@@ -50,13 +50,14 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">E-mail ou NIP</label>
             <div className="relative group">
               <input
                 type="text"
                 required
+                autoComplete="off"
                 value={emailOrNip}
                 onChange={(e) => setEmailOrNip(e.target.value)}
                 className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text"
@@ -75,6 +76,7 @@ const Login: React.FC = () => {
               <input
                 type={showPass ? 'text' : 'password'}
                 required
+                autoComplete="off"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 outline-none text-sm font-medium cursor-text"
@@ -103,7 +105,10 @@ const Login: React.FC = () => {
               {loading ? 'Processando...' : 'Entrar'}
             </button>
             <p className="text-center text-[10px] font-bold text-slate-400 flex items-center justify-center gap-1.5">
-              <Info size={12} /> Esqueceu a senha? Contate o Admin
+              <Info size={12} /> Esqueceu a senha ou teve a conta bloqueada? Contate o Admin
+            </p>
+            <p className="text-center text-[10px] font-medium text-slate-400">
+              Por segurança, a conta é bloqueada após 5 tentativas de senha inválidas seguidas.
             </p>
           </div>
         </form>

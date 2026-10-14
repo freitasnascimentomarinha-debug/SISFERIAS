@@ -1,10 +1,11 @@
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { MemoryRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { VacationProvider } from './contexts/VacationContext';
 import Header from './components/Header';
 import Login from './pages/Login';
+import ChangePasswordModal from './components/ChangePasswordModal';
 
 // As demais telas são carregadas só quando abertas: a primeira abertura do
 // sistema fica mais leve, principalmente em redes lentas.
@@ -35,9 +36,29 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+/**
+ * Faixa exibida em todas as telas do ambiente de homologação (DCTIMARINST
+ * 30-17, item 4.3: ambiente separado, somente com dados fictícios).
+ */
+const EnvironmentBanner: React.FC = () => {
+  const [environment, setEnvironment] = useState('producao');
+  useEffect(() => {
+    fetch('/api/ambiente').then(r => r.json()).then(d => setEnvironment(d.environment || 'producao')).catch(() => {});
+  }, []);
+  if (environment === 'producao') return null;
+  return (
+    <div className="bg-amber-400 text-amber-950 text-center text-[11px] font-black uppercase tracking-widest py-1.5 no-print" role="status">
+      Ambiente de {environment === 'homologacao' ? 'homologação' : environment} — use somente dados fictícios
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen">
+      <EnvironmentBanner />
+      {user?.mustChangePassword && <ChangePasswordModal forced />}
       <Header />
       <Suspense fallback={<PageLoading />}>
       <Routes>

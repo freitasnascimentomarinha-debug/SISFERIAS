@@ -33,9 +33,9 @@ await step('sessão continua válida após reiniciar', async () => {
 });
 await step('login e senhas após reiniciar', async () => {
   const { page } = await newSession(browser, 'admin');
-  check('admin entra com a senha alterada após reiniciar', await login(page, 'admin', 'Admin@456'));
+  check('admin entra com a senha alterada após reiniciar', await login(page, 'admin', 'Admin@45678'));
   const { page: c } = await newSession(browser, 'carla');
-  check('Carla entra após reiniciar', await login(c, '30000003', 'Carla@123'));
+  check('Carla entra após reiniciar', await login(c, '30000003', 'Carla@12345'));
 });
 
 saveResults(`${QA}/r4b.json`);

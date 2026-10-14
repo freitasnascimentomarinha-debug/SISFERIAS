@@ -3,9 +3,9 @@ import fs from 'fs';
 import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, shot, saveResults, QA, SHOTS } from './lib.mjs';
 
 const browser = await chromium.launch();
-const ADMIN = { login: 'admin', pass: 'Admin@456' };
-const BRUNO = { nip: '20000002', pass: 'Bruno@123', email: 'bruno@mb.mil.br' };
-const CARLA = { nip: '30000003', pass: 'Carla@123', email: 'carla@mb.mil.br', name: 'Carla Dias' };
+const ADMIN = { login: 'admin', pass: 'Admin@45678' };
+const BRUNO = { nip: '20000002', pass: 'Bruno@12345', email: 'bruno@mb.mil.br' };
+const CARLA = { nip: '30000003', pass: 'Carla@12345', email: 'carla@mb.mil.br', name: 'Carla Dias' };
 const uid = (email) => db('SELECT id FROM profiles WHERE email = ?', email)[0]?.id;
 const emp = (email, year = 2025) => {
   const r = db('SELECT * FROM employees WHERE user_id = ? AND planning_year = ?', uid(email), year)[0];
@@ -104,7 +104,7 @@ await step('lançamento novo aparece no Painel do admin sem recarregar?', async 
   const before = (await P.textContent('body')).includes('FÉRIAS-QA');
   const ana = uid('ana@mb.mil.br');
   // Ana (agora usuária) altera seu nome de guerra no lançamento via API
-  const { page: a } = await newSession(browser, 'ana'); await login(a, '10000001', 'Ana@1234');
+  const { page: a } = await newSession(browser, 'ana'); await login(a, '10000001', 'Ana@123456');
   const e = db('SELECT id FROM employees WHERE user_id = ?', ana)[0];
   await api(a, 'PATCH', `/employees/${e.id}`, { war_name: 'ANA-QA' });
   await nav(P, 'Início'); await nav(P, 'Painel'); await P.waitForTimeout(800);

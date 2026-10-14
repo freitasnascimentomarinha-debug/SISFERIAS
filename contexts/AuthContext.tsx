@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, PASSWORD_CHANGE_EVENT } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +20,8 @@ interface AuthContextType {
   fetchProfile: (userId: string) => Promise<void>;
   toggleUserRole: (userId: string) => Promise<void>;
   setUserSectorVisibility: (userId: string, viewAllSectors: boolean) => Promise<{ success: boolean; errorMessage?: string }>;
+  unlockUser: (userId: string) => Promise<void>;
+  setCurrentUser: (profile: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +42,8 @@ const mapProfile = (p: any): User => ({
   isBlocked: !!p.is_blocked,
   viewAllSectors: !!p.view_all_sectors,
   hasPassword: p.has_password !== false,
+  mustChangePassword: !!p.must_change_password,
+  accountLocked: !!p.account_locked,
   password: ''
 });
 
@@ -54,11 +58,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .then(({ user: me }) => {
         if (me) {
           setUser(mapProfile(me));
-          void fetchAllUsers();
+          if (!me.must_change_password) void fetchAllUsers();
         }
       })
       .catch(error => console.error('Error restoring session:', error))
       .finally(() => setLoading(false));
+  }, []);
+
+  // O servidor exigiu a troca da senha provisória: recarrega o usuário para
+  // a tela de troca obrigatória aparecer.
+  useEffect(() => {
+    const onRequired = () => {
+      api.get<{ user: any }>('/auth/me').then(({ user: me }) => { if (me) setUser(mapProfile(me)); }).catch(() => {});
+    };
+    window.addEventListener(PASSWORD_CHANGE_EVENT, onRequired);
+    return () => window.removeEventListener(PASSWORD_CHANGE_EVENT, onRequired);
   }, []);
 
   const fetchAllUsers = async () => {
@@ -104,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password: pass
       });
       setUser(mapProfile(me));
-      void fetchAllUsers();
+      if (!me.must_change_password) void fetchAllUsers();
       return true;
     } catch (e) {
       console.error('[Login] Falha:', e);
@@ -256,6 +270,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Libera a conta bloqueada por tentativas inválidas de senha.
+  const unlockUser = async (userId: string) => {
+    const profile = await api.patch(`/profiles/${userId}`, { unlock: true });
+    setUsers(prev => prev.map(u => (u.id === userId ? mapProfile(profile) : u)));
+  };
+
+  // Atualiza o usuário logado com o perfil devolvido pelo servidor (ex.: após trocar a senha).
+  const setCurrentUser = (profile: any) => setUser(mapProfile(profile));
+
   const refreshUser = async () => {
     if (user) await fetchProfile(user.id);
     await fetchAllUsers();
@@ -278,7 +301,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       fetchAllUsers,
       fetchProfile,
       toggleUserRole,
-      setUserSectorVisibility
+      setUserSectorVisibility,
+      unlockUser,
+      setCurrentUser
     }}>
       {!loading && children}
     </AuthContext.Provider>

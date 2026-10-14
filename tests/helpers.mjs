@@ -8,6 +8,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const ADMIN_PASSWORD = 'Admin@Teste1';
@@ -18,32 +19,51 @@ const freePort = () => new Promise((resolve, reject) => {
   srv.on('error', reject);
 });
 
-/** Inicia um servidor em uma pasta temporária. Use `stop()` ao final. */
-export async function startServer({ dataDir, port, env = {} } = {}) {
+/**
+ * Inicia um servidor em uma pasta temporária, com PostgreSQL embutido próprio.
+ * Use `stop()` ao final. Por padrão os testes usam HTTP; passe
+ * `env: { HTTPS: '1' }` (ou `HTTPS: undefined`, o padrão do sistema) para HTTPS.
+ */
+export async function startServer({ dataDir, port, pgPort, env = {} } = {}) {
   dataDir = dataDir || fs.mkdtempSync(path.join(os.tmpdir(), 'sisferias-teste-'));
   port = port || await freePort();
+  pgPort = pgPort || await freePort();
+  const childEnv = {
+    ...process.env, DATA_DIR: dataDir, PORT: String(port), PG_PORT: String(pgPort), HOST: '127.0.0.1',
+    ADMIN_PASSWORD, HTTPS: '0', BCRYPT_COST: '4', ...env,
+  };
+  for (const [k, v] of Object.entries(childEnv)) if (v === undefined) delete childEnv[k];
   const child = spawn(process.execPath, [path.join(ROOT, 'server', 'start.js')], {
-    env: { ...process.env, DATA_DIR: dataDir, PORT: String(port), HOST: '127.0.0.1', ADMIN_PASSWORD, ...env },
+    env: childEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';
   child.stdout.on('data', d => { output += d; });
   child.stderr.on('data', d => { output += d; });
-  const secure = env.HTTPS === '1';
+  const secure = childEnv.HTTPS === undefined || ['1', 'true'].includes(childEnv.HTTPS);
   const base = `${secure ? 'https' : 'http'}://127.0.0.1:${port}`;
   const healthy = () => new Promise(resolve => {
     const req = (secure ? https : http).get(`${base}/api/health`, { rejectUnauthorized: false }, res => { res.resume(); resolve(res.statusCode === 200); });
     req.on('error', () => resolve(false));
   });
-  // HTTPS gera o certificado na primeira vez (alguns segundos).
-  for (let i = 0; i < 300; i += 1) {
+  // A primeira execução cria o banco e, com HTTPS, o certificado (alguns segundos).
+  for (let i = 0; i < 600; i += 1) {
     if (await healthy()) break;
     if (child.exitCode !== null) throw new Error(`servidor não iniciou:\n${output}`);
     await new Promise(r => setTimeout(r, 100));
   }
   return {
-    base, port, dataDir, child,
+    base, port, pgPort, dataDir, child,
     output: () => output,
+    /** Consulta direta ao banco, como o usuário da aplicação (ou outro papel). */
+    sql: async (text, params = [], { role = 'app' } = {}) => {
+      const creds = JSON.parse(fs.readFileSync(path.join(dataDir, 'postgres-credenciais.json'), 'utf8'));
+      const user = { app: 'sisferias_app', dono: 'sisferias_dono', postgres: 'postgres' }[role];
+      const password = { app: creds.appPassword, dono: creds.ownerPassword, postgres: creds.superPassword }[role];
+      const c = new pg.Client({ host: 'localhost', port: pgPort, user, password, database: 'sisferias' });
+      await c.connect();
+      try { return (await c.query(text, params)).rows; } finally { await c.end(); }
+    },
     stop: () => new Promise(resolve => {
       if (child.exitCode !== null) return resolve();
       child.once('exit', resolve);
