@@ -1,20 +1,27 @@
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { MemoryRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { VacationProvider } from './contexts/VacationContext';
 import Header from './components/Header';
-import Dashboard from './pages/Dashboard';
-import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import VacationForm from './pages/VacationForm';
-import CalendarView from './pages/CalendarView';
-import Security from './pages/Security';
-import PrintVacation from './pages/PrintVacation';
-import Justifications from './pages/Justifications';
-import Tramite from './pages/Tramite';
-import Suggestions from './pages/Suggestions';
+
+// As demais telas são carregadas só quando abertas: a primeira abertura do
+// sistema fica mais leve, principalmente em redes lentas.
+const Home = lazy(() => import('./pages/Home'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Register = lazy(() => import('./pages/Register'));
+const VacationForm = lazy(() => import('./pages/VacationForm'));
+const CalendarView = lazy(() => import('./pages/CalendarView'));
+const Security = lazy(() => import('./pages/Security'));
+const PrintVacation = lazy(() => import('./pages/PrintVacation'));
+const Justifications = lazy(() => import('./pages/Justifications'));
+const Tramite = lazy(() => import('./pages/Tramite'));
+const Suggestions = lazy(() => import('./pages/Suggestions'));
+
+const PageLoading: React.FC = () => (
+  <div className="flex items-center justify-center py-32 text-slate-400 text-sm font-bold">Carregando...</div>
+);
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -32,6 +39,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen">
       <Header />
+      <Suspense fallback={<PageLoading />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -49,6 +57,7 @@ const AppContent: React.FC = () => {
         <Route path="/security" element={<AdminRoute><Security /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/home" />} />
       </Routes>
+      </Suspense>
     </div>
   );
 };

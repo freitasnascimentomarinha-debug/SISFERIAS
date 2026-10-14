@@ -276,6 +276,28 @@ novo servidor e execute `iniciar.bat` lá.
 
 ---
 
+### Relatório em Excel
+
+No **Painel**, o botão verde **Exportar Excel** gera uma planilha com o que está na tela, respeitando os filtros. As abas são:
+
+| Aba | Conteúdo |
+|---|---|
+| Informações | Janela, ano de direito, filtros usados, data e quem gerou |
+| Resumo por setor | Militares, dias de direito, programados, cumpridos, restantes, a planejar e % cumprido, com linha de total |
+| Militares | Uma linha por militar, com os mesmos números e a justificativa |
+| Parcelas | Uma linha por parcela: início, término, dias, situação e NUP |
+| Por mês | De dezembro a novembro: quantos militares estão de férias em cada mês e o % do efetivo |
+
+### Fotos e logo
+
+Pode enviar fotos direto do celular, mesmo grandes: o sistema reduz a imagem automaticamente antes de gravar (foto até 400 pixels, logo até 600 pixels). Isso mantém o banco de dados leve.
+
+### Conexão criptografada (HTTPS)
+
+Se a TI pedir conexão criptografada, o procedimento está no `README.md`, seção "Conexão criptografada (HTTPS)". O comando é `npm run https -- ativar`, e depois é preciso reiniciar o SISFERIAS. O endereço passa a começar com `https://`.
+
+---
+
 ## 10. Perguntas frequentes
 
 **Os dados se apagam com o tempo?**

@@ -127,7 +127,7 @@ const Header: React.FC = () => {
                       : 'text-white hover:bg-orange-600'
                     }`}
                 >
-                  {React.cloneElement(item.icon as React.ReactElement, { size: 20 })}
+                  {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 20 })}
                   {item.label}
                 </Link>
               ))}

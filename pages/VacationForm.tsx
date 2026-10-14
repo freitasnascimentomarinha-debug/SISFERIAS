@@ -7,6 +7,7 @@ import { User, Shield, Calendar, ArrowLeft, Save, Info, Ban, AlertTriangle, Mess
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { differenceInDays, format, isValid, isAfter } from 'date-fns';
 import { api } from '../lib/api';
+import { resizeImageFile } from '../lib/image';
 
 const VacationForm: React.FC = () => {
   const { user, isAuthenticated, refreshUser, users, fetchAllUsers, fetchProfile } = useAuth();
@@ -159,16 +160,15 @@ const VacationForm: React.FC = () => {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("A foto deve ter no máximo 2MB.");
-        return;
+      try {
+        // Foto reduzida para 400 px: aceita fotos grandes de celular sem pesar no banco.
+        setPhotoUrl(await resizeImageFile(file, { maxSize: 400 }));
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'Não foi possível usar esta foto.');
       }
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoUrl(reader.result as string);
-      reader.readAsDataURL(file);
     }
   };
 

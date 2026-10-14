@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import https from 'node:https';
 import { startServer, client, ADMIN_PASSWORD } from './helpers.mjs';
 
 let srv;
@@ -225,5 +226,70 @@ describe('persistência', () => {
     assert.deepEqual((await admin.get('/employees')).data, snapshot);
     assert.ok(cookie);
     assert.equal((await bruno.get('/auth/me')).data.user.id, ids.bruno);
+  });
+});
+
+describe('imagens (foto e logo)', () => {
+  let srv2;
+  let adm;
+  before(async () => {
+    srv2 = await startServer();
+    adm = client(srv2.base);
+    await adm.login('admin', ADMIN_PASSWORD);
+    await adm.post('/auth/elevate', { password: ADMIN_PASSWORD });
+  });
+  after(async () => { await srv2?.stop(); });
+
+  it('aceita imagem pequena e recusa imagem grande demais ou formato inválido', async () => {
+    const small = 'data:image/png;base64,' + Buffer.alloc(2000, 1).toString('base64');
+    const big = 'data:image/jpeg;base64,' + Buffer.alloc(2.5 * 1024 * 1024, 1).toString('base64');
+    assert.equal((await adm.put('/settings', { logo_url: small })).status, 200);
+    assert.equal((await adm.put('/settings', { logo_url: big })).status, 413);
+    assert.equal((await adm.put('/settings', { logo_url: 'data:text/html;base64,PGgxPg==' })).status, 400);
+    const me = (await adm.get('/auth/me')).data.user;
+    const e = await adm.post('/employees', { user_id: me.id, planning_year: 2025, vacation_parcels: [], photo_url: small });
+    assert.equal(e.status, 200);
+    assert.equal((await adm.patch(`/employees/${e.data.id}`, { photo_url: big })).status, 413);
+  });
+});
+
+describe('HTTPS', () => {
+  let srv3;
+  before(async () => { srv3 = await startServer({ env: { HTTPS: '1' } }); });
+  after(async () => { await srv3?.stop(); });
+
+  const httpsRequest = (pathname, { method = 'GET', body } = {}) => new Promise((resolve, reject) => {
+    const req = https.request({
+      host: '127.0.0.1', port: srv3.port, path: pathname, method,
+      rejectUnauthorized: false, // certificado próprio da rede interna
+      headers: { 'X-Requested-With': 'sisferias', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    }, res => {
+      const cert = res.socket?.getPeerCertificate?.(); // ler antes de a conexão fechar
+      let data = '';
+      res.on('data', d => { data += d; });
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, data, cert }));
+    });
+    req.on('error', reject);
+    if (body) req.write(JSON.stringify(body));
+    req.end();
+  });
+
+  it('responde em HTTPS com certificado gerado automaticamente', async () => {
+    const r = await httpsRequest('/api/health');
+    assert.equal(r.status, 200);
+    assert.match(r.cert.subjectaltname, /IP Address:127\.0\.0\.1/);
+    assert.ok(fs.existsSync(path.join(srv3.dataDir, 'certs', 'sisferias.crt')));
+  });
+
+  it('cookie de sessão só trafega criptografado (Secure)', async () => {
+    const r = await httpsRequest('/api/auth/login', { method: 'POST', body: { login: 'admin', password: ADMIN_PASSWORD } });
+    assert.equal(r.status, 200);
+    assert.match(String(r.headers['set-cookie']), /;\s*Secure/i);
+  });
+
+  it('certificado público disponível para instalar nos computadores', async () => {
+    const r = await httpsRequest('/api/certificado');
+    assert.equal(r.status, 200);
+    assert.match(r.data, /BEGIN CERTIFICATE/);
   });
 });

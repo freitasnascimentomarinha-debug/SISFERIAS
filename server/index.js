@@ -1,5 +1,6 @@
-import os from 'node:os';
 import fs from 'node:fs';
+import http from 'node:http';
+import https from 'node:https';
 import path from 'node:path';
 import express from 'express';
 import { config } from './config.js';
@@ -8,6 +9,7 @@ import { api } from './api.js';
 import { loadSession, requireAppHeader, purgeExpiredSessions } from './auth.js';
 import { scheduleDailyBackup } from './backup.js';
 import { scheduleDeadlineCheck } from './deadline.js';
+import { loadOrCreateCertificate, localAddresses } from './tls.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -39,15 +41,20 @@ setInterval(purgeExpiredSessions, 6 * 60 * 60_000).unref();
 scheduleDailyBackup();
 scheduleDeadlineCheck();
 
-const server = app.listen(config.port, config.host, () => {
-  const addresses = Object.values(os.networkInterfaces())
-    .flat()
-    .filter(i => i && i.family === 'IPv4' && !i.internal)
-    .map(i => `http://${i.address}:${config.port}`);
+// HTTPS opcional (npm run https -- ativar). O certificado público pode ser
+// baixado em /api/certificado para instalar nos computadores da rede.
+const tls = config.https.enabled ? loadOrCreateCertificate() : null;
+const server = tls
+  ? https.createServer({ cert: tls.cert, key: tls.key }, app)
+  : http.createServer(app);
+
+server.listen(config.port, config.host, () => {
+  const scheme = tls ? 'https' : 'http';
   console.log('SISFERIAS em execução.');
-  console.log(`  Neste computador:  http://localhost:${config.port}`);
-  for (const a of addresses) console.log(`  Na rede:           ${a}`);
+  console.log(`  Neste computador:  ${scheme}://localhost:${config.port}`);
+  for (const ip of localAddresses()) console.log(`  Na rede:           ${scheme}://${ip}:${config.port}`);
   console.log(`  Banco de dados:    ${config.dbFile}`);
+  if (tls) console.log(`  Certificado HTTPS: ${tls.file}`);
   console.log('Para encerrar, feche esta janela ou pressione Ctrl+C.');
 });
 
