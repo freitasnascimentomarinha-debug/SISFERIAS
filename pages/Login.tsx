@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Sun, Mail, Lock, Eye, EyeOff, Info, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { PrivacyNoticeModal } from '../components/PrivacyNotice';
 
 const Login: React.FC = () => {
   const [emailOrNip, setEmailOrNip] = useState('');
@@ -10,6 +11,7 @@ const Login: React.FC = () => {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -117,12 +119,18 @@ const Login: React.FC = () => {
           <span className="text-slate-400">Não tem conta? </span>
           <Link to="/register" className="text-orange-500 hover:text-orange-600 transition-colors">Cadastre-se</Link>
         </div>
+        <div className="mt-4 text-center">
+          <button type="button" onClick={() => setShowPrivacy(true)} className="text-[11px] font-bold text-slate-400 hover:text-orange-500 underline">
+            Aviso de Privacidade (LGPD)
+          </button>
+        </div>
+        <PrivacyNoticeModal open={showPrivacy} onClose={() => setShowPrivacy(false)} />
       </div>
 
       <div className="mt-12 text-slate-400 text-center">
         <div className="text-[10px] font-black uppercase tracking-[0.2em]">Idealização e Desenvolvimento</div>
         <div className="mt-1 text-[9px] font-bold">Centro de Operações do Abastecimento</div>
-        <div className="mt-4 text-[8px] italic opacity-60 tracking-widest">Versão 001.2026</div>
+        <div className="mt-4 text-[8px] italic opacity-60 tracking-widest">Versão {__APP_VERSION__}</div>
       </div>
     </div>
   );

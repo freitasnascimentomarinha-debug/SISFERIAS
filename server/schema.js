@@ -72,6 +72,8 @@ export const TABLES = {
       deadline_applied_for: 'text',
       backup_copy_dir: 'text',
       backup_copy_status: 'json',
+      privacy_officer: 'text',
+      privacy_contact: 'text',
       created_at: 'ts',
       updated_at: 'ts',
     },
@@ -310,6 +312,13 @@ CREATE INDEX operation_log_user_idx ON operation_log(user_id);
 // final; nunca altere um item já publicado.
 export const MIGRATIONS = [
   { version: 1, name: 'esquema inicial (PostgreSQL)', sql: SCHEMA_V1 },
+  {
+    version: 2,
+    name: 'Encarregado de dados (LGPD) configurável',
+    sql: `ALTER TABLE system_settings
+      ADD COLUMN IF NOT EXISTS privacy_officer TEXT,
+      ADD COLUMN IF NOT EXISTS privacy_contact TEXT;`,
+  },
 ];
 
 // Tabelas em que o usuário da aplicação só insere e consulta (trilha de auditoria).

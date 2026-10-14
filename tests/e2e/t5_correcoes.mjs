@@ -73,7 +73,7 @@ await step('prazo definido por um admin vale para todos', async () => {
   check('liberação manual após o prazo é respeitada (não é bloqueado de novo)', db('SELECT is_blocked b FROM profiles WHERE email = ?', 'bruno@mb.mil.br')[0].b === 0);
 
   // Conta nova criada depois do prazo já nasce bloqueada
-  const r = await api(S.carla.page, 'POST', '/auth/register', { name: 'Eva Nova', email: 'eva@mb.mil.br', password: 'Eva@123456', nip: '50000005', sector: '20' });
+  const r = await api(S.carla.page, 'POST', '/auth/register', { name: 'Eva Nova', email: 'eva@mb.mil.br', password: 'Eva@123456', nip: '50000005', sector: '20', privacy_ack: true });
   check('conta nova após o prazo nasce bloqueada', r.status === 201 && db('SELECT is_blocked b FROM profiles WHERE email = ?', 'eva@mb.mil.br')[0].b === 1);
 
   await P.click('button[title="Limpar prazo e liberar todos"]'); await P.waitForTimeout(1500);
@@ -149,7 +149,7 @@ await step('cadastro com Quadro/Esp.', async () => {
   await reg.fill('input[placeholder="seu@email.com"]', 'fabio@mb.mil.br');
   const pw = reg.locator('input[placeholder="********"]');
   await pw.nth(0).fill('Fabio@12345'); await pw.nth(1).fill('Fabio@12345');
-  await reg.click('button[type=submit]'); await reg.waitForTimeout(1500);
+  await reg.check('input[name=privacy_ack]'); await reg.click('button[type=submit]'); await reg.waitForTimeout(1500);
   const pref = db('SELECT specialization s FROM print_preferences WHERE user_id = ?', uid('fabio@mb.mil.br'))[0];
   check('Quadro/Esp. do cadastro gravado no servidor', pref?.s === 'MA', pref?.s);
   // abre em OUTRO navegador (sem o valor guardado localmente)

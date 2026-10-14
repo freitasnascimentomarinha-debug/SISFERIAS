@@ -11,7 +11,8 @@ import { normalizeText } from '../lib/textUtils';
 
 const Dashboard: React.FC = () => {
   const { users, user } = useAuth();
-  const { employees } = useVacation();
+  const { employees, settings } = useVacation();
+  const privacyPending = !settings.privacyOfficer?.trim() || !settings.privacyContact?.trim();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [sectorFilter, setSectorFilter] = useState('all');
@@ -262,6 +263,15 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {privacyPending && (
+        <div className="no-print mb-6 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800" role="alert">
+          <AlertTriangle size={20} className="shrink-0 mt-0.5" />
+          <p className="text-sm">
+            <strong>LGPD:</strong> configure o Encarregado pelo tratamento de dados e o contato em <strong>Segurança &gt; Sistema</strong>.
+            Esses dados aparecem no Aviso de Privacidade mostrado no cadastro e no login.
+          </p>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print mb-10">
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Painel</h2>

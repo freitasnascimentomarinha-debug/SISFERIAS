@@ -154,6 +154,8 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
           next.totalManpower = setData.total_manpower;
           next.logoUrl = setData.logo_url;
           next.vacationDeadline = setData.vacation_deadline || null;
+          next.privacyOfficer = setData.privacy_officer || '';
+          next.privacyContact = setData.privacy_contact || '';
           const keep = (old: StaffMember | undefined, incoming: StaffMember) => (old && sameJson(old, incoming) ? old : incoming);
           next.diretor = keep(prev.diretor, staff.diretor || defaultStaffMember('Diretor'));
           next.viceDiretor = keep(prev.viceDiretor, staff.viceDiretor || defaultStaffMember('Vice-Diretor'));
@@ -281,6 +283,8 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
         institution_name: newSettings.institutionName,
         total_manpower: newSettings.totalManpower,
         logo_url: newSettings.logoUrl,
+        privacy_officer: newSettings.privacyOfficer ?? '',
+        privacy_contact: newSettings.privacyContact ?? '',
         staff_json: {
           diretor: newSettings.diretor,
           viceDiretor: newSettings.viceDiretor,

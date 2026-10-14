@@ -56,7 +56,7 @@ const OPERATIONS = {
 };
 
 // Rotas técnicas, sem acesso a dados, que não precisam de registro.
-const SKIP = new Set(['/health', '/ambiente', '/auth/me', '/auth/elevation']);
+const SKIP = new Set(['/health', '/ambiente', '/privacidade', '/auth/me', '/auth/elevation']);
 
 const GET_INTERVAL_MS = 60 * 60_000;
 const lastGet = new Map();

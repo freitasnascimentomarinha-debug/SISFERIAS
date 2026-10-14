@@ -266,7 +266,8 @@ pages/, components/  Telas
 
 | Ação | Usuário | Admin |
 |---|---|---|
-| Ver lançamentos de férias | Todos | Todos se tiver visão global, senão só do próprio setor |
+| Ver lançamentos de férias | Completos só os próprios; dos demais, apenas setor, categoria e datas (para os indicadores da tela inicial), sem nome, NIP, foto, justificativa ou NUP | Todos se tiver visão global, senão só do próprio setor |
+| Ver cadastro de usuários | Completo só o próprio; dos demais, apenas o identificador e a categoria | Todos |
 | Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Qualquer um |
 | Preferências de impressão | Só as próprias | Qualquer usuário |
 | Enviar sugestão | Sim | Sim |
@@ -283,6 +284,7 @@ Outras regras do servidor:
 - **Senhas:** mínimo de 10 caracteres com maiúscula, minúscula, número e especial em todo o sistema (cadastro, troca pelo próprio usuário, redefinição pelo admin e `npm run admin`). Para trocar a própria senha, fora da área de Segurança, é preciso informar a atual, e a nova deve ser diferente. Senhas definidas por outra pessoa são provisórias (`must_change_password`): até a troca, a API só aceita `/auth/me`, `/auth/password` e `/auth/logout`.
 - **Bloqueio de conta:** `auth_users.failed_attempts`/`locked_at`. Ao atingir 5 erros seguidos, as sessões do usuário são apagadas e o bloqueio vai para a auditoria. Desbloqueio: `PATCH /api/profiles/:id { unlock: true }` ou `npm run admin -- --desbloquear`.
 - **Auditoria:** o autor é sempre o usuário da sessão; o nome enviado pela tela é ignorado.
+- **Aviso de Privacidade (LGPD):** `GET /api/privacidade` (público) devolve o nome da OM, o Encarregado pelo tratamento de dados e o contato (`system_settings.privacy_officer`/`privacy_contact`, configurados em Segurança → Sistema). O cadastro exige `privacy_ack: true` (ciência do aviso), registrada no Registro de Operações. Sem Encarregado configurado, o aviso usa um texto genérico e o Painel mostra um alerta aos administradores.
 - **Telas:** buscam os dados de novo ao trocar de tela, ao voltar para a janela e a cada 60 s. Registros sem mudança mantêm o mesmo objeto, para não reiniciar formulários abertos.
 - **"Quadro/Esp.":** gravado em `print_preferences.specialization` no cadastro e no formulário de férias.
 - **Imagens:** foto e logo são reduzidos no navegador (foto até 400 px; logo até 600 px, mantendo a transparência). O servidor recusa imagens acima de 2 MB ou fora dos formatos JPG, PNG, WEBP e GIF.

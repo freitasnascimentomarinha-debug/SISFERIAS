@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SECTORS, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
 import { passwordRuleMessage } from '../lib/password';
 import PasswordRules from '../components/PasswordRules';
+import { PrivacyNoticeModal } from '../components/PrivacyNotice';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -23,6 +24,8 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [privacyAck, setPrivacyAck] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -44,10 +47,14 @@ const Register: React.FC = () => {
       setError('As senhas não coincidem!');
       return;
     }
+    if (!privacyAck) {
+      setError('Leia o Aviso de Privacidade e marque a declaração de ciência.');
+      return;
+    }
     
     setLoading(true);
     const result = await register(name, email, password, 'user', {
-      warName, nip, category, sector, rank, specialization: specialization.trim()
+      warName, nip, category, sector, rank, specialization: specialization.trim(), privacyAck
     });
     
     if (result.success) {
@@ -312,6 +319,24 @@ const Register: React.FC = () => {
             </div>
           </div>
 
+          <label className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer">
+            <input
+              type="checkbox"
+              name="privacy_ack"
+              checked={privacyAck}
+              onChange={e => setPrivacyAck(e.target.checked)}
+              disabled={loading || !!success}
+              className="mt-0.5 w-4 h-4 accent-orange-500"
+            />
+            <span className="text-xs text-slate-600 leading-relaxed">
+              Li e estou ciente do{' '}
+              <button type="button" onClick={() => setShowPrivacy(true)} className="font-bold text-orange-600 hover:text-orange-700 underline">
+                Aviso de Privacidade
+              </button>
+              : meus dados pessoais serão tratados no SISFERIAS somente para o planejamento e o controle das férias, conforme a LGPD.
+            </span>
+          </label>
+
           <button 
             type="submit" 
             disabled={loading || !!success} 
@@ -320,6 +345,8 @@ const Register: React.FC = () => {
             {loading ? 'Cadastrando...' : success ? 'Sucesso!' : 'Cadastrar'}
           </button>
         </form>
+
+        <PrivacyNoticeModal open={showPrivacy} onClose={() => setShowPrivacy(false)} />
 
         <p className="mt-10 text-center text-xs font-bold">
           <span className="text-slate-400">Já tem conta? </span>

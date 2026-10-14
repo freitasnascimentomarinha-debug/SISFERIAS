@@ -156,6 +156,7 @@ api.post('/auth/register', async (req, res) => {
   const password = String(b.password || '');
   const nip = String(b.nip || '').trim();
   if (!name || !email || !password) fail(400, 'Nome, e-mail e senha são obrigatórios.');
+  if (b.privacy_ack !== true) fail(400, 'É preciso declarar ciência do Aviso de Privacidade.');
   if (!/^[^\s@]+@[^\s@]+$/.test(email)) fail(400, 'E-mail inválido.');
   checkPasswordRule(password);
   if (await one('SELECT 1 FROM auth_users WHERE email_hash = ?', [blindIndex(email)])) {
@@ -183,6 +184,7 @@ api.post('/auth/register', async (req, res) => {
     if (specialization) await upsertRow('print_preferences', { user_id: id, specialization });
   });
   res.locals.opUser = { id, label: name };
+  res.locals.opDetail = 'ciência do Aviso de Privacidade';
   res.status(201).json({ id });
 });
 
@@ -229,11 +231,18 @@ api.post('/auth/elevate/end', requireAuth, async (req, res) => {
 // Usuários (perfis)
 // ---------------------------------------------------------------------------
 
-api.get('/profiles', requireAuth, async (_req, res) => {
-  res.json((await q(PROFILE_SQL)).map(profileOut).sort(byName));
+// Usuário comum recebe completos apenas os próprios dados. Dos demais, só o
+// necessário para os indicadores gerais da tela inicial, sem dados pessoais
+// (LGPD, art. 6º, III — necessidade).
+const minimalProfile = (p) => ({ id: p.id, category: p.category, role: p.role });
+
+api.get('/profiles', requireAuth, async (req, res) => {
+  const profiles = (await q(PROFILE_SQL)).map(profileOut).sort(byName);
+  res.json(isAdmin(req) ? profiles : profiles.map(p => (p.id === req.user.id ? p : minimalProfile(p))));
 });
 
 api.get('/profiles/:id', requireAuth, async (req, res) => {
+  if (!isAdmin(req) && req.params.id !== req.user.id) fail(403, 'Você só pode consultar o seu próprio cadastro.');
   const profile = await getProfile(req.params.id);
   if (!profile) fail(404, 'Usuário não encontrado.');
   res.json(profile);
@@ -322,8 +331,24 @@ api.get('/employees', requireAuth, async (req, res) => {
     // Ordem fixa (de criação): as telas usam o primeiro lançamento de cada militar.
     rows = await q('SELECT * FROM employees ORDER BY created_at, id');
   }
-  res.json(rowsOut('employees', rows));
+  const out = rowsOut('employees', rows);
+  res.json(me.role === 'admin' ? out : out.map(e => (e.user_id === req.user.id ? e : minimalEmployee(e))));
 });
+
+// Lançamentos de outros militares, para usuário comum: só datas e categoria,
+// usadas nos indicadores da tela inicial (ausência hoje, efetivo por categoria)
+// e o setor (lista de setores do formulário). Sem nome, NIP, foto,
+// justificativa ou NUP.
+function minimalEmployee(e) {
+  let parcels = e.vacation_parcels;
+  if (typeof parcels === 'string') { try { parcels = JSON.parse(parcels); } catch { parcels = []; } }
+  return {
+    id: e.id, user_id: e.user_id, sector: e.sector, category: e.category,
+    planning_year: e.planning_year, total_vacation_days: e.total_vacation_days,
+    vacation_parcels: (Array.isArray(parcels) ? parcels : [])
+      .map(({ id, startDate, endDate, days }) => ({ id, startDate, endDate, days })),
+  };
+}
 
 function assertCanEdit(req, userId) {
   if (isAdmin(req)) return;
@@ -391,8 +416,22 @@ api.get('/settings', requireAuth, async (_req, res) => {
   res.json(await getSettings());
 });
 
+// Dados do Aviso de Privacidade (LGPD, art. 9º e art. 41): públicos, pois o aviso
+// aparece no cadastro e no login, antes de a pessoa entrar no sistema.
+api.get('/privacidade', async (_req, res) => {
+  const s = await getSettings();
+  res.json({
+    institution_name: s?.institution_name || '',
+    privacy_officer: s?.privacy_officer || '',
+    privacy_contact: s?.privacy_contact || '',
+  });
+});
+
 api.put('/settings', requireElevated, async (req, res) => {
-  const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json']);
+  const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json', 'privacy_officer', 'privacy_contact']);
+  for (const k of ['privacy_officer', 'privacy_contact']) {
+    if (k in data) data[k] = String(data[k] ?? '').trim().slice(0, 200);
+  }
   checkImage(data.logo_url, 'Logo');
   await upsertRow('system_settings', { ...data, id: 1 });
   res.json(await getSettings());

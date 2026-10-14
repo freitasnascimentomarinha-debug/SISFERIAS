@@ -28,7 +28,7 @@ for (const key of ['ana', 'bruno', 'carla', 'davi']) {
     await reg.fill('input[placeholder="seu@email.com"]', a.email);
     const pw = reg.locator('input[placeholder="********"]');
     await pw.nth(0).fill(a.pass); await pw.nth(1).fill(a.pass);
-    await reg.click('button[type=submit]');
+    await reg.check('input[name=privacy_ack]'); await reg.click('button[type=submit]');
     const ok = await reg.waitForSelector('text=Cadastro realizado', { timeout: 5000 }).then(() => true).catch(() => false);
     const row = db('SELECT * FROM profiles WHERE email = ?', a.email)[0];
     check(`cadastro ${a.name}`, ok && row && row.nip === a.nip && row.sector === a.sector && row.rank === a.rank && row.category === a.cat && row.role === 'user',
@@ -44,13 +44,13 @@ await step('cadastro duplicado (mesmo e-mail) é recusado', async () => {
   await reg.fill('input[placeholder="seu@email.com"]', a.email);
   const pw = reg.locator('input[placeholder="********"]');
   await pw.nth(0).fill('qwerty12'); await pw.nth(1).fill('qwerty12');
-  await reg.click('button[type=submit]'); await reg.waitForTimeout(1200);
+  await reg.check('input[name=privacy_ack]'); await reg.click('button[type=submit]'); await reg.waitForTimeout(1200);
   const n = db('SELECT COUNT(*) c FROM profiles WHERE email = ?', a.email)[0].c;
   check('cadastro duplicado (mesmo e-mail) é recusado', n === 1 && !(await reg.isVisible('text=Cadastro realizado')),
     (await reg.textContent('form')).match(/já|cadastrad|exist/i)?.[0] ? 'mensagem exibida' : 'sem mensagem clara');
 });
 await step('cadastro com NIP repetido é recusado', async () => {
-  const r = await api(reg, 'POST', '/auth/register', { name: 'Clone', email: 'clone@mb.mil.br', password: 'Clone@12345', nip: ACCOUNTS.carla.nip });
+  const r = await api(reg, 'POST', '/auth/register', { name: 'Clone', email: 'clone@mb.mil.br', password: 'Clone@12345', nip: ACCOUNTS.carla.nip, privacy_ack: true });
   check('cadastro com NIP repetido é recusado', r.status === 409, `${r.status} ${r.data?.error}`);
 });
 
