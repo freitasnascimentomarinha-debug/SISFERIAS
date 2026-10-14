@@ -1,5 +1,5 @@
 // Etapa 9: requisitos das normas da DCTIM vistos pela tela.
-import { chromium, check, step, setSection, db, newSession, login, api, unlockSecurity, tab, shot, saveResults, QA, BASE } from './lib.mjs';
+import { chromium, check, step, setSection, db, newSession, login, api, nav, unlockSecurity, tab, shot, saveResults, QA, BASE } from './lib.mjs';
 
 const browser = await chromium.launch();
 const ADMIN = { login: 'admin', pass: 'Admin@45678' };
@@ -73,6 +73,48 @@ await step('aba Registro de Operações', async () => {
   const refused = await P.locator('[data-testid=registro-operacoes] tbody tr').count();
   check('filtro de recusadas funciona', refused >= 5, `${refused} linha(s)`);
   await shot(P, 't9-registro-operacoes');
+});
+
+setSection('LGPD — Aviso de Privacidade e Encarregado configurável');
+await step('aviso no login e no cadastro; Encarregado configurado pela OM', async () => {
+  const { page: A } = await newSession(browser, 'anon-privacidade');
+  await A.goto(BASE); await A.waitForSelector('text=Entrar');
+  await A.click('text=Aviso de Privacidade (LGPD)');
+  await A.waitForSelector('#aviso-privacidade-titulo');
+  check('login: link abre o Aviso de Privacidade', await A.isVisible('text=Base legal'));
+  check('sem configuração: Encarregado genérico', (await A.textContent('[data-testid=privacy-officer]')).includes('Encarregado pelo Tratamento de Dados Pessoais da OM'));
+  await A.click('[role=dialog] button:has-text("Fechar")');
+
+  await nav(P, 'Painel');
+  check('Painel alerta que falta configurar o Encarregado', await P.isVisible('text=configure o Encarregado'));
+  await unlockSecurity(P, ADMIN.pass); await tab(P, 'Sistema');
+  await P.fill('#privacy-officer', 'Encarregado pelo Tratamento de Dados Pessoais do COpAb');
+  await P.fill('#privacy-contact', 'secretaria@copab.mb – ramal 1234');
+  await P.click('button:has-text("Salvar Proteção de Dados")'); await P.waitForTimeout(900);
+  await shot(P, 't9-lgpd-configuracao');
+  await nav(P, 'Painel');
+  check('alerta some depois de configurado', !(await P.isVisible('text=configure o Encarregado')));
+
+  await A.click('text=Cadastre-se');
+  await A.fill('input[placeholder="Seu nome completo"]', 'Helena Prado');
+  await A.fill('input[placeholder="Nome de guerra"]', 'HELENA');
+  await A.fill('input[placeholder="Número de Identificação Pessoal"]', '80000008');
+  await A.fill('input[placeholder="seu@email.com"]', 'helena@mb.mil.br');
+  const pw = A.locator('input[placeholder="********"]');
+  await pw.nth(0).fill('Helena@12345'); await pw.nth(1).fill('Helena@12345');
+  await A.click('button[type=submit]'); await A.waitForTimeout(800);
+  check('cadastro sem ciência do aviso é recusado', await A.isVisible('text=marque a declaração de ciência') && !db("SELECT 1 FROM profiles WHERE email = 'helena@mb.mil.br'").length);
+  await A.click('form button:has-text("Aviso de Privacidade")');
+  await A.waitForSelector('#aviso-privacidade-titulo');
+  const officer = await A.textContent('[data-testid=privacy-officer]');
+  const contact = await A.textContent('[data-testid=privacy-contact]');
+  check('cadastro: aviso mostra o Encarregado configurado', officer.includes('do COpAb') && contact.includes('ramal 1234'), `${officer} | ${contact}`);
+  await shot(A, 't9-aviso-privacidade');
+  await A.click('[role=dialog] button:has-text("Fechar")');
+  await A.check('input[name=privacy_ack]');
+  await A.click('button[type=submit]');
+  const ok = await A.waitForSelector('text=Cadastro realizado', { timeout: 5000 }).then(() => true).catch(() => false);
+  check('com a ciência marcada, o cadastro é feito', ok && db("SELECT 1 FROM profiles WHERE email = 'helena@mb.mil.br'").length === 1);
 });
 
 setSection('30-17 4.3 — ambiente');

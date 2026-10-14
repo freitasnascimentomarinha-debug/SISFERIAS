@@ -156,6 +156,7 @@ api.post('/auth/register', async (req, res) => {
   const password = String(b.password || '');
   const nip = String(b.nip || '').trim();
   if (!name || !email || !password) fail(400, 'Nome, e-mail e senha são obrigatórios.');
+  if (b.privacy_ack !== true) fail(400, 'É preciso declarar ciência do Aviso de Privacidade.');
   if (!/^[^\s@]+@[^\s@]+$/.test(email)) fail(400, 'E-mail inválido.');
   checkPasswordRule(password);
   if (await one('SELECT 1 FROM auth_users WHERE email_hash = ?', [blindIndex(email)])) {
@@ -183,6 +184,7 @@ api.post('/auth/register', async (req, res) => {
     if (specialization) await upsertRow('print_preferences', { user_id: id, specialization });
   });
   res.locals.opUser = { id, label: name };
+  res.locals.opDetail = 'ciência do Aviso de Privacidade';
   res.status(201).json({ id });
 });
 
@@ -414,8 +416,22 @@ api.get('/settings', requireAuth, async (_req, res) => {
   res.json(await getSettings());
 });
 
+// Dados do Aviso de Privacidade (LGPD, art. 9º e art. 41): públicos, pois o aviso
+// aparece no cadastro e no login, antes de a pessoa entrar no sistema.
+api.get('/privacidade', async (_req, res) => {
+  const s = await getSettings();
+  res.json({
+    institution_name: s?.institution_name || '',
+    privacy_officer: s?.privacy_officer || '',
+    privacy_contact: s?.privacy_contact || '',
+  });
+});
+
 api.put('/settings', requireElevated, async (req, res) => {
-  const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json']);
+  const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json', 'privacy_officer', 'privacy_contact']);
+  for (const k of ['privacy_officer', 'privacy_contact']) {
+    if (k in data) data[k] = String(data[k] ?? '').trim().slice(0, 200);
+  }
   checkImage(data.logo_url, 'Logo');
   await upsertRow('system_settings', { ...data, id: 1 });
   res.json(await getSettings());

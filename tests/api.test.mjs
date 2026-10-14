@@ -15,7 +15,7 @@ let bruno;      // usuário do setor 10
 let carla;      // usuária do setor 20
 const ids = {};
 
-const register = (c, p) => c.post('/auth/register', { password: 'Senha@12345', category: 'praca', rank: 'CB', ...p });
+const register = (c, p) => c.post('/auth/register', { password: 'Senha@12345', category: 'praca', rank: 'CB', privacy_ack: true, ...p });
 
 before(async () => {
   srv = await startServer();
@@ -48,6 +48,23 @@ describe('instalação e login', () => {
     ids.carla = c.data.id;
     assert.equal((await register(anon, { name: 'Dup', email: 'BRUNO@mb.mil.br', nip: '1' })).status, 409, 'e-mail repetido (sem diferenciar maiúsculas)');
     assert.equal((await register(anon, { name: 'Dup', email: 'outro@mb.mil.br', nip: '20000002' })).status, 409, 'NIP repetido');
+  });
+
+  it('cadastro exige ciência do Aviso de Privacidade, que é público e configurável', async () => {
+    const anon = client(srv.base);
+    const r = await register(anon, { name: 'Sem Ciência', email: 'sc@mb.mil.br', nip: '70000007', privacy_ack: undefined });
+    assert.equal(r.status, 400);
+    assert.match(r.data.error, /Aviso de Privacidade/);
+    const vazio = (await anon.get('/privacidade')).data;
+    assert.equal(vazio.privacy_officer, '', 'sem encarregado configurado');
+    await admin.post('/auth/elevate', { password: ADMIN_PASSWORD });
+    const s = (await admin.get('/settings')).data;
+    const put = await admin.put('/settings', { ...s, privacy_officer: '  Encarregado de Dados do COpAb ', privacy_contact: 'secom@marinha.mil.br' });
+    assert.equal(put.status, 200);
+    const aviso = (await anon.get('/privacidade')).data;
+    assert.equal(aviso.privacy_officer, 'Encarregado de Dados do COpAb');
+    assert.equal(aviso.privacy_contact, 'secom@marinha.mil.br');
+    await admin.post('/auth/elevate/end');
   });
 
   it('login por NIP e por e-mail; senha errada recusada', async () => {
@@ -351,7 +368,7 @@ describe('conformidade com as normas da DCTIM', () => {
     adm = client(s4.base);
     await adm.login('admin', ADMIN_PASSWORD);
     await adm.post('/auth/elevate', { password: ADMIN_PASSWORD });
-    await client(s4.base).post('/auth/register', { name: 'Davi Lima', war_name: 'DAVI', email: 'davi@mb.mil.br', nip: '40000004', password: 'Davi@123456', sector: '10' });
+    await client(s4.base).post('/auth/register', { name: 'Davi Lima', war_name: 'DAVI', email: 'davi@mb.mil.br', nip: '40000004', password: 'Davi@123456', sector: '10', privacy_ack: true });
   });
   after(async () => { await s4?.stop(); });
 

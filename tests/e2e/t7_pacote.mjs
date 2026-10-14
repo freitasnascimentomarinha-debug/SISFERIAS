@@ -41,7 +41,7 @@ await step('cadastro e redefinição seguem a regra de senha da DCTIM', async ()
   await r.fill('input[placeholder="seu@email.com"]', 'gabi@mb.mil.br');
   const pw = r.locator('input[placeholder="********"]');
   await pw.nth(0).fill('12345'); await pw.nth(1).fill('12345');
-  await r.click('button[type=submit]'); await r.waitForTimeout(800);
+  await r.check('input[name=privacy_ack]'); await r.click('button[type=submit]'); await r.waitForTimeout(800);
   check('cadastro com senha fraca é recusado', await r.isVisible('text=pelo menos 10 caracteres') && !db("SELECT 1 FROM profiles WHERE email = 'gabi@mb.mil.br'").length);
   check('a tela mostra o checklist da regra de senha', await r.isVisible('[data-testid=regras-senha]'));
   const res = await api(P, 'POST', '/admin/reset-password', { email: 'carla@mb.mil.br', password: '1234' });

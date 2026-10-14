@@ -1,6 +1,9 @@
 import path from 'path';
 import { defineConfig } from 'vite';
+import fs from 'fs';
 import react from '@vitejs/plugin-react';
+
+const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
 
 // Em desenvolvimento, o Vite (porta 5173) repassa /api para o servidor
 // Node (porta 3000, `npm run dev:server`). Em produção, o próprio servidor
@@ -14,6 +17,8 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  // Versão do package.json, mostrada na tela de login.
+  define: { __APP_VERSION__: JSON.stringify(version) },
   build: {
     rollupOptions: {
       output: {

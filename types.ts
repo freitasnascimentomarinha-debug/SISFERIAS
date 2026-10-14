@@ -93,6 +93,9 @@ export interface SystemSettings {
   encPessoal?: StaffMember;
   // Prazo final de lançamento (AAAA-MM-DD), gravado no servidor.
   vacationDeadline?: string | null;
+  /** Encarregado pelo tratamento de dados (cargo, não pessoa) e contato institucional, exibidos no Aviso de Privacidade. */
+  privacyOfficer?: string;
+  privacyContact?: string;
 }
 
 /** Tamanho mínimo de senha (o servidor aplica a mesma regra). */

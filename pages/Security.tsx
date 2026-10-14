@@ -63,6 +63,13 @@ const Security: React.FC = () => {
   const [staffViceDiretor, setStaffViceDiretor] = useState<StaffMember>(settings.viceDiretor || defaultStaff('Vice-Diretor'));
   const [staffEncPessoal, setStaffEncPessoal] = useState<StaffMember>(settings.encPessoal || defaultStaff('Encarregado do Dep. Pessoal'));
   const [staffSaveSuccess, setStaffSaveSuccess] = useState(false);
+  const [privacyOfficerDraft, setPrivacyOfficerDraft] = useState(settings.privacyOfficer || '');
+  const [privacyContactDraft, setPrivacyContactDraft] = useState(settings.privacyContact || '');
+  const [privacySaveSuccess, setPrivacySaveSuccess] = useState(false);
+  useEffect(() => {
+    setPrivacyOfficerDraft(settings.privacyOfficer || '');
+    setPrivacyContactDraft(settings.privacyContact || '');
+  }, [settings.privacyOfficer, settings.privacyContact]);
 
   useEffect(() => {
     if (settings.diretor) setStaffDiretor(settings.diretor);
@@ -200,6 +207,15 @@ const Security: React.FC = () => {
     addAuditLog({ userName: user?.name || 'Admin', action: 'Alteração', field: 'Autoridades Assinantes', oldValue: '-', newValue: `Diretor: ${staffDiretor.name} | Vice: ${staffViceDiretor.name} | Enc. Pessoal: ${staffEncPessoal.name}` });
     setStaffSaveSuccess(true);
     setTimeout(() => setStaffSaveSuccess(false), 3000);
+  };
+
+  const handleSavePrivacy = async () => {
+    const officer = privacyOfficerDraft.trim();
+    const contact = privacyContactDraft.trim();
+    await updateSettings({ ...settings, privacyOfficer: officer, privacyContact: contact });
+    addAuditLog({ userName: user?.name || 'Admin', action: 'Alteração', field: 'Encarregado de dados (LGPD)', oldValue: `${settings.privacyOfficer || '-'} | ${settings.privacyContact || '-'}`, newValue: `${officer || '-'} | ${contact || '-'}` });
+    setPrivacySaveSuccess(true);
+    setTimeout(() => setPrivacySaveSuccess(false), 3000);
   };
 
   const sortedNotices = useMemo(() => {
@@ -773,6 +789,42 @@ const Security: React.FC = () => {
                   >
                     {staffSaveSuccess ? <><CheckCircle2 size={18} /> Salvo!</> : <><Save size={18} /> Salvar Autoridades</>}
                   </button>
+                </section>
+
+                <section>
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-6">
+                    <ShieldCheck className="text-orange-500" size={24} /> Proteção de Dados (LGPD)
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-4">
+                    Aparecem no Aviso de Privacidade do cadastro e do login. Informe o cargo ou a função (não o nome de uma pessoa)
+                    e um contato institucional (e-mail do setor e ramal), para não precisar mudar quando o responsável for substituído.
+                  </p>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                    <div className="space-y-1">
+                      <label htmlFor="privacy-officer" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Encarregado pelo tratamento de dados</label>
+                      <input autoComplete="off" id="privacy-officer" maxLength={200}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Ex.: Encarregado pelo Tratamento de Dados Pessoais do COpAb"
+                        value={privacyOfficerDraft}
+                        onChange={e => setPrivacyOfficerDraft(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="privacy-contact" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato</label>
+                      <input autoComplete="off" id="privacy-contact" maxLength={200}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Ex.: secretaria@copab.mb – ramal 1234"
+                        value={privacyContactDraft}
+                        onChange={e => setPrivacyContactDraft(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      onClick={handleSavePrivacy}
+                      className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+                    >
+                      {privacySaveSuccess ? <><CheckCircle2 size={18} /> Salvo!</> : <><Save size={18} /> Salvar Proteção de Dados</>}
+                    </button>
+                  </div>
                 </section>
               </div>
 

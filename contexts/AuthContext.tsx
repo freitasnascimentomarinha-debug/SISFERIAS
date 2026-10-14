@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   users: User[]; // Kept for interface compatibility, but might be empty or restricted
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string }) => Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }>;
+  register: (name: string, email: string, pass: string, role?: 'admin' | 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string; privacyAck?: boolean }) => Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
   getRegisteredUsers: () => User[]; // Might need to be async or removed/deprecated
@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, _role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
+  const register = async (name: string, email: string, pass: string, _role: 'admin' | 'user' = 'user', extra?: { warName?: string; nip?: string; category?: string; sector?: string; rank?: string; specialization?: string; privacyAck?: boolean }): Promise<{ success: boolean; userId?: string; errorCode?: string; errorMessage?: string }> => {
     try {
       // O servidor sempre cria contas novas como 'user'; a promoção a admin
       // é feita por um administrador em Segurança.
@@ -139,7 +139,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         category: extra?.category || '',
         sector: extra?.sector || '',
         rank: extra?.rank || '',
-        specialization: extra?.specialization || ''
+        specialization: extra?.specialization || '',
+        privacy_ack: extra?.privacyAck === true,
       });
       return { success: true, userId: id };
     } catch (e) {

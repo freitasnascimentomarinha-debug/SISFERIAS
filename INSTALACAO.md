@@ -127,10 +127,14 @@ Siga esta sequência:
 2. O sistema pede **imediatamente uma nova senha** (troca obrigatória da senha provisória).
 3. **Apague o arquivo `data\ADMIN_INICIAL.txt`.**
 4. **Guarde uma cópia do arquivo `data\chave-dados.key`** em local seguro, fora do servidor (seção 8).
-5. Peça às pessoas que se cadastrem (tela de login → **Cadastre-se**), ou importe os dados
-   antigos (seção 7).
-6. Em **Segurança → Gestão de Contas**, dê **Acesso Administrativo** a quem vai administrar.
-7. Opcional: depois que houver outro administrador funcionando, exclua a conta `admin`.
+5. Em **Segurança → Sistema → Proteção de Dados (LGPD)**, informe o **Encarregado pelo tratamento
+   de dados** (o cargo ou a função, não o nome de uma pessoa) e um **contato institucional** (e-mail
+   do setor e ramal). Eles aparecem no Aviso de Privacidade do cadastro e do login. Enquanto não
+   forem preenchidos, o Painel mostra um alerta.
+6. Peça às pessoas que se cadastrem (tela de login → **Cadastre-se**; é preciso marcar a ciência do
+   Aviso de Privacidade), ou importe os dados antigos (seção 7).
+7. Em **Segurança → Gestão de Contas**, dê **Acesso Administrativo** a quem vai administrar.
+8. Opcional: depois que houver outro administrador funcionando, exclua a conta `admin`.
 
 **Vindo da versão 2.x?** Na primeira execução da versão 3, os dados do arquivo antigo
 `data\sisferias.db` são **copiados automaticamente** para o PostgreSQL. O arquivo antigo é mantido
