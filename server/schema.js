@@ -260,4 +260,9 @@ CREATE TABLE IF NOT EXISTS print_preferences (
 // final; nunca altere um item já publicado.
 export const MIGRATIONS = [
   { version: 1, name: 'esquema inicial', sql: SCHEMA_V1 },
+  {
+    version: 2,
+    name: 'confirmação de senha para a área de Segurança',
+    sql: 'ALTER TABLE sessions ADD COLUMN elevated_until TEXT;',
+  },
 ];

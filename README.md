@@ -35,7 +35,16 @@ Na primeira execução é criado um administrador:
 - **Login:** `admin` (ou `admin@sisferias.local`)
 - **Senha:** aparece na janela e fica gravada em `data/ADMIN_INICIAL.txt`
 
-Depois de entrar, troque a senha em **Segurança → Gestão de Contas** e apague o arquivo `ADMIN_INICIAL.txt`.
+Depois de entrar, troque a senha em **Segurança → Sistema → Alterar Minha Senha** e apague o arquivo `ADMIN_INICIAL.txt`.
+
+### Quem acessa a área de Segurança
+
+Não existe senha única para a área de Segurança. O controle funciona assim:
+
+1. **Só administradores veem a área.** Usuários comuns não têm o item no menu, e o servidor recusa as ações deles.
+2. **Para entrar, o administrador confirma a própria senha de login.** Cada um usa a sua senha, e cada entrada (ou tentativa errada) fica registrada na **Auditoria** com o nome de quem tentou.
+3. **A área bloqueia sozinha** após 15 minutos sem uso (configurável em `ELEVATION_MINUTES`) e tem o botão **Bloquear área**, para quando o administrador se afastar do computador.
+4. **Quem é administrador** é definido em **Gestão de Contas**, botão de nível de acesso. Para tirar o acesso de alguém, basta voltar a conta para **Acesso Padrão**.
 
 ### Linux
 
@@ -153,6 +162,7 @@ Atenção: esse comando também **torna a conta administradora** e a desbloqueia
 | `ADMIN_EMAIL` | `admin@sisferias.local` | E-mail do admin criado na primeira execução |
 | `ADMIN_PASSWORD` | (aleatória) | Senha do admin criado na primeira execução |
 | `SESSION_DAYS` | `7` | Dias até a sessão expirar |
+| `ELEVATION_MINUTES` | `15` | Minutos sem uso até a área de Segurança pedir a senha de novo |
 | `KEEP_BACKUPS` | `30` | Quantidade de backups mantidos |
 
 ---
@@ -171,7 +181,11 @@ Navegador (React)  ──HTTP──▶  Servidor Node (Express)  ──▶  SQLi
 - **Servidor:** Node.js 22.13+ com Express 5. O banco usa o módulo nativo `node:sqlite`, então não há nada para compilar nem banco para instalar.
 - **Banco:** modo WAL (leituras e gravações simultâneas), atende de algumas centenas a poucos milhares de usuários simultâneos.
 - **Login:** NIP ou e-mail. Senhas em bcrypt. Sessão em cookie `httpOnly` (sem token no navegador).
-- **Segurança:** permissões verificadas no servidor (não só na tela), limite de 10 tentativas de login em 15 minutos e proteção contra requisições forjadas.
+- **Segurança:**
+  - permissões verificadas no servidor (não só na tela);
+  - ações administrativas exigem a confirmação recente da senha do próprio admin (expira por inatividade);
+  - limite de 10 tentativas de login em 15 minutos;
+  - proteção contra requisições forjadas.
 
 ### Estrutura
 
@@ -217,7 +231,7 @@ O último administrador não pode ser rebaixado, e o admin não pode excluir a p
 | `/vacation-form` | Lançamento de férias | Autenticado |
 | `/print` | Documento para impressão | Autenticado |
 | `/suggestions` | Sugestões | Autenticado |
-| `/security` | Segurança (abas administrativas e **Dados e Backup**) | Autenticado (abas de gestão exigem admin no servidor) |
+| `/security` | Segurança (abas administrativas e **Dados e Backup**) | Admin, com confirmação da própria senha |
 
 ### Desenvolvimento
 

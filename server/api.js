@@ -5,8 +5,8 @@ import {
   db, rowOut, rowsOut, upsertRow, updateRow, transaction, newId, nowIso, hashPassword, verifyPassword,
 } from './db.js';
 import {
-  createSession, destroySession, destroyUserSessions, requireAuth, requireAdmin,
-  loginBlocked, registerLoginFailure, clearLoginFailures,
+  createSession, destroySession, destroyUserSessions, requireAuth, requireAdmin, requireElevated,
+  isElevated, elevateSession, endElevation, loginBlocked, registerLoginFailure, clearLoginFailures,
 } from './auth.js';
 import { TABLES } from './schema.js';
 import { previewImport, applyImport, exportAll, exportTableCsv, countAll } from './importer.js';
@@ -141,9 +141,47 @@ api.post('/auth/register', h((req, res) => {
 api.post('/auth/password', requireAuth, h((req, res) => {
   const password = String(req.body?.password || '');
   if (password.length < 4) fail(400, 'A senha deve ter pelo menos 4 caracteres.');
+  // A senha atual só é dispensada logo após confirmá-la na área de Segurança.
+  if (!isElevated(req)) {
+    const auth = db.prepare('SELECT password_hash FROM auth_users WHERE id = ?').get(req.user.id);
+    if (!verifyPassword(String(req.body?.current_password || ''), auth?.password_hash)) {
+      fail(400, 'Senha atual incorreta.');
+    }
+  }
   db.prepare('UPDATE auth_users SET password_hash = ? WHERE id = ?').run(hashPassword(password), req.user.id);
   res.json({ ok: true });
 }));
+
+// Área de Segurança: o admin confirma a própria senha de login.
+api.get('/auth/elevation', requireAuth, (req, res) => {
+  res.json({ elevated: isAdmin(req) && isElevated(req), until: req.session.elevatedUntil, minutes: config.elevationMinutes });
+});
+
+api.post('/auth/elevate', requireAdmin, h((req, res) => {
+  const key = `elevate|${req.ip}|${req.user.id}`;
+  if (loginBlocked(key)) fail(429, 'Muitas tentativas. Aguarde 15 minutos e tente novamente.');
+  const auth = db.prepare('SELECT password_hash FROM auth_users WHERE id = ?').get(req.user.id);
+  if (!verifyPassword(String(req.body?.password || ''), auth?.password_hash)) {
+    registerLoginFailure(key);
+    upsertRow('audit_logs', {
+      id: newId(), timestamp: nowIso(), user_name: req.user.name, action: 'Bloqueio',
+      field: 'Acesso à área de Segurança', old_value: '-', new_value: 'Senha incorreta',
+    });
+    fail(401, 'Senha incorreta.');
+  }
+  clearLoginFailures(key);
+  const until = elevateSession(req);
+  upsertRow('audit_logs', {
+    id: newId(), timestamp: nowIso(), user_name: req.user.name, action: 'Alteração',
+    field: 'Acesso à área de Segurança', old_value: '-', new_value: 'Liberado',
+  });
+  res.json({ elevated: true, until, minutes: config.elevationMinutes });
+}));
+
+api.post('/auth/elevate/end', requireAuth, (req, res) => {
+  endElevation(req);
+  res.json({ ok: true });
+});
 
 // ---------------------------------------------------------------------------
 // Usuários (perfis)
@@ -159,7 +197,7 @@ api.get('/profiles/:id', requireAuth, h((req, res) => {
   res.json(profile);
 }));
 
-api.patch('/profiles/:id', requireAdmin, h((req, res) => {
+api.patch('/profiles/:id', requireElevated, h((req, res) => {
   const target = getProfile(req.params.id);
   if (!target) fail(404, 'Usuário não encontrado.');
   const changes = pick(req.body, ['is_blocked', 'role', 'view_all_sectors']);
@@ -173,13 +211,13 @@ api.patch('/profiles/:id', requireAdmin, h((req, res) => {
 }));
 
 // Bloqueio/liberação geral de lançamentos (prazo final).
-api.post('/profiles/block-all', requireAdmin, h((req, res) => {
+api.post('/profiles/block-all', requireElevated, h((req, res) => {
   const status = !!req.body?.status;
   db.prepare('UPDATE profiles SET is_blocked = ?, updated_at = ?').run(status ? 1 : 0, nowIso());
   res.json({ ok: true });
 }));
 
-api.post('/admin/reset-password', requireAdmin, h((req, res) => {
+api.post('/admin/reset-password', requireElevated, h((req, res) => {
   const email = String(req.body?.email || '').trim();
   const userId = String(req.body?.userId || '').trim();
   const password = String(req.body?.password || '');
@@ -207,7 +245,7 @@ api.post('/admin/reset-password', requireAdmin, h((req, res) => {
   res.json({ ok: true });
 }));
 
-api.delete('/profiles/:id', requireAdmin, h((req, res) => {
+api.delete('/profiles/:id', requireElevated, h((req, res) => {
   const target = getProfile(req.params.id);
   if (!target) fail(404, 'Usuário não encontrado.');
   if (target.id === req.user.id) fail(400, 'Você não pode excluir a própria conta.');
@@ -303,7 +341,7 @@ api.get('/settings', requireAuth, (_req, res) => {
   res.json(rowOut('system_settings', db.prepare('SELECT * FROM system_settings WHERE id = 1').get()));
 });
 
-api.put('/settings', requireAdmin, h((req, res) => {
+api.put('/settings', requireElevated, h((req, res) => {
   const data = pick(req.body, ['institution_name', 'total_manpower', 'logo_url', 'staff_json']);
   upsertRow('system_settings', { ...data, id: 1 });
   res.json(rowOut('system_settings', db.prepare('SELECT * FROM system_settings WHERE id = 1').get()));
@@ -313,7 +351,7 @@ api.get('/notices', requireAuth, (_req, res) => {
   res.json(rowsOut('notices', db.prepare('SELECT * FROM notices ORDER BY created_at').all()));
 });
 
-api.post('/notices', requireAdmin, h((req, res) => {
+api.post('/notices', requireElevated, h((req, res) => {
   const title = String(req.body?.title || '').trim();
   const content = String(req.body?.content || '').trim();
   if (!title) fail(400, 'Informe o título do aviso.');
@@ -322,12 +360,12 @@ api.post('/notices', requireAdmin, h((req, res) => {
   res.status(201).json(rowOut('notices', db.prepare('SELECT * FROM notices WHERE id = ?').get(id)));
 }));
 
-api.patch('/notices/:id', requireAdmin, h((req, res) => {
+api.patch('/notices/:id', requireElevated, h((req, res) => {
   updateRow('notices', { id: req.params.id }, pick(req.body, ['title', 'content', 'is_pinned']));
   res.json({ ok: true });
 }));
 
-api.delete('/notices/:id', requireAdmin, (req, res) => {
+api.delete('/notices/:id', requireElevated, (req, res) => {
   db.prepare('DELETE FROM notices WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -370,7 +408,7 @@ api.post('/suggestions', requireAuth, h((req, res) => {
   res.status(201).json(rowOut('suggestions', db.prepare('SELECT * FROM suggestions WHERE id = ?').get(id)));
 }));
 
-api.delete('/suggestions/:id', requireAdmin, (req, res) => {
+api.delete('/suggestions/:id', requireElevated, (req, res) => {
   db.prepare('DELETE FROM suggestions WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -401,17 +439,17 @@ api.put('/print-preferences/:userId', requireAuth, h((req, res) => {
 // Administração de dados: importação, exportação e backups
 // ---------------------------------------------------------------------------
 
-api.get('/admin/stats', requireAdmin, (_req, res) => {
+api.get('/admin/stats', requireElevated, (_req, res) => {
   res.json({ counts: countAll(), dbFile: config.dbFile, backups: listBackups().slice(0, 10) });
 });
 
-api.post('/admin/import/preview', requireAdmin, h((req, res) => {
+api.post('/admin/import/preview', requireElevated, h((req, res) => {
   const files = Array.isArray(req.body?.files) ? req.body.files : [];
   if (!files.length) fail(400, 'Selecione ao menos um arquivo.');
   res.json(previewImport(files, req.body?.overrides || {}));
 }));
 
-api.post('/admin/import/apply', requireAdmin, h((req, res) => {
+api.post('/admin/import/apply', requireElevated, h((req, res) => {
   const files = Array.isArray(req.body?.files) ? req.body.files : [];
   if (!files.length) fail(400, 'Selecione ao menos um arquivo.');
   const mode = req.body?.mode === 'replace' ? 'replace' : 'merge';
@@ -428,14 +466,14 @@ api.post('/admin/import/apply', requireAdmin, h((req, res) => {
   }
 }));
 
-api.get('/admin/export', requireAdmin, (req, res) => {
+api.get('/admin/export', requireElevated, (req, res) => {
   const includePasswords = req.query.passwords !== '0';
   const stamp = new Date().toISOString().slice(0, 10);
   res.setHeader('Content-Disposition', `attachment; filename="sisferias_backup_${stamp}.json"`);
   res.json(exportAll({ includePasswords }));
 });
 
-api.get('/admin/export/:table', requireAdmin, h((req, res) => {
+api.get('/admin/export/:table', requireElevated, h((req, res) => {
   const table = req.params.table.replace(/\.csv$/, '');
   if (!(table in TABLES)) fail(404, 'Tabela desconhecida.');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -443,14 +481,14 @@ api.get('/admin/export/:table', requireAdmin, h((req, res) => {
   res.send(exportTableCsv(table));
 }));
 
-api.get('/admin/backups', requireAdmin, (_req, res) => res.json(listBackups()));
+api.get('/admin/backups', requireElevated, (_req, res) => res.json(listBackups()));
 
-api.post('/admin/backups', requireAdmin, (_req, res) => {
+api.post('/admin/backups', requireElevated, (_req, res) => {
   const file = createBackup('manual');
   res.status(201).json({ file: path.basename(file) });
 });
 
-api.get('/admin/backups/:file', requireAdmin, h((req, res) => {
+api.get('/admin/backups/:file', requireElevated, h((req, res) => {
   const name = path.basename(req.params.file);
   const full = path.join(config.backupDir, name);
   if (!name.endsWith('.db') || !fs.existsSync(full)) fail(404, 'Backup não encontrado.');

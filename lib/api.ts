@@ -1,6 +1,9 @@
 // Cliente da API do servidor SISFERIAS (server/). A sessão fica em um cookie
 // httpOnly, então não há token para guardar no navegador.
 
+/** Disparado quando o servidor pede a confirmação da senha do administrador. */
+export const REAUTH_EVENT = 'sisferias:reauth-required';
+
 export class ApiError extends Error {
   status: number;
   data: any;
@@ -33,6 +36,10 @@ async function request<T = any>(method: string, path: string, body?: unknown): P
     try { data = JSON.parse(text); } catch { data = text; }
   }
   if (!response.ok) {
+    // A confirmação de senha da área de Segurança expirou: avisa a tela.
+    if (response.status === 403 && data && typeof data === 'object' && data.code === 'reauth_required') {
+      window.dispatchEvent(new Event(REAUTH_EVENT));
+    }
     const message = (data && typeof data === 'object' && data.error) || `Erro ${response.status}`;
     throw new ApiError(response.status, message, data);
   }

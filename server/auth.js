@@ -44,11 +44,16 @@ function readCookie(req) {
 export function loadSession(req, _res, next) {
   const token = readCookie(req);
   if (token) {
+    const tokenHash = sha256(token);
     const row = db.prepare(`
-      SELECT p.* FROM sessions s
+      SELECT p.*, s.elevated_until AS _elevated_until FROM sessions s
       JOIN profiles p ON p.id = s.user_id
-      WHERE s.token_hash = ? AND s.expires_at > ?`).get(sha256(token), nowIso());
-    if (row) req.user = row;
+      WHERE s.token_hash = ? AND s.expires_at > ?`).get(tokenHash, nowIso());
+    if (row) {
+      const { _elevated_until: elevatedUntil, ...profile } = row;
+      req.user = profile;
+      req.session = { tokenHash, elevatedUntil };
+    }
   }
   next();
 }
@@ -61,6 +66,41 @@ export function requireAuth(req, res, next) {
 export function requireAdmin(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+  next();
+}
+
+// ---------------------------------------------------------------------------
+// Área de Segurança: o administrador confirma a própria senha e ganha um
+// período de acesso que se renova a cada ação e expira por inatividade.
+// ---------------------------------------------------------------------------
+
+export const isElevated = (req) =>
+  !!req.session?.elevatedUntil && req.session.elevatedUntil > nowIso();
+
+export function elevateSession(req) {
+  const until = new Date(Date.now() + config.elevationMinutes * 60_000).toISOString();
+  db.prepare('UPDATE sessions SET elevated_until = ? WHERE token_hash = ?').run(until, req.session.tokenHash);
+  req.session.elevatedUntil = until;
+  return until;
+}
+
+export function endElevation(req) {
+  if (!req.session) return;
+  db.prepare('UPDATE sessions SET elevated_until = NULL WHERE token_hash = ?').run(req.session.tokenHash);
+  req.session.elevatedUntil = null;
+}
+
+/** Admin com a senha confirmada recentemente. Cada uso renova o prazo. */
+export function requireElevated(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+  if (!isElevated(req)) {
+    return res.status(403).json({
+      error: 'Por segurança, confirme sua senha para continuar.',
+      code: 'reauth_required',
+    });
+  }
+  elevateSession(req);
   next();
 }
 

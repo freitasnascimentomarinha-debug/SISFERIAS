@@ -19,7 +19,7 @@ const Header: React.FC = () => {
     { label: 'Minhas Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
     { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },
     { label: 'Trâmite', path: '/tramite', icon: <FileText size={18} />, adminOnly: true },
-    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} /> },
+    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} />, adminOnly: true },
   ];
 
   const navItems = allNavItems.filter(item => !item.adminOnly || user.role === 'admin');

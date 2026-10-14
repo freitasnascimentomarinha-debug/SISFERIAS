@@ -6,14 +6,18 @@ import { Shield, Key, Users, History, FileText, Search, Trash2, Lock, Ban, Unloc
 import { format, startOfDay, endOfDay, isAfter, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { User, StaffMember, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS } from '../types';
-import { api } from '../lib/api';
+import { api, REAUTH_EVENT } from '../lib/api';
 import DataManagement from '../components/DataManagement';
 import { normalizeText } from '../lib/textUtils';
 
 const Security: React.FC = () => {
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  // Acesso liberado pelo servidor após o admin confirmar a própria senha.
+  // null = verificando.
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean | null>(null);
   const [adminPass, setAdminPass] = useState('');
-  const [authError, setAuthError] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [elevationMinutes, setElevationMinutes] = useState(15);
   const [activeTab, setActiveTab] = useState<'users' | 'accounts' | 'logs' | 'settings' | 'visibility' | 'tracking' | 'suggestions' | 'data'>('users');
 
   const [userSearch, setUserSearch] = useState('');
@@ -28,14 +32,12 @@ const Security: React.FC = () => {
   // Estados para Modais Customizados
   const [targetUser, setTargetUser] = useState<User | null>(null);
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
-  const [isAdminPassModalOpen, setIsAdminPassModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleteNoticeModalOpen, setIsDeleteNoticeModalOpen] = useState(false);
   const [noticeIdToDelete, setNoticeIdToDelete] = useState<string | null>(null);
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [modalError, setModalError] = useState('');
-  const [adminPassSuccess, setAdminPassSuccess] = useState(false);
 
   // Estados para Gestão de Avisos
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -69,6 +71,7 @@ const Security: React.FC = () => {
   const lastProcessedDeadline = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!isAdminAuthenticated) return;
     if (deadline && deadline !== lastProcessedDeadline.current) {
       localStorage.setItem('vacation_deadline', deadline);
       const deadlineDate = endOfDay(new Date(deadline + 'T00:00:00'));
@@ -88,17 +91,42 @@ const Security: React.FC = () => {
       localStorage.removeItem('vacation_deadline');
       lastProcessedDeadline.current = null;
     }
-  }, [deadline, users, toggleBlockUser]);
+  }, [deadline, users, toggleBlockUser, isAdminAuthenticated]);
 
-  const handleAdminAuth = (e: React.FormEvent) => {
+  // Verifica se a confirmação de senha ainda vale e volta a pedi-la quando
+  // o servidor avisar que expirou (inatividade).
+  useEffect(() => {
+    // Remove a antiga senha fixa da área, que ficava guardada no navegador.
+    try { localStorage.removeItem('vacation_admin_pass'); } catch { /* ignora */ }
+
+    api.get<{ elevated: boolean; minutes: number }>('/auth/elevation')
+      .then(r => { setIsAdminAuthenticated(r.elevated); setElevationMinutes(r.minutes); })
+      .catch(() => setIsAdminAuthenticated(false));
+
+    const lock = () => { setIsAdminAuthenticated(false); setAdminPass(''); };
+    window.addEventListener(REAUTH_EVENT, lock);
+    return () => window.removeEventListener(REAUTH_EVENT, lock);
+  }, []);
+
+  const lockNow = async () => {
+    try { await api.post('/auth/elevate/end'); } catch { /* ignora */ }
+    setIsAdminAuthenticated(false);
+    setAdminPass('');
+  };
+
+  const handleAdminAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedAdminPass = localStorage.getItem('vacation_admin_pass') || 'admin1234';
-    if (adminPass === storedAdminPass) {
+    setAuthLoading(true);
+    try {
+      const r = await api.post<{ minutes: number }>('/auth/elevate', { password: adminPass });
+      setElevationMinutes(r.minutes);
       setIsAdminAuthenticated(true);
-      setAuthError(false);
-    } else {
-      setAuthError(true);
+      setAuthError('');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Senha incorreta!');
+    } finally {
       setAdminPass('');
+      setAuthLoading(false);
     }
   };
 
@@ -302,14 +330,6 @@ const Security: React.FC = () => {
     setIsPassModalOpen(true);
   };
 
-  const openAdminPassModal = () => {
-    setNewPass('');
-    setConfirmPass('');
-    setModalError('');
-    setAdminPassSuccess(false);
-    setIsAdminPassModalOpen(true);
-  };
-
   const openDeleteModal = (user: User) => {
     setTargetUser(user);
     setIsDeleteModalOpen(true);
@@ -335,25 +355,6 @@ const Security: React.FC = () => {
         setModalError('Erro ao alterar senha. Verifique as permissões.');
       }
     }
-  };
-
-  const handleExecuteAdminPassChange = () => {
-    if (!newPass || newPass.length < 4) {
-      setModalError('A senha deve ter pelo menos 4 caracteres.');
-      return;
-    }
-    if (newPass !== confirmPass) {
-      setModalError('As senhas não coincidem.');
-      return;
-    }
-
-    localStorage.setItem('vacation_admin_pass', newPass);
-    addAuditLog({ userName: 'Admin', action: 'Senha', field: 'Senha Admin', oldValue: '********', newValue: 'Alterada' });
-    setAdminPassSuccess(true);
-    setTimeout(() => {
-      setIsAdminPassModalOpen(false);
-      setAdminPassSuccess(false);
-    }, 2000);
   };
 
   const handleExecuteDelete = () => {
@@ -485,6 +486,10 @@ const Security: React.FC = () => {
     return val.replace(dateRegex, (match, y, m, d) => `${d}/${m}/${y}`);
   };
 
+  if (isAdminAuthenticated === null) {
+    return <div className="max-w-md mx-auto mt-32 text-center text-slate-400 text-sm font-bold">Verificando acesso...</div>;
+  }
+
   if (!isAdminAuthenticated) {
     return (
       <div className="max-w-md mx-auto mt-32 p-10 bg-white rounded-3xl shadow-xl border border-slate-100 text-center">
@@ -494,19 +499,28 @@ const Security: React.FC = () => {
           </div>
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Área Restrita</h2>
-        <p className="text-slate-500 mb-8">Digite a senha de administrador para acessar as configurações críticas.</p>
+        <p className="text-slate-500 mb-8">
+          Por segurança, confirme a <b>sua senha de login</b>{user?.name ? <> ({user.name})</> : null} para acessar as configurações críticas.
+        </p>
         <form onSubmit={handleAdminAuth} className="space-y-4">
           <input
             type="password"
-            placeholder="Senha de Admin"
+            placeholder="Sua senha"
+            autoComplete="current-password"
             className={`w-full px-4 py-3 bg-slate-50 border ${authError ? 'border-red-500' : 'border-slate-200'} rounded-xl outline-none focus:ring-2 focus:ring-orange-500`}
             value={adminPass}
-            onChange={e => { setAdminPass(e.target.value); setAuthError(false); }}
+            onChange={e => { setAdminPass(e.target.value); setAuthError(''); }}
             autoFocus
+            required
           />
-          {authError && <p className="text-red-500 text-sm font-bold flex items-center justify-center gap-2"><AlertCircle size={14} /> Senha incorreta!</p>}
-          <button type="submit" className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg transition-all">Acessar Sistema</button>
+          {authError && <p className="text-red-500 text-sm font-bold flex items-center justify-center gap-2"><AlertCircle size={14} /> {authError}</p>}
+          <button type="submit" disabled={authLoading} className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold rounded-xl shadow-lg transition-all">
+            {authLoading ? 'Verificando...' : 'Acessar'}
+          </button>
         </form>
+        <p className="text-[11px] text-slate-400 mt-6">
+          O acesso expira após {elevationMinutes} minutos sem uso. Cada tentativa fica registrada na auditoria.
+        </p>
       </div>
     );
   }
@@ -555,65 +569,6 @@ const Security: React.FC = () => {
                 <button onClick={() => setIsPassModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
                 <button onClick={handleExecutePassChange} className="flex-1 py-3 bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-100 hover:bg-orange-600 transition-all">Salvar Senha</button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL REDEFINIR SENHA ADMIN */}
-      {isAdminPassModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <ShieldCheck size={24} />
-                <h3 className="font-bold text-lg">Alterar Senha de Admin</h3>
-              </div>
-              <button onClick={() => setIsAdminPassModalOpen(false)} className="hover:bg-white/20 p-1.5 rounded-full transition-colors"><X size={20} /></button>
-            </div>
-            <div className="p-8 space-y-6">
-              {adminPassSuccess ? (
-                <div className="flex flex-col items-center justify-center py-10 space-y-4 animate-in fade-in zoom-in">
-                  <div className="p-4 bg-green-50 text-green-500 rounded-full">
-                    <CheckCircle2 size={64} />
-                  </div>
-                  <h4 className="text-xl font-bold text-slate-900">Sucesso!</h4>
-                  <p className="text-sm text-slate-500">A senha de administrador foi alterada com sucesso.</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-slate-500">Defina uma nova senha mestra de administrador para o sistema.</p>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nova Senha Admin</label>
-                      <input
-                        type="password"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Mínimo 4 caracteres"
-                        value={newPass}
-                        onChange={e => setNewPass(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirmar Senha</label>
-                      <input
-                        type="password"
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500"
-                        placeholder="Repita a senha"
-                        value={confirmPass}
-                        onChange={e => setConfirmPass(e.target.value)}
-                      />
-                    </div>
-                    {modalError && <p className="text-red-500 text-xs font-bold">{modalError}</p>}
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <button onClick={() => setIsAdminPassModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
-                    <button onClick={handleExecuteAdminPassChange} className="flex-1 py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-black transition-all">Alterar Senha</button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -684,6 +639,15 @@ const Security: React.FC = () => {
             <Shield className="text-orange-500" size={32} /> Segurança e Controle
           </h2>
           <p className="text-slate-500">Gestão administrativa e monitoramento de atividades</p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={() => void lockNow()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-black transition-all"
+          >
+            <Lock size={14} /> Bloquear área
+          </button>
+          <span className="text-[10px] text-slate-400 font-medium">Bloqueia sozinha após {elevationMinutes} min sem uso</span>
         </div>
       </div>
 
@@ -762,12 +726,15 @@ const Security: React.FC = () => {
                   </h3>
                   <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-100">
                     <button
-                      onClick={openAdminPassModal}
+                      onClick={() => user && openPassModal(user)}
                       className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all"
                     >
-                      <Key size={18} /> Alterar Senha de Administrador
+                      <Key size={18} /> Alterar Minha Senha
                     </button>
-                    <p className="text-[10px] text-slate-400 font-medium text-center mt-2">Esta senha é usada para acessar esta área restrita do sistema.</p>
+                    <p className="text-[10px] text-slate-400 font-medium text-center mt-2">
+                      Não existe mais senha única desta área: cada administrador entra com a própria senha de login.
+                      Quem pode acessar é definido em Gestão de Contas (Acesso Administrativo).
+                    </p>
                   </div>
                 </section>
 

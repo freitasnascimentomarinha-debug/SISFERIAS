@@ -46,7 +46,7 @@ const AppContent: React.FC = () => {
         <Route path="/print" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/print/:id" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/suggestions" element={<PrivateRoute><Suggestions /></PrivateRoute>} />
-        <Route path="/security" element={<PrivateRoute><Security /></PrivateRoute>} />
+        <Route path="/security" element={<AdminRoute><Security /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/home" />} />
       </Routes>
     </div>
