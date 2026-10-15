@@ -358,13 +358,50 @@ function assertCanEdit(req, userId) {
 
 const parseParcels = (value) => (typeof value === 'string' ? JSON.parse(value) : value);
 
+// Validação no servidor das regras que a tela já aplica (a API não confia no
+// navegador): datas válidas, início antes do término, soma dos dias dentro do
+// direito e tamanho dos campos de texto.
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const validDate = (v) => ISO_DATE.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`))
+  && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v);
+const TEXT_LIMITS = { name: 200, war_name: 60, nip: 20, sector: 60, category: 20, rank: 20, justification: 4000 };
+
+function validateEmployee(data, current = {}) {
+  for (const [field, max] of Object.entries(TEXT_LIMITS)) {
+    if (data[field] != null && String(data[field]).length > max) fail(400, `Campo "${field}" muito longo (máximo de ${max} caracteres).`);
+  }
+  const total = data.total_vacation_days ?? current.total_vacation_days;
+  if (data.total_vacation_days !== undefined) {
+    const n = Number(data.total_vacation_days);
+    if (!Number.isInteger(n) || n < 1 || n > 120) fail(400, 'Quantidade de dias de direito inválida.');
+  }
+  if (data.vacation_parcels === undefined) return;
+  let parcels;
+  try { parcels = parseParcels(data.vacation_parcels); } catch { fail(400, 'Parcelas inválidas.'); }
+  if (!Array.isArray(parcels) || parcels.length > 12) fail(400, 'Parcelas inválidas.');
+  let sum = 0;
+  parcels.forEach((p, i) => {
+    const n = i + 1;
+    if (!p || typeof p !== 'object') fail(400, `Parcela ${n} inválida.`);
+    for (const k of ['startDate', 'endDate']) {
+      if (p[k] && !validDate(p[k])) fail(400, `Parcela ${n}: data inválida.`);
+    }
+    if (p.startDate && p.endDate && p.startDate > p.endDate) fail(400, `Parcela ${n}: a data de início é posterior à de término.`);
+    const days = Number(p.days || 0);
+    if (!Number.isInteger(days) || days < 0 || days > 366) fail(400, `Parcela ${n}: quantidade de dias inválida.`);
+    if (p.nup != null && String(p.nup).length > 60) fail(400, `Parcela ${n}: NUP muito longo.`);
+    sum += days;
+  });
+  if (total != null && sum > Number(total)) fail(400, `A soma das parcelas (${sum} dias) ultrapassa os ${total} dias de direito.`);
+}
+
 api.post('/employees', requireAuth, async (req, res) => {
   const body = req.body || {};
   const data = pick(body, EMPLOYEE_FIELDS);
   if (!data.user_id) fail(400, 'Lançamento sem usuário.');
   checkImage(data.photo_url, 'Foto');
   if (!Number.isInteger(Number(data.planning_year))) fail(400, 'Ano de referência inválido.');
-  if (data.vacation_parcels !== undefined && !Array.isArray(parseParcels(data.vacation_parcels))) fail(400, 'Parcelas inválidas.');
+  validateEmployee(data, { total_vacation_days: 30 });
   assertCanEdit(req, data.user_id);
 
   let id = body.id;
@@ -389,11 +426,12 @@ api.post('/employees', requireAuth, async (req, res) => {
 });
 
 api.patch('/employees/:id', requireAuth, async (req, res) => {
-  const existing = await one('SELECT user_id FROM employees WHERE id = ?', [req.params.id]);
+  const existing = await one('SELECT user_id, total_vacation_days FROM employees WHERE id = ?', [req.params.id]);
   if (!existing) fail(404, 'Lançamento não encontrado.');
   assertCanEdit(req, existing.user_id);
   const data = pick(req.body, EMPLOYEE_FIELDS.filter(f => f !== 'user_id'));
   checkImage(data.photo_url, 'Foto');
+  validateEmployee(data, existing);
   await updateRow('employees', { id: req.params.id }, data);
   res.json(await getEmployee(req.params.id));
 });

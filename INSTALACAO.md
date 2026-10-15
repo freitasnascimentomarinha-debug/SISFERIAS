@@ -404,9 +404,15 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   ao lado de "Sair". O sistema pede a senha atual e a nova (regra da seção 5).
 - **Atualizar para uma versão nova:**
   1. Faça um backup e confira se há cópia da chave (seção 8).
-  2. Substitua os arquivos do sistema **mantendo a pasta `data`**.
-  3. Se for código-fonte, execute `atualizar.bat`.
-  4. Inicie normalmente.
+  2. Pare o sistema: feche a janela ou, no modo serviço, execute `node scripts\servico.js parar`
+     como administrador.
+  3. Extraia o pacote novo por cima da pasta atual, **mantendo a pasta `data`**.
+  4. Se for código-fonte, execute `atualizar.bat`.
+  5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
+     aplicadas sozinhas na primeira inicialização.
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.2**).
+  7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
+     indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
   manter o antivírus homologado da MB (DCTIMBOTEC 31/002, item 3.4).
 

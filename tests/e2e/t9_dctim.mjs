@@ -80,7 +80,7 @@ await step('aviso no login e no cadastro; Encarregado configurado pela OM', asyn
   const { page: A } = await newSession(browser, 'anon-privacidade');
   await A.goto(BASE); await A.waitForSelector('text=Entrar');
   await A.click('text=Aviso de Privacidade (LGPD)');
-  await A.waitForSelector('#aviso-privacidade-titulo');
+  await A.waitForSelector('[role=dialog][data-loaded=true]');
   check('login: link abre o Aviso de Privacidade', await A.isVisible('text=Base legal'));
   check('sem configuração: Encarregado genérico', (await A.textContent('[data-testid=privacy-officer]')).includes('Encarregado pelo Tratamento de Dados Pessoais da OM'));
   await A.click('[role=dialog] button:has-text("Fechar")');
@@ -105,7 +105,7 @@ await step('aviso no login e no cadastro; Encarregado configurado pela OM', asyn
   await A.click('button[type=submit]'); await A.waitForTimeout(800);
   check('cadastro sem ciência do aviso é recusado', await A.isVisible('text=marque a declaração de ciência') && !db("SELECT 1 FROM profiles WHERE email = 'helena@mb.mil.br'").length);
   await A.click('form button:has-text("Aviso de Privacidade")');
-  await A.waitForSelector('#aviso-privacidade-titulo');
+  await A.waitForSelector('[role=dialog][data-loaded=true]');
   const officer = await A.textContent('[data-testid=privacy-officer]');
   const contact = await A.textContent('[data-testid=privacy-contact]');
   check('cadastro: aviso mostra o Encarregado configurado', officer.includes('do COpAb') && contact.includes('ramal 1234'), `${officer} | ${contact}`);

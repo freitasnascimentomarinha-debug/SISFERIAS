@@ -48,10 +48,6 @@ const Security: React.FC = () => {
   const [noticeContent, setNoticeContent] = useState('');
 
   // Segurança da Aba Gestão de Contas
-  const [isAccountTabAuthenticated, setIsAccountTabAuthenticated] = useState(false);
-  const [showAccountPassModal, setShowAccountPassModal] = useState(false);
-  const [accountPassInput, setAccountPassInput] = useState('');
-  const [accountPassError, setAccountPassError] = useState(false);
 
   const navigate = useNavigate();
   const { user, users, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility, unlockUser, fetchAllUsers } = useAuth();
@@ -401,20 +397,6 @@ const Security: React.FC = () => {
       addAuditLog({ userName: user?.name || 'Admin', action: 'Exclusão', field: 'Usuário', oldValue: targetUser.name, newValue: '-' });
       setIsDeleteModalOpen(false);
       setTargetUser(null);
-    }
-  };
-
-  const handleAccountTabAccess = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (accountPassInput === 'dp159') {
-      setIsAccountTabAuthenticated(true);
-      setShowAccountPassModal(false);
-      setActiveTab('accounts');
-      setAccountPassInput('');
-      setAccountPassError(false);
-    } else {
-      setAccountPassError(true);
-      setAccountPassInput('');
     }
   };
 
