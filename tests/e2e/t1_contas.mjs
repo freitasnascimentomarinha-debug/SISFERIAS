@@ -97,7 +97,10 @@ await step('promover Ana', async () => {
 await step('Ana passa a ver menus de admin após entrar de novo', async () => {
   const p = sessions.ana.page; await p.reload(); await p.waitForTimeout(1200);
   const h = await p.textContent('header');
-  check('Ana passa a ver menus de admin', h.includes('Painel') && h.includes('Segurança'));
+  check('Ana passa a ver menus de admin', h.includes('Painel') && h.includes('Trâmite'));
+  check('encarregada de setor não vê o menu Segurança', !h.includes('Segurança'));
+  const r = await api(p, 'POST', '/auth/elevate', { password: ACCOUNTS.ana.pass });
+  check('servidor recusa a Segurança para a encarregada de setor (403)', r.status === 403, `status ${r.status}`);
 });
 await step('visibilidade padrão de Ana', async () => {
   const r = db('SELECT view_all_sectors v FROM profiles WHERE email = ?', ACCOUNTS.ana.email)[0];

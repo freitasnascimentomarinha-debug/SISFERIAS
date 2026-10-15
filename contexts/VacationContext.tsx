@@ -113,7 +113,7 @@ export const VacationProvider: React.FC<{ children: ReactNode }> = ({ children }
       safeGet<any[]>('/employees'),
       safeGet<any>('/settings'),
       safeGet<any[]>('/notices'),
-      user.role === 'admin' ? safeGet<any[]>('/audit-logs') : Promise.resolve(null),
+      user.role === 'admin' && user.viewAllSectors ? safeGet<any[]>('/audit-logs') : Promise.resolve(null),
       safeGet<any[]>('/suggestions'),
     ]);
 

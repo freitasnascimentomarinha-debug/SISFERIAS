@@ -383,7 +383,14 @@ export async function seed() {
   const hasAdmin = await one(`
     SELECT 1 FROM profiles p JOIN auth_users a ON a.id = p.id
     WHERE p.role = 'admin' AND a.password_hash IS NOT NULL LIMIT 1`);
-  if (hasAdmin) return;
+  if (hasAdmin) {
+    // Desde a 3.0.5 só o admin com Visão Global entra na Segurança. Instalação
+    // antiga (ou backup importado) sem nenhum: os admins atuais recebem a Visão
+    // Global para ninguém perder o acesso; o Departamento de Pessoal ajusta depois.
+    await run(`UPDATE profiles SET view_all_sectors = TRUE
+      WHERE role = 'admin' AND NOT EXISTS (SELECT 1 FROM profiles WHERE role = 'admin' AND view_all_sectors)`);
+    return;
+  }
 
   const email = config.adminEmail;
   if (await one('SELECT 1 FROM auth_users WHERE email_hash = ?', [blindIndex(email)])) {

@@ -47,10 +47,10 @@ No primeiro acesso o sistema exige uma nova senha. Depois, apague o arquivo `ADM
 
 Não existe senha única para a área de Segurança. O controle funciona assim:
 
-1. **Só administradores veem a área.** Usuários comuns não têm o item no menu, e o servidor recusa as ações deles.
+1. **Só administradores com Visão Global (Departamento de Pessoal) veem a área.** Usuários comuns e encarregados de setor (admin "Apenas Setor") não têm o item no menu, e o servidor recusa as ações deles.
 2. **Para entrar, o administrador confirma a própria senha de login.** Cada um usa a sua senha, e cada entrada (ou tentativa errada) fica registrada na **Auditoria** com o nome de quem tentou.
 3. **A área bloqueia sozinha** após 15 minutos sem uso (configurável em `ELEVATION_MINUTES`) e tem o botão **Bloquear área**, para quando o administrador se afastar do computador.
-4. **Quem é administrador** é definido em **Gestão de Contas**, botão de nível de acesso. Para tirar o acesso de alguém, basta voltar a conta para **Acesso Padrão**.
+4. **Quem é administrador** é definido em **Gestão de Contas**, botão de nível de acesso. A conta promovida começa como **Apenas Setor** (encarregado); a **Visão Global** é concedida no botão ao lado. Para tirar o acesso de alguém, basta voltar a conta para **Acesso Padrão**. Sempre resta ao menos um administrador com Visão Global.
 
 ### Linux
 
@@ -194,6 +194,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.0.5** | **Encarregado de setor sem acesso à gestão do sistema:** o administrador "Apenas Setor" passa a ver e alterar somente os lançamentos, cadastros e papeletas do próprio setor, e não entra mais na área de Segurança (contas, senhas, níveis de visão, prazo, configurações, exportação, backups e auditoria). Só o administrador com **Visão Global** (Departamento de Pessoal) gerencia o sistema e desbloqueia ou redefine senhas. Tudo verificado no servidor. | Se nenhum administrador tinha Visão Global, o sistema a concede aos administradores existentes; confira em **Segurança → Gestão de Contas** e deixe a Visão Global só para o Departamento de Pessoal. |
 | **3.0.4** | Calendário mensal: os dias do mês vizinho voltam a aparecer esmaecidos, com o número em cinza (mantendo o contraste mínimo exigido). | Nenhuma. |
 | **3.0.3** | **Acessibilidade (e-MAG / WCAG 2.1 AA):** contraste mínimo de 4,5:1 (paleta ajustada), rótulos associados a todos os campos, nome acessível nos botões com ícone, textos alternativos nas imagens e áreas com rolagem acessíveis pelo teclado. Verificação automática (axe-core) em todas as telas incluída nos testes. | Nenhuma. |
 | **3.0.2** | O servidor valida as parcelas de férias (datas, ordem e soma dentro do direito), mesmo sem passar pela tela. Remoção de código antigo sem uso que continha uma senha fixa. O Aviso de Privacidade mostra "Carregando…" até receber os dados do Encarregado. | Nenhuma. |
@@ -277,20 +278,20 @@ pages/, components/  Telas
 
 ### Permissões aplicadas pelo servidor
 
-| Ação | Usuário | Admin |
-|---|---|---|
-| Ver lançamentos de férias | Completos só os próprios; dos demais, apenas setor, categoria e datas (para os indicadores da tela inicial), sem nome, NIP, foto, justificativa ou NUP | Todos se tiver visão global, senão só do próprio setor |
-| Ver cadastro de usuários | Completo só o próprio; dos demais, apenas o identificador e a categoria | Todos |
-| Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Qualquer um |
-| Preferências de impressão | Só as próprias | Qualquer usuário |
-| Enviar sugestão | Sim | Sim |
-| Ver sugestões | Só as próprias | Todas |
-| Avisos, configurações, auditoria | Só leitura de avisos e configurações | Total |
-| Usuários (bloquear, papel, visibilidade, senha, desbloquear conta, excluir) | Não | Sim |
-| Importar, exportar e backups | Não | Sim |
-| Registro de operações | Não | Sim (só leitura) |
+| Ação | Usuário | Encarregado (admin "Apenas Setor") | Admin com Visão Global |
+|---|---|---|---|
+| Ver lançamentos de férias | Completos só os próprios; dos demais, apenas setor, categoria e datas (para os indicadores da tela inicial), sem nome, NIP, foto, justificativa ou NUP | Só os do próprio setor | Todos |
+| Ver cadastro de usuários | Completo só o próprio; dos demais, apenas o identificador e a categoria | Completos só os do próprio setor | Todos |
+| Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Só do próprio setor (não move ninguém para outro setor, nem a si mesmo) | Qualquer um |
+| Preferências de impressão | Só as próprias | Do próprio setor | Qualquer usuário |
+| Enviar sugestão | Sim | Sim | Sim |
+| Ver sugestões | Só as próprias | Só as próprias | Todas |
+| Área de Segurança: avisos, configurações, prazo, auditoria | Só leitura de avisos e configurações | Só leitura de avisos e configurações | Total |
+| Usuários (bloquear, papel, visibilidade, senha, desbloquear conta, excluir) | Não | Não | Sim |
+| Importar, exportar e backups | Não | Não | Sim |
+| Registro de operações | Não | Não | Sim (só leitura) |
 
-O último administrador não pode ser rebaixado, e o admin não pode excluir a própria conta.
+O último administrador com Visão Global não pode ser rebaixado nem perder a Visão Global, e o admin não pode excluir a própria conta.
 
 Outras regras do servidor:
 - **Prazo final de lançamento:** fica em `system_settings.vacation_deadline` (`server/deadline.js`). É verificado ao iniciar e a cada 10 minutos. Quando vence, bloqueia todos uma única vez por prazo, o que preserva as liberações manuais. Contas novas nascem bloqueadas enquanto o prazo vencido estiver em vigor.
@@ -316,7 +317,7 @@ Outras regras do servidor:
 | `/vacation-form` | Lançamento de férias | Autenticado |
 | `/print` | Documento para impressão | Autenticado |
 | `/suggestions` | Sugestões | Autenticado |
-| `/security` | Segurança (abas administrativas e **Dados e Backup**) | Admin, com confirmação da própria senha |
+| `/security` | Segurança (abas administrativas e **Dados e Backup**) | Admin com Visão Global, com confirmação da própria senha |
 
 ### Desenvolvimento
 

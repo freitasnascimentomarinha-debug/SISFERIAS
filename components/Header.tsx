@@ -21,10 +21,12 @@ const Header: React.FC = () => {
     { label: 'Minhas Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
     { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },
     { label: 'Trâmite', path: '/tramite', icon: <FileText size={18} />, adminOnly: true },
-    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} />, adminOnly: true },
+    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} />, adminOnly: true, globalOnly: true },
   ];
 
-  const navItems = allNavItems.filter(item => !item.adminOnly || user.role === 'admin');
+  // Segurança: só o administrador com Visão Global (o encarregado de setor não gerencia o sistema).
+  const navItems = allNavItems.filter(item =>
+    (!item.adminOnly || user.role === 'admin') && (!item.globalOnly || user.viewAllSectors));
 
   return (
     <>
@@ -67,7 +69,7 @@ const Header: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-slate-900">Olá, {user.name.split(' ')[0]}</p>
-              <p className="text-xs text-slate-500 font-bold">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</p>
+              <p className="text-xs text-slate-500 font-bold">{user.role !== 'admin' ? 'Usuário' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
             </div>
             <button
               type="button"
@@ -140,7 +142,7 @@ const Header: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-medium text-sm">{user.name.split(' ')[0]}</p>
-                  <p className="text-orange-200 text-xs">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</p>
+                  <p className="text-orange-200 text-xs">{user.role !== 'admin' ? 'Usuário' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
                 </div>
               </div>
               <button

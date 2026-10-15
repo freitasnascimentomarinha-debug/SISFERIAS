@@ -161,12 +161,23 @@ também libera a conta.
 
 ## 6. Quem administra e como funciona a área de Segurança
 
-Existem dois níveis de conta:
+Existem três níveis de conta:
 
 | Nível | O que pode fazer |
 |---|---|
 | **Usuário** (Acesso Padrão) | Lançar e imprimir as próprias férias, ver avisos, enviar sugestões |
-| **Administrador** (Acesso Administrativo) | Tudo o que o usuário faz, mais Painel, Calendário, Justificativas, Trâmite e a área de **Segurança** |
+| **Encarregado de setor** (Acesso Administrativo, **Apenas Setor**) | Tudo o que o usuário faz, mais Painel, Diagnóstico, Calendário, Justificativas, Trâmite e relatórios, **somente do efetivo do próprio setor**: corrige lançamentos e NUP e imprime papeletas desse efetivo. **Não entra na área de Segurança**, não muda a própria visão nem o próprio setor, não mexe em contas e senhas, não exporta a base e não vê a auditoria |
+| **Administrador** (Acesso Administrativo, **Visão Global**) | Departamento de Pessoal: tudo, para toda a OM, inclusive a área de **Segurança** (contas, desbloqueio e redefinição de senhas, níveis de visão, prazo, configurações, backups e auditoria) |
+
+Para tornar alguém encarregado: em **Segurança → Gestão de Contas**, mude a conta para
+**Acesso Administrativo** (ela começa como **Apenas Setor**). Só use **Visão Global** para quem
+administra o sistema. O sistema não deixa retirar a Visão Global do último administrador que a tem.
+O setor do encarregado é o do seu lançamento de férias mais recente; se ele mudar de setor,
+o Departamento de Pessoal corrige o lançamento dele.
+
+Ao atualizar de uma versão anterior à 3.0.5, se nenhum administrador tiver Visão Global, o
+sistema a concede a todos os administradores existentes, para ninguém perder o acesso. Depois,
+o Departamento de Pessoal deixa a Visão Global só para quem deve tê-la.
 
 Sobre a área de Segurança:
 
@@ -175,8 +186,8 @@ Sobre a área de Segurança:
   contam para o bloqueio da conta.
 - **Bloqueio automático:** a área se bloqueia sozinha após **15 minutos sem uso**, e há o
   botão **Bloquear área** para quando o administrador sair de perto do computador.
-- **Usuários comuns:** não veem a área no menu, e o servidor recusa qualquer ação
-  administrativa vinda deles.
+- **Usuários comuns e encarregados de setor:** não veem a área no menu, e o servidor recusa
+  qualquer ação administrativa vinda deles (só o administrador com Visão Global entra).
 
 ### Prazo final de lançamento
 
@@ -410,7 +421,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.4**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.5**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
