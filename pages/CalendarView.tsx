@@ -39,6 +39,9 @@ const CalendarView: React.FC = () => {
     return `hsl(${hue.toFixed(2)} 76% 28%)`; // escuro o bastante para texto branco (contraste ≥ 4,5:1)
   };
 
+  // Dias do mês vizinho: etiqueta esmaecida (fundo claro, texto cinza), legível (contraste ≥ 4,5:1).
+  const fadedColor = (color: string) => color.replace(/hsl\(([\d.]+) [\d.]+% [\d.]+%\)/, 'hsl($1 35% 93%)');
+
   const formatWeekdayDate = (date: Date) => {
     const raw = format(date, 'EEEE, dd/MM/yyyy', { locale: ptBR });
     return raw.charAt(0).toUpperCase() + raw.slice(1);
@@ -365,7 +368,7 @@ const CalendarView: React.FC = () => {
             return (
               <div 
                 key={day.toISOString()} 
-                className={`min-h-[140px] bg-white p-2 transition-all ${!isCurrentMonth ? 'bg-slate-100' : 'hover:bg-slate-50/30'}`}
+                className={`min-h-[140px] p-2 transition-all ${!isCurrentMonth ? 'bg-slate-50' : 'bg-white hover:bg-slate-50/30'}`}
               >
                 <div className="flex justify-start mb-2">
                   <span className={`text-xs font-bold ${isCurrentMonth ? 'text-slate-700' : 'text-slate-400'}`}>
@@ -377,8 +380,8 @@ const CalendarView: React.FC = () => {
                   {vacations.map((v, i) => (
                     <div 
                       key={`${v.userId}-${i}`} 
-                      className="h-4 text-white text-[8px] font-black px-1.5 flex items-center rounded-sm truncate uppercase tracking-tighter shadow-sm"
-                      style={{ backgroundColor: v.color }}
+                      className={`h-4 text-[8px] font-black px-1.5 flex items-center rounded-sm truncate uppercase tracking-tighter ${isCurrentMonth ? 'text-white shadow-sm' : 'text-slate-500'}`}
+                      style={{ backgroundColor: isCurrentMonth ? v.color : fadedColor(v.color) }}
                       title={`${v.rank} ${v.name}`}
                     >
                       {v.rank} {v.name}
