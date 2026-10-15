@@ -127,6 +127,22 @@ describe('lançamentos de férias e permissões', () => {
     assert.equal((await admin.get('/employees')).data.find(e => e.user_id === ids.carla).justification, 'motivo pessoal', 'admin vê tudo');
   });
 
+  it('servidor valida as parcelas (datas, ordem e soma dentro do direito)', async () => {
+    const base = { user_id: ids.bruno, planning_year: 2030, name: 'Bruno Costa', sector: '10', total_vacation_days: 30 };
+    const post = (vacation_parcels, extra = {}) => bruno.post('/employees', { ...base, ...extra, vacation_parcels });
+    assert.equal((await post([{ id: 'a', startDate: '2031-01-10', endDate: '2031-01-01', days: 10 }])).status, 400, 'início depois do término');
+    assert.equal((await post([{ id: 'a', startDate: '2031-02-30', endDate: '2031-03-05', days: 4 }])).status, 400, 'data inexistente');
+    const soma = await post([{ id: 'a', startDate: '2031-01-01', endDate: '2031-01-20', days: 20 }, { id: 'b', startDate: '2031-06-01', endDate: '2031-06-15', days: 15 }]);
+    assert.equal(soma.status, 400, 'soma acima do direito');
+    assert.match(soma.data.error, /ultrapassa/);
+    assert.equal((await post([], { total_vacation_days: 500 })).status, 400, 'direito absurdo');
+    const ok = await post([{ id: 'a', startDate: '2031-01-01', endDate: '2031-01-15', days: 15 }, { id: 'b', startDate: '', endDate: '', days: 0 }]);
+    assert.equal(ok.status, 200, 'parcela ainda sem datas é aceita');
+    const patch = await bruno.patch(`/employees/${ok.data.id}`, { vacation_parcels: [{ id: 'a', startDate: '2031-01-01', endDate: '2031-02-09', days: 40 }] });
+    assert.equal(patch.status, 400, 'alteração também validada contra o direito gravado');
+    await bruno.del(`/employees/${ok.data.id}`);
+  });
+
   it('usuário comum não acessa funções de administrador', async () => {
     for (const [m, p] of [['get', '/admin/stats'], ['get', '/audit-logs'], ['get', '/admin/export']]) {
       assert.equal((await bruno[m](p)).status, 403, p);

@@ -190,6 +190,17 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 ---
 
+### Histórico de versões
+
+| Versão | Principais mudanças | Ação na atualização |
+|---|---|---|
+| **3.0.2** | O servidor valida as parcelas de férias (datas, ordem e soma dentro do direito), mesmo sem passar pela tela. Remoção de código antigo sem uso que continha uma senha fixa. O Aviso de Privacidade mostra "Carregando…" até receber os dados do Encarregado. | Nenhuma. |
+| **3.0.1** | Usuário comum recebe do servidor apenas os próprios dados pessoais. **Aviso de Privacidade** no login e no cadastro, com ciência obrigatória. Encarregado de dados configurável por OM. Versão real na tela de login. | Preencher **Segurança → Sistema → Proteção de Dados (LGPD)**. |
+| **3.0.0** | Adequação às normas da DCTIM: PostgreSQL, regra de senha, bloqueio após 5 tentativas, dados pessoais cifrados, HTTPS, registro de operações, ambiente de homologação. | Migração automática dos dados da 2.x; guardar cópia de `data/chave-dados.key`. |
+| 2.x | Servidor próprio na rede interna (fim do Vercel/Supabase). | — |
+
+---
+
 ## 7. Configuração (variáveis de ambiente)
 
 | Variável | Padrão | Descrição |
@@ -296,7 +307,7 @@ Outras regras do servidor:
 
 | Rota | Tela | Acesso |
 |---|---|---|
-| `/login`, `/register` | Login e cadastro | Público |
+| `/login`, `/register` | Login e cadastro (com o Aviso de Privacidade) | Público |
 | `/home` | Área pessoal e avisos | Autenticado |
 | `/` | Painel | Admin |
 | `/calendar`, `/justifications`, `/tramite` | Calendário, justificativas, trâmite | Admin |

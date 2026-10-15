@@ -23,19 +23,26 @@ const Item: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
 
 export const PrivacyNoticeModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [info, setInfo] = useState<PrivacyInfo | null>(null);
+  // Até a resposta do servidor chegar, não mostra o Encarregado (evita exibir
+  // por um instante o texto genérico no lugar do configurado pela OM).
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    api.get<PrivacyInfo>('/privacidade').then(setInfo).catch(() => setInfo(null));
+    setLoaded(false);
+    api.get<PrivacyInfo>('/privacidade')
+      .then(setInfo)
+      .catch(() => setInfo(null))
+      .finally(() => setLoaded(true));
   }, [open]);
 
   if (!open) return null;
-  const om = info?.institution_name?.trim() || 'a Organização Militar';
+  const om = info?.institution_name?.trim() || 'A Organização Militar';
   const officer = info?.privacy_officer?.trim() || DEFAULT_PRIVACY_OFFICER;
   const contact = info?.privacy_contact?.trim() || 'procure a Secretaria ou o Departamento de Pessoal da OM';
 
   return (
-    <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="aviso-privacidade-titulo">
+    <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="aviso-privacidade-titulo" data-loaded={loaded ? 'true' : 'false'}>
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-8 pt-7 pb-4 border-b border-slate-100">
           <h3 id="aviso-privacidade-titulo" className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -47,7 +54,7 @@ export const PrivacyNoticeModal: React.FC<{ open: boolean; onClose: () => void }
         </div>
         <div className="px-8 py-6 space-y-4 overflow-y-auto">
           <p className="text-sm text-slate-700 leading-relaxed">
-            <strong>{om}</strong> trata dados pessoais no SISFERIAS conforme a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD).
+            <strong>{loaded ? om : 'A Organização Militar'}</strong> trata dados pessoais no SISFERIAS conforme a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD).
           </p>
           <Item title="Dados tratados">
             Nome, nome de guerra, NIP, e-mail funcional, posto ou graduação, setor, foto, períodos de férias, endereço e telefone durante as férias e justificativas informadas.
@@ -72,8 +79,14 @@ export const PrivacyNoticeModal: React.FC<{ open: boolean; onClose: () => void }
           </Item>
           <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4">
             <h4 className="text-[11px] font-black text-orange-700 uppercase tracking-widest mb-1">Encarregado pelo tratamento de dados</h4>
-            <p className="text-sm text-slate-800 font-semibold" data-testid="privacy-officer">{officer}</p>
-            <p className="text-sm text-slate-700" data-testid="privacy-contact">Contato: {contact}</p>
+            {loaded ? (
+              <>
+                <p className="text-sm text-slate-800 font-semibold" data-testid="privacy-officer">{officer}</p>
+                <p className="text-sm text-slate-700" data-testid="privacy-contact">Contato: {contact}</p>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Carregando…</p>
+            )}
           </div>
         </div>
         <div className="px-8 pb-7 pt-2">
