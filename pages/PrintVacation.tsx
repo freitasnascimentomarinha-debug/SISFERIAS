@@ -29,14 +29,14 @@ const StaffInputGroup = ({ label, member, onChange }: { label: string, member: S
         <input autoComplete="off" className={inputClass} placeholder="Nome Completo" value={member.name} onChange={e => onChange({ ...member, name: e.target.value })} />
         <div className="grid grid-cols-2 gap-2">
           <input autoComplete="off" className={inputClass} placeholder="NIP" value={member.nip} onChange={e => onChange({ ...member, nip: e.target.value })} />
-          <select className={inputClass} value={member.category} onChange={e => onChange({ ...member, category: e.target.value as MilitaryCategory, rank: '' })}>
+          <select className={inputClass} aria-label={`${label}: categoria`} value={member.category} onChange={e => onChange({ ...member, category: e.target.value as MilitaryCategory, rank: '' })}>
             <option value="oficial">Oficial</option>
             <option value="praca">Praça</option>
             <option value="civil">Civil</option>
           </select>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <select className={inputClass} value={member.rank} onChange={e => onChange({ ...member, rank: e.target.value })}>
+          <select className={inputClass} aria-label={`${label}: posto ou graduação`} value={member.rank} onChange={e => onChange({ ...member, rank: e.target.value })}>
             <option value="">Patente</option>
             {ranks.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -586,7 +586,7 @@ const PrintVacation: React.FC = () => {
                 <div class="flex gap-4 items-center">
                   ${employee.photoUrl ? `
                     <div class="w-20 h-24 border border-black overflow-hidden shadow-sm flex-shrink-0">
-                      <img src="${employee.photoUrl}" class="w-full h-full object-cover">
+                      <img src="${employee.photoUrl}" alt="Foto do militar" class="w-full h-full object-cover">
                     </div>
                   ` : `
                     <div class="w-20 h-24 border border-dashed border-slate-300 flex items-center justify-center text-slate-300 font-bold uppercase text-[7px] flex-shrink-0">Sem Foto</div>
@@ -672,7 +672,7 @@ const PrintVacation: React.FC = () => {
               <p className="text-orange-100 text-sm">A pág. 2 (anexo) só é gerada quando houver texto preenchido no anexo.</p>
             </div>
           </div>
-          <button onClick={() => navigate(-1)} className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
+          <button onClick={() => navigate(-1)} aria-label="Voltar" className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
         </div>
 
         <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">

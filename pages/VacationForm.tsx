@@ -496,7 +496,7 @@ const VacationForm: React.FC = () => {
           return (
             <>
               <div className="bg-gradient-to-r from-orange-500 via-orange-500 to-amber-500 px-6 py-4 text-white relative flex items-center gap-3 flex-wrap">
-                <button type="button" onClick={() => navigate(-1)} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
+                <button type="button" onClick={() => navigate(-1)} aria-label="Voltar" className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors shrink-0">
                   <ArrowLeft size={16} />
                 </button>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -572,8 +572,8 @@ const VacationForm: React.FC = () => {
                         )}
                         {!isBlocked && (
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 bg-white text-orange-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
-                            {photoUrl && <button type="button" onClick={removePhoto} className="p-2 bg-white text-red-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Trash2 size={18} /></button>}
+                            <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="Incluir ou trocar a foto" className="p-2 bg-white text-orange-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
+                            {photoUrl && <button type="button" onClick={removePhoto} aria-label="Remover a foto" className="p-2 bg-white text-red-500 rounded-lg shadow-lg hover:scale-110 transition-transform"><Trash2 size={18} /></button>}
                           </div>
                         )}
                       </div>

@@ -213,7 +213,7 @@ const Home: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight uppercase">Quadro de Avisos</h2>
-              <p className="text-orange-50 text-[11px] font-medium opacity-80 uppercase tracking-wide">Comunicados Internos da Organização</p>
+              <p className="text-orange-50 text-[11px] font-medium uppercase tracking-wide">Comunicados Internos da Organização</p>
             </div>
           </div>
 

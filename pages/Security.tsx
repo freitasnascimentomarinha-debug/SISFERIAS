@@ -648,7 +648,7 @@ const Security: React.FC = () => {
                       <div className="flex items-center gap-6">
                         <div className="w-24 h-24 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-center relative group overflow-hidden shadow-inner">
                           {settings.logoUrl ? (
-                            <img src={settings.logoUrl} className="w-full h-full object-contain p-2" />
+                            <img src={settings.logoUrl} alt="Logotipo atual da instituição" className="w-full h-full object-contain p-2" />
                           ) : (
                             <Camera className="text-slate-300" size={32} />
                           )}
@@ -738,6 +738,7 @@ const Security: React.FC = () => {
                           />
                           <select
                             className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            aria-label={`${labels[role]}: categoria`}
                             value={member.category}
                             onChange={e => setMember({ ...member, category: e.target.value as any, rank: '' })}
                           >
@@ -749,6 +750,7 @@ const Security: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500"
+                            aria-label={`${labels[role]}: posto ou graduação`}
                             value={member.rank}
                             onChange={e => setMember({ ...member, rank: e.target.value })}
                           >
@@ -872,6 +874,7 @@ const Security: React.FC = () => {
                             </button>
                             <button
                               onClick={() => confirmRemoveNotice(notice.id)}
+                              aria-label="Excluir aviso"
                               className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <Trash2 size={16} />
@@ -1165,10 +1168,10 @@ const Security: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input autoComplete="off" type="date" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logStart} onChange={e => setLogStart(e.target.value)} />
+                  <input autoComplete="off" type="date" aria-label="Data inicial" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logStart} onChange={e => setLogStart(e.target.value)} />
                 </div>
                 <div className="relative flex-1">
-                  <input autoComplete="off" type="date" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logEnd} onChange={e => setLogEnd(e.target.value)} />
+                  <input autoComplete="off" type="date" aria-label="Data final" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold" value={logEnd} onChange={e => setLogEnd(e.target.value)} />
                 </div>
                 <button onClick={() => { setLogStart(''); setLogEnd(''); setLogSearch(''); }} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-all" title="Limpar filtros"><Filter size={18} /></button>
               </div>

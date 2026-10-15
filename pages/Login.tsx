@@ -91,6 +91,7 @@ const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
+                aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-orange-500 transition-colors p-1"
               >
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -130,7 +131,7 @@ const Login: React.FC = () => {
       <div className="mt-12 text-slate-400 text-center">
         <div className="text-[10px] font-black uppercase tracking-[0.2em]">Idealização e Desenvolvimento</div>
         <div className="mt-1 text-[9px] font-bold">Centro de Operações do Abastecimento</div>
-        <div className="mt-4 text-[8px] italic opacity-60 tracking-widest">Versão {__APP_VERSION__}</div>
+        <div className="mt-4 text-[8px] italic text-slate-500 tracking-widest">Versão {__APP_VERSION__}</div>
       </div>
     </div>
   );

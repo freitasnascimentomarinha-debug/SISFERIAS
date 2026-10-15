@@ -35,6 +35,7 @@ const steps = [
   ['t7_pacote', 'Troca de senha, regra de senha, ajustes de tela e cópia de backups'],
   ['t8_excel_https', 'Excel, redução de imagens, aba removida, telas sob demanda e HTTPS'],
   ['t9_dctim', 'Normas da DCTIM: troca obrigatória, bloqueio, registro de operações, autocomplete'],
+  ['t10_acessibilidade', 'Acessibilidade (e-MAG / WCAG 2.1 AA) em todas as telas'],
 ];
 
 let srv = await startServer({ dataDir, env });

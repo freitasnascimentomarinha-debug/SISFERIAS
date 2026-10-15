@@ -1,7 +1,7 @@
 {
   "name": "sisferias",
   "private": true,
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "SISFERIAS - sistema de planejamento e controle de férias para rede interna",
   "type": "module",
   "engines": {
@@ -38,6 +38,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.6.1",
+    "axe-core": "^4.10.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
     "postcss": "^8.5.30",

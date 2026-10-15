@@ -340,6 +340,7 @@ const DataManagement: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
           <input
             type="file"
+            aria-label="Arquivos para importar"
             multiple
             accept=".csv,.json,.txt"
             onChange={e => void handleFiles(e.target.files)}
@@ -404,7 +405,7 @@ const DataManagement: React.FC = () => {
                       <td className="py-3 px-3 text-right">{t.total}</td>
                       <td className="py-3 px-3 text-right text-green-600 font-bold">{t.insert}</td>
                       <td className="py-3 px-3 text-right text-blue-600 font-bold">{t.update}</td>
-                      <td className={`py-3 px-3 text-right font-bold ${t.errors.length ? 'text-red-600' : 'text-slate-300'}`}>{t.errors.length}</td>
+                      <td className={`py-3 px-3 text-right font-bold ${t.errors.length ? 'text-red-600' : 'text-slate-400'}`}>{t.errors.length}</td>
                     </tr>
                   ))}
                 </tbody>

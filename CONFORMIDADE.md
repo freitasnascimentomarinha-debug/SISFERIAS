@@ -62,6 +62,7 @@ Legenda: ✅ atendido pelo sistema · 📄 depende de documento/ação da OM · 
 | 3.1.d | Desabilitar cache no cliente (`Cache-Control: no-store`) | Todas as respostas da API e a página principal com `Cache-Control: no-store` e `Pragma: no-cache` | `server/index.js`; teste "3.1.d" | ✅ |
 | 3.1.e | `autocomplete="off"` em formulários sensíveis, inclusive login | `autocomplete="off"` em **todos** os formulários e campos da interface (login, cadastro, senhas, férias, papeleta) | teste e2e "formulário e campos com autocomplete=off" | ✅ |
 | 3.1.f | Autenticação só por **POST**; GET bloqueado | `POST /api/auth/login`; `GET` responde 405 | teste "3.1.f" | ✅ |
+| e-MAG (citado no modelo do DAIS, item 1.6) | Acessibilidade para pessoas com deficiência (WCAG 2.1 níveis A e AA) | Todas as telas verificadas com o **axe-core**, sem violações: contraste mínimo de 4,5:1, rótulos associados aos campos (`lib/a11y.ts`), nome acessível nos botões, textos alternativos, navegação por teclado, idioma `pt-BR` | teste de navegador "t10_acessibilidade" | ✅ |
 | Boas práticas | Validação das entradas no servidor (não confiar no navegador) | Regras de senha, imagens (tipo e tamanho), tamanho dos campos de texto e **parcelas de férias** (datas válidas, início antes do término, soma dentro do direito) conferidas na API; consultas ao banco sempre parametrizadas; nenhuma senha ou chave fixa no código | `server/api.js`; teste "servidor valida as parcelas" | ✅ |
 
 ### 3.2 Controle de acesso e autenticação
