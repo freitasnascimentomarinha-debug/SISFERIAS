@@ -53,6 +53,15 @@ await step('Painel da Ana (restrita ao setor 10)', async () => {
   const r = await api(p, 'GET', '/employees');
   check('a restrição de setor é aplicada pelo servidor', r.data.every(e => e.sector === '10'), `${r.data.length} registro(s), setores: ${[...new Set(r.data.map(e => e.sector))]}`);
 });
+await step('encarregada edita e imprime pelo Painel', async () => {
+  const p = S.ana.page;
+  check('Painel da encarregada mostra os atalhos de editar e imprimir do Bruno',
+    await p.locator('button[title="Editar férias de BRUNO"]').count() === 1 && await p.locator('button[title="Imprimir papeleta de BRUNO"]').count() === 1);
+  await p.click('button[title="Editar férias de BRUNO"]'); await p.waitForTimeout(1200);
+  const vals = await p.$$eval('input', els => els.map(e => e.value));
+  check('o lápis abre as férias do Bruno', vals.includes('Bruno Costa'), vals.filter(Boolean).slice(0, 4).join(' | '));
+  await nav(p, 'Painel');
+});
 await step('liberar visão global para Ana', async () => {
   await unlockSecurity(P, ADMIN.pass); await tab(P, 'Visibilidade');
   await P.locator('div, tr', { hasText: A.ana.email }).locator('button:has-text("Liberar Todos os Setores")').last().click();
@@ -61,6 +70,24 @@ await step('liberar visão global para Ana', async () => {
   const p = S.ana.page; await p.reload(); await p.waitForTimeout(1000); await nav(p, 'Painel');
   const t = await p.textContent('body');
   check('após liberar visão global, Ana vê todos os setores', v === 1 && t.includes('CARLA') && t.includes('DAVI'));
+});
+await step('Direção (consulta): vê tudo, não altera, sem Segurança', async () => {
+  await tab(P, 'Visibilidade');
+  await P.locator('div', { hasText: A.ana.email }).locator('button:has-text("Somente consulta (Direção)")').last().click();
+  await P.waitForTimeout(900);
+  check('perfil de consulta gravado no banco', db('SELECT read_only r FROM profiles WHERE email = ?', A.ana.email)[0].r === 1);
+  const p = S.ana.page; await p.reload(); await p.waitForTimeout(1000); await nav(p, 'Painel');
+  const t = await p.textContent('body'); const h = await p.textContent('header');
+  check('Direção vê todos os setores no Painel', t.includes('CARLA') && t.includes('DAVI'));
+  check('Direção não vê Segurança e aparece como "Direção (consulta)"', !h.includes('Segurança') && h.includes('Direção (consulta)'));
+  check('Painel da Direção sem atalhos de edição', await p.locator('button[title^="Editar férias de"]').count() === 0);
+  const emp = db("SELECT id FROM employees WHERE user_id = (SELECT id FROM profiles WHERE email = ?)", A.carla.email)[0];
+  const r = await api(p, 'PATCH', `/employees/${emp.id}`, { justification: 'x' });
+  check('servidor recusa alteração feita pela Direção (403)', r.status === 403, `status ${r.status}`);
+  await tab(P, 'Visibilidade');
+  await P.locator('div', { hasText: A.ana.email }).locator('button:has-text("Permitir gerenciar")').last().click();
+  await P.waitForTimeout(900);
+  check('consulta desfeita', db('SELECT read_only r FROM profiles WHERE email = ?', A.ana.email)[0].r === 0);
 });
 
 setSection('8. Admin altera parcelas de outro usuário');

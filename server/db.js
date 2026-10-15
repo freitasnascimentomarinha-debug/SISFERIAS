@@ -387,8 +387,9 @@ export async function seed() {
     // Desde a 3.0.5 só o admin com Visão Global entra na Segurança. Instalação
     // antiga (ou backup importado) sem nenhum: os admins atuais recebem a Visão
     // Global para ninguém perder o acesso; o Departamento de Pessoal ajusta depois.
-    await run(`UPDATE profiles SET view_all_sectors = TRUE
-      WHERE role = 'admin' AND NOT EXISTS (SELECT 1 FROM profiles WHERE role = 'admin' AND view_all_sectors)`);
+    await run(`UPDATE profiles SET view_all_sectors = TRUE, read_only = FALSE
+      WHERE role = 'admin' AND NOT EXISTS (
+        SELECT 1 FROM profiles WHERE role = 'admin' AND view_all_sectors AND NOT read_only)`);
     return;
   }
 
@@ -422,7 +423,7 @@ export async function seed() {
     await setAuthPassword(id, email, password, { mustChange });
     await upsertRow('profiles', {
       id, email, name: 'Administrador', war_name: 'ADMIN', nip: 'admin', role: 'admin',
-      is_blocked: false, view_all_sectors: true,
+      is_blocked: false, view_all_sectors: true, read_only: false,
     });
   });
 

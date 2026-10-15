@@ -6,7 +6,7 @@ import {
   findAuthByLogin, setAuthPassword, dbInfo,
 } from './db.js';
 import {
-  createSession, destroySession, destroyUserSessions, requireAuth, requireGlobalAdmin, requireElevated, isGlobalAdmin,
+  createSession, destroySession, destroyUserSessions, requireAuth, requireGlobalAdmin, requireElevated, isGlobalAdmin, seesAllSectors,
   isElevated, elevateSession, endElevation, checkAccountPassword, ipBlocked, registerIpFailure,
 } from './auth.js';
 import { blindIndex, decrypt, passwordProblems, PASSWORD_RULE_TEXT } from './crypto.js';
@@ -241,7 +241,7 @@ const mySector = async (req) => effectiveSector(await getProfile(req.user.id));
 
 api.get('/profiles', requireAuth, async (req, res) => {
   const profiles = (await q(PROFILE_SQL)).map(profileOut).sort(byName);
-  if (isGlobalAdmin(req)) return res.json(profiles);
+  if (seesAllSectors(req)) return res.json(profiles);
   // Encarregado de setor: completos só os do próprio setor (LGPD, art. 6º, III).
   const sector = isAdmin(req) ? await mySector(req) : null;
   res.json(profiles.map(p => (p.id === req.user.id || (sector && effectiveSector(p) === sector) ? p : minimalProfile(p))));
@@ -249,7 +249,7 @@ api.get('/profiles', requireAuth, async (req, res) => {
 
 api.get('/profiles/:id', requireAuth, async (req, res) => {
   const profile = await getProfile(req.params.id);
-  if (req.params.id !== req.user.id && !isGlobalAdmin(req)) {
+  if (req.params.id !== req.user.id && !seesAllSectors(req)) {
     const sector = isAdmin(req) ? await mySector(req) : null;
     if (!sector || !profile || effectiveSector(profile) !== sector) fail(403, 'Você só pode consultar o seu próprio cadastro.');
   }
@@ -260,13 +260,14 @@ api.get('/profiles/:id', requireAuth, async (req, res) => {
 api.patch('/profiles/:id', requireElevated, async (req, res) => {
   const target = await getProfile(req.params.id);
   if (!target) fail(404, 'Usuário não encontrado.');
-  const changes = pick(req.body, ['is_blocked', 'role', 'view_all_sectors']);
+  const changes = pick(req.body, ['is_blocked', 'role', 'view_all_sectors', 'read_only']);
+  if (changes.read_only !== undefined) changes.read_only = !!changes.read_only;
   if (changes.role !== undefined && !['admin', 'user'].includes(changes.role)) fail(400, 'Papel inválido.');
   // Sempre resta ao menos um administrador com Visão Global, que é quem gerencia o sistema.
-  const losesGlobal = target.role === 'admin' && target.view_all_sectors
-    && (changes.role === 'user' || changes.view_all_sectors === false);
+  const losesGlobal = target.role === 'admin' && target.view_all_sectors && !target.read_only
+    && (changes.role === 'user' || changes.view_all_sectors === false || changes.read_only === true);
   if (losesGlobal) {
-    const globals = (await one("SELECT COUNT(*)::int c FROM profiles WHERE role = 'admin' AND view_all_sectors")).c;
+    const globals = (await one("SELECT COUNT(*)::int c FROM profiles WHERE role = 'admin' AND view_all_sectors AND NOT read_only")).c;
     if (globals <= 1) fail(400, 'Não é possível remover o último administrador com Visão Global.');
   }
   await updateRow('profiles', { id: target.id }, changes);
@@ -366,6 +367,11 @@ function minimalEmployee(e) {
 // de setor só altera lançamentos do próprio setor; o admin global, qualquer um.
 async function assertCanEdit(req, userId, sectors = []) {
   if (isGlobalAdmin(req)) return;
+  if (isAdmin(req) && req.user.read_only) {
+    // Direção (consulta): só os próprios lançamentos.
+    if (userId === req.user.id) return;
+    fail(403, 'Perfil de consulta: a Direção acompanha, mas não altera lançamentos de outras pessoas.');
+  }
   if (isAdmin(req)) {
     const mine = await mySector(req);
     const list = sectors.filter(s => s != null && s !== '');
@@ -585,9 +591,10 @@ api.delete('/suggestions/:id', requireElevated, async (req, res) => {
 const PRINT_FIELDS = Object.keys(TABLES.print_preferences.columns)
   .filter(c => !['user_id', 'created_at', 'updated_at'].includes(c));
 
-async function assertOwnerOrAdmin(req, userId) {
+async function assertOwnerOrAdmin(req, userId, { write = false } = {}) {
   if (userId === req.user.id || isGlobalAdmin(req)) return;
-  if (isAdmin(req)) {
+  if (!write && seesAllSectors(req)) return; // Direção (consulta) lê
+  if (isAdmin(req) && !req.user.read_only) {
     const mine = await mySector(req);
     const target = await getProfile(userId);
     if (mine && target && effectiveSector(target) === mine) return;
@@ -601,7 +608,7 @@ api.get('/print-preferences/:userId', requireAuth, async (req, res) => {
 });
 
 api.put('/print-preferences/:userId', requireAuth, async (req, res) => {
-  await assertOwnerOrAdmin(req, req.params.userId);
+  await assertOwnerOrAdmin(req, req.params.userId, { write: true });
   await upsertRow('print_preferences', { ...pick(req.body, PRINT_FIELDS), user_id: req.params.userId });
   res.json({ ok: true });
 });

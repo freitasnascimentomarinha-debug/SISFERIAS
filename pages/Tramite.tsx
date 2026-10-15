@@ -2,10 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, FileText, Filter, Pencil, Save, Search, ShieldCheck, X } from 'lucide-react';
 import { format, startOfDay, subDays } from 'date-fns';
 import { useVacation } from '../contexts/VacationContext';
+import { useAuth } from '../contexts/AuthContext';
 import { normalizeText } from '../lib/textUtils';
 
 const Tramite: React.FC = () => {
   const { employees, updateParcelNup } = useVacation();
+  const { user } = useAuth();
+  // Direção (consulta) acompanha o trâmite, mas não corrige NUP.
+  const canEdit = !user?.readOnly;
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -334,7 +338,7 @@ const Tramite: React.FC = () => {
                               <X size={14} />
                             </button>
                           </div>
-                        ) : (
+                        ) : canEdit && (
                           <button
                             type="button"
                             onClick={() => startEditingNup(row.key, row.nup)}

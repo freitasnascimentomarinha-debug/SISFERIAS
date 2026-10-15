@@ -273,6 +273,51 @@ describe('encarregado de setor (admin "Apenas Setor")', () => {
   });
 });
 
+describe('Direção (Visão Global somente leitura)', () => {
+  let helena;
+  before(async () => {
+    helena = client(srv.base);
+    const r = await register(client(srv.base), { name: 'Helena Diretora', war_name: 'HELENA', email: 'helena@mb.mil.br', nip: '60000006', sector: '01' });
+    ids.helena = r.data.id;
+    await admin.post('/auth/elevate', { password: ADMIN_PASSWORD });
+    const p = await admin.patch(`/profiles/${ids.helena}`, { role: 'admin', view_all_sectors: true, read_only: true });
+    assert.equal(p.data.read_only, true);
+    assert.equal((await helena.login('60000006', 'Senha@12345')).status, 200);
+  });
+
+  it('vê toda a OM, com os dados completos', async () => {
+    const emps = (await helena.get('/employees')).data;
+    assert.ok(emps.some(e => e.sector === '10') && emps.some(e => e.sector === '20'));
+    assert.equal(emps.find(e => e.user_id === ids.carla).justification !== undefined, true, 'vê justificativas');
+    assert.equal((await helena.get('/profiles')).data.find(p => p.id === ids.carla).name, 'Carla Dias');
+    assert.equal((await helena.get(`/profiles/${ids.carla}`)).status, 200);
+    assert.equal((await helena.get(`/print-preferences/${ids.carla}`)).status, 200, 'consulta a papeleta');
+  });
+
+  it('não altera nada de outras pessoas nem entra na Segurança', async () => {
+    assert.equal((await helena.patch(`/employees/${ids.carlaEmp}`, { justification: 'x' })).status, 403);
+    assert.equal((await helena.del(`/employees/${ids.brunoEmp}`)).status, 403);
+    assert.equal((await helena.post('/employees', { user_id: ids.bruno, planning_year: 2027, sector: '10' })).status, 403);
+    assert.equal((await helena.put(`/print-preferences/${ids.carla}`, { address: 'x' })).status, 403);
+    const e = await helena.post('/auth/elevate', { password: 'Senha@12345' });
+    assert.equal(e.status, 403);
+    assert.equal(e.data.code, 'global_admin_required');
+    for (const [m, p, body] of [['post', '/admin/reset-password', { userId: ids.bruno, password: 'Invasao@1234' }], ['get', '/audit-logs'], ['get', '/admin/export'], ['patch', `/profiles/${ids.helena}`, { read_only: false }]]) {
+      assert.equal((await helena[m](p, body)).status, 403, `${m} ${p}`);
+    }
+  });
+
+  it('lança as próprias férias normalmente', async () => {
+    const r = await helena.post('/employees', { user_id: ids.helena, planning_year: 2025, name: 'Helena Diretora', sector: '01', vacation_parcels: [] });
+    assert.equal(r.status, 200);
+  });
+
+  it('o administrador de consulta não conta como gestor do sistema', async () => {
+    const me = (await admin.get('/auth/me')).data.user;
+    assert.equal((await admin.patch(`/profiles/${me.id}`, { read_only: true })).status, 400, 'o último gestor não vira consulta');
+  });
+});
+
 describe('prazo final de lançamento', () => {
   it('prazo vencido bloqueia todos; liberação manual é respeitada; limpar libera', async () => {
     assert.equal((await admin.put('/settings/deadline', { deadline: '2099-12-31' })).data.blocked, false);

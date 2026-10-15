@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useVacation } from '../contexts/VacationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Users, CalendarCheck, CalendarDays, TrendingUp, Search, Filter, User as UserIcon, Shield, ChevronRight, ChevronDown, Calendar, AlertTriangle, ClipboardList, X, TriangleAlert, CircleDashed, CalendarClock } from 'lucide-react';
 import VacationChart from '../components/VacationChart';
 import EmployeeList from '../components/EmployeeList';
@@ -11,6 +12,10 @@ import { normalizeText } from '../lib/textUtils';
 
 const Dashboard: React.FC = () => {
   const { users, user } = useAuth();
+  const navigate = useNavigate();
+  // Encarregado (no seu setor) e Dep. Pessoal gerenciam; a Direção (consulta) só acompanha.
+  const canManage = user?.role === 'admin' && !user.readOnly;
+  const editUser = (userId: string) => navigate(`/vacation-form/user/${userId}`);
   const { employees, settings } = useVacation();
   const privacyPending = !settings.privacyOfficer?.trim() || !settings.privacyContact?.trim();
   const [search, setSearch] = useState('');
@@ -315,6 +320,7 @@ const Dashboard: React.FC = () => {
                 icon={<CircleDashed size={16} />}
                 accent="orange"
                 rows={diagnostics.semLancamento}
+                onEdit={canManage ? editUser : undefined}
               />
               <DiagnosticColumn
                 title="Falta Planejar"
@@ -322,6 +328,7 @@ const Dashboard: React.FC = () => {
                 icon={<CalendarClock size={16} />}
                 accent="blue"
                 rows={diagnostics.faltaPlanejar}
+                onEdit={canManage ? editUser : undefined}
               />
               <DiagnosticColumn
                 title="Fora do Período"
@@ -329,6 +336,7 @@ const Dashboard: React.FC = () => {
                 icon={<TriangleAlert size={16} />}
                 accent="red"
                 rows={diagnostics.foraPeriodo}
+                onEdit={canManage ? editUser : undefined}
               />
             </div>
           </div>
@@ -469,7 +477,9 @@ const Dashboard: React.FC = () => {
             <Users size={20} className="text-orange-500" /> Lista de Militares
           </h3>
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            <EmployeeList employees={filteredEmployees} planningYear={planningYear} />
+            <EmployeeList employees={filteredEmployees} planningYear={planningYear}
+              onEdit={canManage ? (emp) => editUser(emp.userId) : undefined}
+              onPrint={canManage ? (emp) => navigate(`/print/${emp.id}`) : undefined} />
           </div>
         </div>
       </div>
@@ -492,7 +502,7 @@ type DiagnosticRow = {
   details: string;
 };
 
-const DiagnosticColumn = ({ title, subtitle, icon, rows, accent }: { title: string; subtitle: string; icon: React.ReactNode; rows: DiagnosticRow[]; accent: 'orange' | 'blue' | 'red' }) => {
+const DiagnosticColumn = ({ title, subtitle, icon, rows, accent, onEdit }: { title: string; subtitle: string; icon: React.ReactNode; rows: DiagnosticRow[]; accent: 'orange' | 'blue' | 'red'; onEdit?: (userId: string) => void }) => {
   const accentMap = {
     orange: {
       chip: 'bg-orange-100 text-orange-700 border-orange-200',
@@ -535,6 +545,12 @@ const DiagnosticColumn = ({ title, subtitle, icon, rows, accent }: { title: stri
               <p className="text-sm font-bold text-slate-900 leading-tight">{row.displayName}</p>
               <p className="text-[11px] text-slate-500 mt-0.5">NIP: {row.nip} • Setor: {row.sector}</p>
               <p className="text-[11px] text-slate-700 mt-2 font-semibold">{row.details}</p>
+              {onEdit && (
+                <button type="button" onClick={() => onEdit(row.id)}
+                  className="mt-2 text-[11px] font-black uppercase tracking-wide text-orange-700 hover:underline">
+                  Lançar / editar férias
+                </button>
+              )}
             </article>
           ))
         )}

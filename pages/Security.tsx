@@ -50,7 +50,7 @@ const Security: React.FC = () => {
   // Segurança da Aba Gestão de Contas
 
   const navigate = useNavigate();
-  const { user, users, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility, unlockUser, fetchAllUsers } = useAuth();
+  const { user, users, deleteUser, toggleBlockUser, batchUpdateBlockStatus, toggleUserRole, setUserSectorVisibility, setUserReadOnly, unlockUser, fetchAllUsers } = useAuth();
   const { employees, auditLogs, addAuditLog, settings, updateSettings, setVacationDeadline, addNotice, deleteNotice, togglePinNotice, suggestions, deleteSuggestion, refreshData } = useVacation();
 
   const defaultStaff = (fn: string): StaffMember => ({ name: '', nip: '', rank: '', category: 'oficial', function: fn });
@@ -433,6 +433,24 @@ const Security: React.FC = () => {
     } else {
       console.error("Error toggling viewAllSectors:", result.errorMessage);
       alert("Erro ao atualizar visibilidade: " + (result.errorMessage || 'Erro desconhecido'));
+    }
+  };
+
+  const handleToggleReadOnly = async (userId: string) => {
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) return;
+    const newValue = !targetUser.readOnly;
+    const result = await setUserReadOnly(userId, newValue);
+    if (result.success) {
+      addAuditLog({
+        userName: user?.name || 'Admin',
+        action: 'Alteração',
+        field: `Perfil de consulta (${targetUser.name})`,
+        oldValue: targetUser.readOnly ? 'Direção (consulta)' : 'Pode alterar',
+        newValue: newValue ? 'Direção (consulta)' : 'Pode alterar'
+      });
+    } else {
+      alert('Erro ao atualizar o perfil: ' + (result.errorMessage || 'Erro desconhecido'));
     }
   };
 
@@ -1129,8 +1147,8 @@ const Security: React.FC = () => {
                           <span className="text-orange-600">Setor: {getResolvedSector(u) || 'Não definido'}</span>
                         </p>
                       </div>
-                      <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-tighter uppercase border ${u.viewAllSectors ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                        {u.viewAllSectors ? 'Visão Global' : 'Apenas Setor'}
+                      <span className={`text-[9px] px-3 py-1 rounded-full font-black tracking-tighter uppercase border ${u.readOnly ? 'bg-blue-50 text-blue-600 border-blue-100' : u.viewAllSectors ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                        {u.readOnly ? 'Direção (consulta)' : u.viewAllSectors ? 'Visão Global' : 'Apenas Setor'}
                       </span>
                     </div>
 
@@ -1150,6 +1168,19 @@ const Security: React.FC = () => {
                         )}
                       </button>
                     </div>
+                    {u.viewAllSectors && (
+                      <button
+                        onClick={() => handleToggleReadOnly(u.id)}
+                        title="Direção (consulta): vê toda a OM, mas não altera lançamentos nem acessa a Segurança"
+                        className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          u.readOnly
+                            ? 'bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white'
+                        }`}
+                      >
+                        {u.readOnly ? 'Permitir gerenciar (Dep. Pessoal)' : 'Somente consulta (Direção)'}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
