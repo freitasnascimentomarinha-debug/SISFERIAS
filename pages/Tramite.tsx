@@ -219,6 +219,7 @@ const Tramite: React.FC = () => {
             </div>
             <select
               className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              aria-label="Filtrar por janela"
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
             >
@@ -227,6 +228,7 @@ const Tramite: React.FC = () => {
             </select>
             <select
               className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              aria-label="Filtrar por situação"
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >

@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { startAccessibilityHelpers } from './lib/a11y';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -10,6 +11,7 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+startAccessibilityHelpers();
 root.render(
   <React.StrictMode>
     <App />

@@ -301,6 +301,7 @@ const Dashboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsDiagnosticsOpen(false)}
+                aria-label="Fechar diagnóstico"
                 className="p-2 rounded-xl bg-white/15 hover:bg-white/25 transition-colors"
               >
                 <X size={18} />
@@ -449,7 +450,7 @@ const Dashboard: React.FC = () => {
                   <button
                     key={year}
                     onClick={() => setPlanningYear(year)}
-                    className={`px-3 py-1 text-[10px] font-black rounded-md transition-all whitespace-nowrap ${planningYear === year ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-3 py-1 text-[10px] font-black rounded-md transition-all whitespace-nowrap ${planningYear === year ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-600 hover:text-slate-600'}`}
                   >
                     {year}
                   </button>

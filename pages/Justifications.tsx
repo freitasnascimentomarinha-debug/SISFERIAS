@@ -108,6 +108,7 @@ const Justifications: React.FC = () => {
             </div>
             <select
               className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              aria-label="Filtrar por setor"
               value={justifSector}
               onChange={e => setJustifSector(e.target.value)}
             >
@@ -116,6 +117,7 @@ const Justifications: React.FC = () => {
             </select>
             <select
               className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-orange-500"
+              aria-label="Filtrar por janela"
               value={justifYear}
               onChange={e => setJustifYear(e.target.value)}
             >

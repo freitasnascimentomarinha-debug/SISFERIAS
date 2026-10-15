@@ -84,7 +84,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear }) 
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-slate-900">{emp.rank} {emp.warName}</h4>
                     {isCurrentlyOnVacation && (
-                      <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse uppercase">Em Férias</span>
+                      <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase"><span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />Em Férias</span>
                     )}
                     <span className="bg-slate-100 text-slate-600 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 border border-slate-200 shadow-sm">
                       <Shield size={10} /> {emp.totalVacationDays} dias
