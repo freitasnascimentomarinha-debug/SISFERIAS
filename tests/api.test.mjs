@@ -205,6 +205,74 @@ describe('área de Segurança (confirmação de senha do admin)', () => {
   });
 });
 
+describe('encarregado de setor (admin "Apenas Setor")', () => {
+  let diego;
+  before(async () => {
+    diego = client(srv.base);
+    const r = await register(client(srv.base), { name: 'Diego Encarregado', war_name: 'DIEGO', email: 'diego@mb.mil.br', nip: '40000004', sector: '10' });
+    ids.diego = r.data.id;
+    await admin.post('/auth/elevate', { password: ADMIN_PASSWORD });
+    assert.equal((await admin.patch(`/profiles/${ids.diego}`, { role: 'admin' })).data.view_all_sectors, false, 'promovido sem Visão Global');
+    assert.equal((await diego.login('40000004', 'Senha@12345')).status, 200);
+  });
+
+  it('não entra na área de Segurança nem muda a própria visão', async () => {
+    const e = await diego.post('/auth/elevate', { password: 'Senha@12345' });
+    assert.equal(e.status, 403);
+    assert.equal(e.data.code, 'global_admin_required');
+    assert.equal((await diego.get('/auth/elevation')).data.elevated, false);
+    assert.equal((await diego.patch(`/profiles/${ids.diego}`, { view_all_sectors: true })).status, 403);
+    assert.equal((await admin.get(`/profiles/${ids.diego}`)).data.view_all_sectors, false);
+  });
+
+  it('não gerencia contas, senhas, exportação, auditoria nem configurações', async () => {
+    const tentativas = [
+      ['post', '/admin/reset-password', { userId: ids.bruno, password: 'Invasao@1234' }],
+      ['patch', `/profiles/${ids.bruno}`, { is_blocked: true, unlock: true }],
+      ['del', `/profiles/${ids.carla}`],
+      ['get', '/admin/export'],
+      ['get', '/admin/stats'],
+      ['get', '/audit-logs'],
+      ['put', '/settings', { institution_name: 'X' }],
+      ['post', '/profiles/block-all', { status: true }],
+    ];
+    for (const [m, p, body] of tentativas) assert.equal((await diego[m](p, body)).status, 403, `${m} ${p}`);
+    assert.equal((await diego.get('/suggestions')).data.every(s => s.user_id === ids.diego), true, 'só as próprias sugestões');
+  });
+
+  it('vê e altera somente os lançamentos do próprio setor', async () => {
+    const emps = (await diego.get('/employees')).data;
+    assert.ok(emps.length > 0 && emps.every(e => e.sector === '10'));
+    const ok = await diego.patch(`/employees/${ids.brunoEmp}`, { justification: 'ajuste do encarregado' });
+    assert.equal(ok.status, 200, 'setor 10: permitido');
+    assert.equal((await diego.get(`/print-preferences/${ids.bruno}`)).status, 200);
+    assert.equal((await diego.patch(`/employees/${ids.brunoEmp}`, { sector: '20' })).status, 403, 'não leva o militar para outro setor');
+    assert.equal((await diego.patch(`/employees/${ids.carlaEmp}`, { justification: 'x' })).status, 403, 'setor 20: recusado');
+    assert.equal((await diego.del(`/employees/${ids.carlaEmp}`)).status, 403);
+    assert.equal((await diego.post('/employees', { user_id: ids.carla, planning_year: 2025, sector: '10' })).status, 403);
+    assert.equal((await diego.get(`/print-preferences/${ids.carla}`)).status, 403);
+    assert.equal((await diego.get(`/profiles/${ids.carla}`)).status, 403);
+    const perfis = (await diego.get('/profiles')).data;
+    assert.equal(perfis.find(p => p.id === ids.bruno).name, 'Bruno Costa', 'perfil do próprio setor completo');
+    assert.equal(perfis.find(p => p.id === ids.carla).name, undefined, 'outro setor sem dados pessoais');
+  });
+
+  it('não muda o próprio setor para ganhar a visão de outro', async () => {
+    const r = await diego.post('/employees', { user_id: ids.diego, planning_year: 2025, name: 'Diego Encarregado', sector: '10', vacation_parcels: [] });
+    assert.equal(r.status, 200);
+    assert.equal((await diego.patch(`/employees/${r.data.id}`, { sector: '20' })).status, 403);
+    assert.equal((await diego.post('/employees', { user_id: ids.diego, planning_year: 2026, sector: '20' })).status, 403);
+  });
+
+  it('sempre resta um administrador com Visão Global', async () => {
+    const me = (await admin.get('/auth/me')).data.user;
+    assert.equal((await admin.patch(`/profiles/${me.id}`, { view_all_sectors: false })).status, 400);
+    assert.equal((await admin.patch(`/profiles/${ids.diego}`, { view_all_sectors: true })).status, 200, 'o global concede a visão');
+    assert.equal((await diego.post('/auth/elevate', { password: 'Senha@12345' })).status, 200, 'com Visão Global, entra na Segurança');
+    await admin.patch(`/profiles/${ids.diego}`, { role: 'user', view_all_sectors: false });
+  });
+});
+
 describe('prazo final de lançamento', () => {
   it('prazo vencido bloqueia todos; liberação manual é respeitada; limpar libera', async () => {
     assert.equal((await admin.put('/settings/deadline', { deadline: '2099-12-31' })).data.blocked, false);

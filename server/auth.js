@@ -105,10 +105,23 @@ export async function endElevation(req) {
   req.session.elevatedUntil = null;
 }
 
-/** Admin com a senha confirmada recentemente. Cada uso renova o prazo. */
+/** Administrador com "Visão Global" (Direção / Departamento de Pessoal). */
+export const isGlobalAdmin = (req) => req.user?.role === 'admin' && !!req.user?.view_all_sectors;
+export const GLOBAL_ONLY = 'Área de Segurança restrita aos administradores com Visão Global (Departamento de Pessoal).';
+
+/** Administrador com Visão Global. O encarregado de setor não gerencia o sistema. */
+export function requireGlobalAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+  if (!req.user.view_all_sectors) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
+  next();
+}
+
+/** Admin com Visão Global e a senha confirmada recentemente. Cada uso renova o prazo. */
 export async function requireElevated(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+  if (!req.user.view_all_sectors) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
   if (!isElevated(req)) {
     return res.status(403).json({
       error: 'Por segurança, confirme sua senha para continuar.',

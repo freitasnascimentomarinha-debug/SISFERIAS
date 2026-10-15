@@ -36,6 +36,14 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+/** Área de Segurança: só o administrador com Visão Global (Departamento de Pessoal). */
+const GlobalAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (user?.role !== 'admin' || !user.viewAllSectors) return <Navigate to="/home" />;
+  return <>{children}</>;
+};
+
 /**
  * Faixa exibida em todas as telas do ambiente de homologação (DCTIMARINST
  * 30-17, item 4.3: ambiente separado, somente com dados fictícios).
@@ -75,7 +83,7 @@ const AppContent: React.FC = () => {
         <Route path="/print" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/print/:id" element={<PrivateRoute><PrintVacation /></PrivateRoute>} />
         <Route path="/suggestions" element={<PrivateRoute><Suggestions /></PrivateRoute>} />
-        <Route path="/security" element={<AdminRoute><Security /></AdminRoute>} />
+        <Route path="/security" element={<GlobalAdminRoute><Security /></GlobalAdminRoute>} />
         <Route path="*" element={<Navigate to="/home" />} />
       </Routes>
       </Suspense>

@@ -6,7 +6,7 @@ import {
   findAuthByLogin, setAuthPassword, dbInfo,
 } from './db.js';
 import {
-  createSession, destroySession, destroyUserSessions, requireAuth, requireAdmin, requireElevated,
+  createSession, destroySession, destroyUserSessions, requireAuth, requireGlobalAdmin, requireElevated, isGlobalAdmin,
   isElevated, elevateSession, endElevation, checkAccountPassword, ipBlocked, registerIpFailure,
 } from './auth.js';
 import { blindIndex, decrypt, passwordProblems, PASSWORD_RULE_TEXT } from './crypto.js';
@@ -207,10 +207,10 @@ api.post('/auth/password', requireAuth, async (req, res) => {
 
 // Área de Segurança: o admin confirma a própria senha de login.
 api.get('/auth/elevation', requireAuth, (req, res) => {
-  res.json({ elevated: isAdmin(req) && isElevated(req), until: req.session.elevatedUntil, minutes: config.elevationMinutes });
+  res.json({ elevated: isGlobalAdmin(req) && isElevated(req), until: req.session.elevatedUntil, minutes: config.elevationMinutes });
 });
 
-api.post('/auth/elevate', requireAdmin, async (req, res) => {
+api.post('/auth/elevate', requireGlobalAdmin, async (req, res) => {
   const auth = await one('SELECT * FROM auth_users WHERE id = ?', [req.user.id]);
   const result = await checkAccountPassword(auth, String(req.body?.password || ''), { label: req.user.name, context: 'área de Segurança' });
   if (result !== 'ok') {
@@ -236,14 +236,23 @@ api.post('/auth/elevate/end', requireAuth, async (req, res) => {
 // (LGPD, art. 6º, III — necessidade).
 const minimalProfile = (p) => ({ id: p.id, category: p.category, role: p.role });
 
+// Setor do encarregado (admin "Apenas Setor"); vazio = não vê ninguém além de si.
+const mySector = async (req) => effectiveSector(await getProfile(req.user.id));
+
 api.get('/profiles', requireAuth, async (req, res) => {
   const profiles = (await q(PROFILE_SQL)).map(profileOut).sort(byName);
-  res.json(isAdmin(req) ? profiles : profiles.map(p => (p.id === req.user.id ? p : minimalProfile(p))));
+  if (isGlobalAdmin(req)) return res.json(profiles);
+  // Encarregado de setor: completos só os do próprio setor (LGPD, art. 6º, III).
+  const sector = isAdmin(req) ? await mySector(req) : null;
+  res.json(profiles.map(p => (p.id === req.user.id || (sector && effectiveSector(p) === sector) ? p : minimalProfile(p))));
 });
 
 api.get('/profiles/:id', requireAuth, async (req, res) => {
-  if (!isAdmin(req) && req.params.id !== req.user.id) fail(403, 'Você só pode consultar o seu próprio cadastro.');
   const profile = await getProfile(req.params.id);
+  if (req.params.id !== req.user.id && !isGlobalAdmin(req)) {
+    const sector = isAdmin(req) ? await mySector(req) : null;
+    if (!sector || !profile || effectiveSector(profile) !== sector) fail(403, 'Você só pode consultar o seu próprio cadastro.');
+  }
   if (!profile) fail(404, 'Usuário não encontrado.');
   res.json(profile);
 });
@@ -253,9 +262,12 @@ api.patch('/profiles/:id', requireElevated, async (req, res) => {
   if (!target) fail(404, 'Usuário não encontrado.');
   const changes = pick(req.body, ['is_blocked', 'role', 'view_all_sectors']);
   if (changes.role !== undefined && !['admin', 'user'].includes(changes.role)) fail(400, 'Papel inválido.');
-  if (changes.role === 'user' && target.role === 'admin') {
-    const admins = (await one("SELECT COUNT(*)::int c FROM profiles WHERE role = 'admin'")).c;
-    if (admins <= 1) fail(400, 'Não é possível remover o último administrador.');
+  // Sempre resta ao menos um administrador com Visão Global, que é quem gerencia o sistema.
+  const losesGlobal = target.role === 'admin' && target.view_all_sectors
+    && (changes.role === 'user' || changes.view_all_sectors === false);
+  if (losesGlobal) {
+    const globals = (await one("SELECT COUNT(*)::int c FROM profiles WHERE role = 'admin' AND view_all_sectors")).c;
+    if (globals <= 1) fail(400, 'Não é possível remover o último administrador com Visão Global.');
   }
   await updateRow('profiles', { id: target.id }, changes);
   // Libera a conta bloqueada por tentativas inválidas de senha.
@@ -350,8 +362,22 @@ function minimalEmployee(e) {
   };
 }
 
-function assertCanEdit(req, userId) {
-  if (isAdmin(req)) return;
+// sectors: setores envolvidos (do lançamento atual e/ou do novo). O encarregado
+// de setor só altera lançamentos do próprio setor; o admin global, qualquer um.
+async function assertCanEdit(req, userId, sectors = []) {
+  if (isGlobalAdmin(req)) return;
+  if (isAdmin(req)) {
+    const mine = await mySector(req);
+    const list = sectors.filter(s => s != null && s !== '');
+    if (userId === req.user.id) {
+      // Mudar o próprio setor mudaria a própria visão: só o Departamento de Pessoal.
+      if (!mine || list.every(s => s === mine)) return;
+      fail(403, 'Para mudar de setor, procure o Departamento de Pessoal (administrador com Visão Global).');
+    }
+    if (!list.length) list.push(effectiveSector((await getProfile(userId)) || {}));
+    if (mine && list.every(s => s === mine)) return;
+    fail(403, 'O encarregado só pode alterar os lançamentos do próprio setor.');
+  }
   if (userId !== req.user.id) fail(403, 'Você só pode alterar os seus próprios lançamentos.');
   if (req.user.is_blocked) fail(403, 'Os lançamentos estão bloqueados. Procure o administrador.');
 }
@@ -402,22 +428,23 @@ api.post('/employees', requireAuth, async (req, res) => {
   checkImage(data.photo_url, 'Foto');
   if (!Number.isInteger(Number(data.planning_year))) fail(400, 'Ano de referência inválido.');
   validateEmployee(data, { total_vacation_days: 30 });
-  assertCanEdit(req, data.user_id);
+  await assertCanEdit(req, data.user_id, [data.sector]);
 
   let id = body.id;
   await transaction(async () => {
     if (id) {
-      const existing = await one('SELECT user_id FROM employees WHERE id = ?', [id]);
+      const existing = await one('SELECT user_id, sector FROM employees WHERE id = ?', [id]);
       if (!existing) fail(404, 'Lançamento não encontrado.');
-      assertCanEdit(req, existing.user_id);
+      await assertCanEdit(req, existing.user_id, [existing.sector, data.sector]);
       const clash = await one('SELECT id FROM employees WHERE user_id = ? AND planning_year = ? AND id <> ?',
         [data.user_id, Number(data.planning_year), id]);
       if (clash) fail(409, `Já existe um lançamento deste militar para o ano ${data.planning_year}.`);
       await updateRow('employees', { id }, data);
     } else {
       // Um lançamento por militar por ano: reaproveita o existente.
-      const existing = await one('SELECT id FROM employees WHERE user_id = ? AND planning_year = ?',
+      const existing = await one('SELECT id, sector FROM employees WHERE user_id = ? AND planning_year = ?',
         [data.user_id, Number(data.planning_year)]);
+      if (existing) await assertCanEdit(req, data.user_id, [existing.sector, data.sector]);
       id = existing?.id || newId();
       await upsertRow('employees', { ...data, id });
     }
@@ -426,10 +453,10 @@ api.post('/employees', requireAuth, async (req, res) => {
 });
 
 api.patch('/employees/:id', requireAuth, async (req, res) => {
-  const existing = await one('SELECT user_id, total_vacation_days FROM employees WHERE id = ?', [req.params.id]);
+  const existing = await one('SELECT user_id, sector, total_vacation_days FROM employees WHERE id = ?', [req.params.id]);
   if (!existing) fail(404, 'Lançamento não encontrado.');
-  assertCanEdit(req, existing.user_id);
   const data = pick(req.body, EMPLOYEE_FIELDS.filter(f => f !== 'user_id'));
+  await assertCanEdit(req, existing.user_id, [existing.sector, data.sector]);
   checkImage(data.photo_url, 'Foto');
   validateEmployee(data, existing);
   await updateRow('employees', { id: req.params.id }, data);
@@ -437,9 +464,9 @@ api.patch('/employees/:id', requireAuth, async (req, res) => {
 });
 
 api.delete('/employees/:id', requireAuth, async (req, res) => {
-  const existing = await one('SELECT user_id FROM employees WHERE id = ?', [req.params.id]);
+  const existing = await one('SELECT user_id, sector FROM employees WHERE id = ?', [req.params.id]);
   if (!existing) return res.json({ ok: true });
-  assertCanEdit(req, existing.user_id);
+  await assertCanEdit(req, existing.user_id, [existing.sector]);
   await run('DELETE FROM employees WHERE id = ?', [req.params.id]);
   res.json({ ok: true });
 });
@@ -506,7 +533,7 @@ api.delete('/notices/:id', requireElevated, async (req, res) => {
   res.json({ ok: true });
 });
 
-api.get('/audit-logs', requireAdmin, async (_req, res) => {
+api.get('/audit-logs', requireGlobalAdmin, async (_req, res) => {
   res.json(rowsOut('audit_logs', await q('SELECT * FROM audit_logs ORDER BY timestamp DESC')));
 });
 
@@ -523,7 +550,7 @@ api.post('/audit-logs', requireAuth, async (req, res) => {
 });
 
 api.get('/suggestions', requireAuth, async (req, res) => {
-  const rows = isAdmin(req)
+  const rows = isGlobalAdmin(req)
     ? await q('SELECT * FROM suggestions ORDER BY created_at DESC')
     : await q('SELECT * FROM suggestions WHERE user_id = ? ORDER BY created_at DESC', [req.user.id]);
   res.json(rowsOut('suggestions', rows));
@@ -558,17 +585,23 @@ api.delete('/suggestions/:id', requireElevated, async (req, res) => {
 const PRINT_FIELDS = Object.keys(TABLES.print_preferences.columns)
   .filter(c => !['user_id', 'created_at', 'updated_at'].includes(c));
 
-function assertOwnerOrAdmin(req, userId) {
-  if (!isAdmin(req) && userId !== req.user.id) fail(403, 'Acesso negado.');
+async function assertOwnerOrAdmin(req, userId) {
+  if (userId === req.user.id || isGlobalAdmin(req)) return;
+  if (isAdmin(req)) {
+    const mine = await mySector(req);
+    const target = await getProfile(userId);
+    if (mine && target && effectiveSector(target) === mine) return;
+  }
+  fail(403, 'Acesso negado.');
 }
 
 api.get('/print-preferences/:userId', requireAuth, async (req, res) => {
-  assertOwnerOrAdmin(req, req.params.userId);
+  await assertOwnerOrAdmin(req, req.params.userId);
   res.json(rowOut('print_preferences', await one('SELECT * FROM print_preferences WHERE user_id = ?', [req.params.userId])));
 });
 
 api.put('/print-preferences/:userId', requireAuth, async (req, res) => {
-  assertOwnerOrAdmin(req, req.params.userId);
+  await assertOwnerOrAdmin(req, req.params.userId);
   await upsertRow('print_preferences', { ...pick(req.body, PRINT_FIELDS), user_id: req.params.userId });
   res.json({ ok: true });
 });
