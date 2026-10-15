@@ -40,7 +40,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const GlobalAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" />;
-  if (user?.role !== 'admin' || !user.viewAllSectors) return <Navigate to="/home" />;
+  if (user?.role !== 'admin' || !user.viewAllSectors || user.readOnly) return <Navigate to="/home" />;
   return <>{children}</>;
 };
 

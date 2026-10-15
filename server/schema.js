@@ -28,6 +28,7 @@ export const TABLES = {
       role: 'text',
       is_blocked: 'bool',
       view_all_sectors: 'bool',
+      read_only: 'bool',
       war_name: 'text',
       nip: 'text',
       category: 'text',
@@ -318,6 +319,12 @@ export const MIGRATIONS = [
     sql: `ALTER TABLE system_settings
       ADD COLUMN IF NOT EXISTS privacy_officer TEXT,
       ADD COLUMN IF NOT EXISTS privacy_contact TEXT;`,
+  },
+  {
+    version: 3,
+    // Direção (consulta): administrador que vê toda a OM sem alterar nada.
+    name: 'Perfil de consulta (Visão Global somente leitura)',
+    sql: `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS read_only BOOLEAN NOT NULL DEFAULT FALSE;`,
   },
 ];
 

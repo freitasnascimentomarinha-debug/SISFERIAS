@@ -105,15 +105,18 @@ export async function endElevation(req) {
   req.session.elevatedUntil = null;
 }
 
-/** Administrador com "Visão Global" (Direção / Departamento de Pessoal). */
-export const isGlobalAdmin = (req) => req.user?.role === 'admin' && !!req.user?.view_all_sectors;
+/** Administrador com "Visão Global" que gerencia o sistema (Departamento de Pessoal).
+ *  O perfil de consulta (read_only, Direção) vê toda a OM, mas não gerencia nada. */
+export const isGlobalAdmin = (req) => req.user?.role === 'admin' && !!req.user?.view_all_sectors && !req.user?.read_only;
+/** Vê toda a OM: administrador com Visão Global, inclusive o de consulta. */
+export const seesAllSectors = (req) => req.user?.role === 'admin' && !!req.user?.view_all_sectors;
 export const GLOBAL_ONLY = 'Área de Segurança restrita aos administradores com Visão Global (Departamento de Pessoal).';
 
 /** Administrador com Visão Global. O encarregado de setor não gerencia o sistema. */
 export function requireGlobalAdmin(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
-  if (!req.user.view_all_sectors) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
+  if (!isGlobalAdmin(req)) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
   next();
 }
 
@@ -121,7 +124,7 @@ export function requireGlobalAdmin(req, res, next) {
 export async function requireElevated(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Sessão expirada. Entre novamente.' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
-  if (!req.user.view_all_sectors) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
+  if (!isGlobalAdmin(req)) return res.status(403).json({ error: GLOBAL_ONLY, code: 'global_admin_required' });
   if (!isElevated(req)) {
     return res.status(403).json({
       error: 'Por segurança, confirme sua senha para continuar.',

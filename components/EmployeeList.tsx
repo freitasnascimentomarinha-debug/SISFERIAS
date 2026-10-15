@@ -1,15 +1,18 @@
 
 import React from 'react';
 import { Employee } from '../types';
-import { BadgeCheck, Calendar, Clock, CalendarX, CalendarCheck, User as UserIcon, Shield, AlertTriangle } from 'lucide-react';
+import { BadgeCheck, Calendar, Clock, CalendarX, CalendarCheck, User as UserIcon, Shield, AlertTriangle, Pencil, Printer } from 'lucide-react';
 import { format, startOfDay, isBefore, isAfter, differenceInDays, isValid, endOfDay } from 'date-fns';
 
 interface EmployeeListProps {
   employees: Employee[];
   planningYear?: number;
+  /** Atalhos para quem pode gerenciar (encarregado no seu setor, Dep. Pessoal em toda a OM). */
+  onEdit?: (emp: Employee) => void;
+  onPrint?: (emp: Employee) => void;
 }
 
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear }) => {
+const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear, onEdit, onPrint }) => {
   const now = startOfDay(new Date());
 
   // Janela de planejamento: 01/12/(Ano-1) até 30/11/(Ano)
@@ -94,10 +97,26 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, planningYear }) 
                 </div>
               </div>
               
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end gap-2">
                 <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase border shadow-sm ${getCategoryColor(emp.category)}`}>
                   {getCategoryLabel(emp.category)}
                 </span>
+                {(onEdit || onPrint) && (
+                  <div className="flex gap-1.5 no-print">
+                    {onEdit && (
+                      <button type="button" onClick={() => onEdit(emp)} title={`Editar férias de ${emp.warName}`}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-900 hover:text-white transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    {onPrint && (
+                      <button type="button" onClick={() => onPrint(emp)} title={`Imprimir papeleta de ${emp.warName}`}
+                        className="p-1.5 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-600 hover:text-white transition-colors">
+                        <Printer size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

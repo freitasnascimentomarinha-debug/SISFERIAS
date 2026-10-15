@@ -26,7 +26,7 @@ const Header: React.FC = () => {
 
   // Segurança: só o administrador com Visão Global (o encarregado de setor não gerencia o sistema).
   const navItems = allNavItems.filter(item =>
-    (!item.adminOnly || user.role === 'admin') && (!item.globalOnly || user.viewAllSectors));
+    (!item.adminOnly || user.role === 'admin') && (!item.globalOnly || (user.viewAllSectors && !user.readOnly)));
 
   return (
     <>
@@ -69,7 +69,7 @@ const Header: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-slate-900">Olá, {user.name.split(' ')[0]}</p>
-              <p className="text-xs text-slate-500 font-bold">{user.role !== 'admin' ? 'Usuário' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
+              <p className="text-xs text-slate-500 font-bold">{user.role !== 'admin' ? 'Usuário' : user.readOnly ? 'Direção (consulta)' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
             </div>
             <button
               type="button"
@@ -142,7 +142,7 @@ const Header: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white font-medium text-sm">{user.name.split(' ')[0]}</p>
-                  <p className="text-orange-200 text-xs">{user.role !== 'admin' ? 'Usuário' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
+                  <p className="text-orange-200 text-xs">{user.role !== 'admin' ? 'Usuário' : user.readOnly ? 'Direção (consulta)' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
                 </div>
               </div>
               <button

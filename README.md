@@ -194,6 +194,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.0.6** | **Direção (consulta):** novo nível de acesso para Diretor e Vice-Diretor, que veem toda a OM (Painel, Calendário, Justificativas, Trâmite e relatórios) sem alterar lançamentos de outras pessoas e sem acessar a Segurança. **Atalhos no Painel** para editar as férias e imprimir a papeleta de cada militar (lápis e impressora) e **Lançar / editar férias** no Diagnóstico, para o encarregado (no seu setor) e o Departamento de Pessoal. | Para a Direção: **Segurança → Visibilidade → Liberar Todos os Setores → Somente consulta (Direção)**. |
 | **3.0.5** | **Encarregado de setor sem acesso à gestão do sistema:** o administrador "Apenas Setor" passa a ver e alterar somente os lançamentos, cadastros e papeletas do próprio setor, e não entra mais na área de Segurança (contas, senhas, níveis de visão, prazo, configurações, exportação, backups e auditoria). Só o administrador com **Visão Global** (Departamento de Pessoal) gerencia o sistema e desbloqueia ou redefine senhas. Tudo verificado no servidor. | Se nenhum administrador tinha Visão Global, o sistema a concede aos administradores existentes; confira em **Segurança → Gestão de Contas** e deixe a Visão Global só para o Departamento de Pessoal. |
 | **3.0.4** | Calendário mensal: os dias do mês vizinho voltam a aparecer esmaecidos, com o número em cinza (mantendo o contraste mínimo exigido). | Nenhuma. |
 | **3.0.3** | **Acessibilidade (e-MAG / WCAG 2.1 AA):** contraste mínimo de 4,5:1 (paleta ajustada), rótulos associados a todos os campos, nome acessível nos botões com ícone, textos alternativos nas imagens e áreas com rolagem acessíveis pelo teclado. Verificação automática (axe-core) em todas as telas incluída nos testes. | Nenhuma. |
@@ -278,20 +279,20 @@ pages/, components/  Telas
 
 ### Permissões aplicadas pelo servidor
 
-| Ação | Usuário | Encarregado (admin "Apenas Setor") | Admin com Visão Global |
-|---|---|---|---|
-| Ver lançamentos de férias | Completos só os próprios; dos demais, apenas setor, categoria e datas (para os indicadores da tela inicial), sem nome, NIP, foto, justificativa ou NUP | Só os do próprio setor | Todos |
-| Ver cadastro de usuários | Completo só o próprio; dos demais, apenas o identificador e a categoria | Completos só os do próprio setor | Todos |
-| Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Só do próprio setor (não move ninguém para outro setor, nem a si mesmo) | Qualquer um |
-| Preferências de impressão | Só as próprias | Do próprio setor | Qualquer usuário |
-| Enviar sugestão | Sim | Sim | Sim |
-| Ver sugestões | Só as próprias | Só as próprias | Todas |
-| Área de Segurança: avisos, configurações, prazo, auditoria | Só leitura de avisos e configurações | Só leitura de avisos e configurações | Total |
-| Usuários (bloquear, papel, visibilidade, senha, desbloquear conta, excluir) | Não | Não | Sim |
-| Importar, exportar e backups | Não | Não | Sim |
-| Registro de operações | Não | Não | Sim (só leitura) |
+| Ação | Usuário | Encarregado (admin "Apenas Setor") | Direção (consulta) | Admin com Visão Global |
+|---|---|---|---|---|
+| Ver lançamentos de férias | Completos só os próprios; dos demais, apenas setor, categoria e datas (para os indicadores da tela inicial), sem nome, NIP, foto, justificativa ou NUP | Só os do próprio setor | Todos | Todos |
+| Ver cadastro de usuários | Completo só o próprio; dos demais, apenas o identificador e a categoria | Completos só os do próprio setor | Todos | Todos |
+| Criar, editar ou excluir lançamento | Só os próprios, e se não estiver bloqueado | Só do próprio setor (não move ninguém para outro setor, nem a si mesmo) | Só os próprios | Qualquer um |
+| Preferências de impressão | Só as próprias | Do próprio setor | Lê de todos; altera só as próprias | Qualquer usuário |
+| Enviar sugestão | Sim | Sim | Sim | Sim |
+| Ver sugestões | Só as próprias | Só as próprias | Só as próprias | Todas |
+| Área de Segurança: avisos, configurações, prazo, auditoria | Só leitura de avisos e configurações | Só leitura de avisos e configurações | Só leitura de avisos e configurações | Total |
+| Usuários (bloquear, papel, visibilidade, senha, desbloquear conta, excluir) | Não | Não | Não | Sim |
+| Importar, exportar e backups | Não | Não | Não | Sim |
+| Registro de operações | Não | Não | Não | Sim (só leitura) |
 
-O último administrador com Visão Global não pode ser rebaixado nem perder a Visão Global, e o admin não pode excluir a própria conta.
+A Direção (consulta) é um admin com Visão Global e `read_only = true`. O último administrador com Visão Global que gerencia o sistema não pode ser rebaixado, perder a Visão Global nem virar consulta, e o admin não pode excluir a própria conta.
 
 Outras regras do servidor:
 - **Prazo final de lançamento:** fica em `system_settings.vacation_deadline` (`server/deadline.js`). É verificado ao iniciar e a cada 10 minutos. Quando vence, bloqueia todos uma única vez por prazo, o que preserva as liberações manuais. Contas novas nascem bloqueadas enquanto o prazo vencido estiver em vigor.

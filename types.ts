@@ -40,6 +40,8 @@ export interface User {
   role: 'admin' | 'user';
   isBlocked?: boolean;
   viewAllSectors?: boolean;
+  /** Direção (consulta): vê toda a OM, sem alterar nada nem acessar a Segurança. */
+  readOnly?: boolean;
   hasPassword?: boolean;
   /** Senha provisória: o usuário precisa trocá-la antes de usar o sistema. */
   mustChangePassword?: boolean;

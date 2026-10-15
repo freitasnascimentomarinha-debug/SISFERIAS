@@ -20,6 +20,7 @@ interface AuthContextType {
   fetchProfile: (userId: string) => Promise<void>;
   toggleUserRole: (userId: string) => Promise<void>;
   setUserSectorVisibility: (userId: string, viewAllSectors: boolean) => Promise<{ success: boolean; errorMessage?: string }>;
+  setUserReadOnly: (userId: string, readOnly: boolean) => Promise<{ success: boolean; errorMessage?: string }>;
   unlockUser: (userId: string) => Promise<void>;
   setCurrentUser: (profile: any) => void;
 }
@@ -41,6 +42,7 @@ const mapProfile = (p: any): User => ({
   role: p.role as 'admin' | 'user',
   isBlocked: !!p.is_blocked,
   viewAllSectors: !!p.view_all_sectors,
+  readOnly: !!p.read_only,
   hasPassword: p.has_password !== false,
   mustChangePassword: !!p.must_change_password,
   accountLocked: !!p.account_locked,
@@ -271,6 +273,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Direção (consulta): Visão Global somente leitura.
+  const setUserReadOnly = async (userId: string, readOnly: boolean): Promise<{ success: boolean; errorMessage?: string }> => {
+    try {
+      const profile = await api.patch(`/profiles/${userId}`, readOnly ? { read_only: true, view_all_sectors: true } : { read_only: false });
+      const mapped = mapProfile(profile);
+      setUsers(prev => prev.map(u => (u.id === userId ? mapped : u)));
+      if (user?.id === userId) setUser(prev => (prev ? { ...prev, readOnly: mapped.readOnly, viewAllSectors: mapped.viewAllSectors } : prev));
+      return { success: true };
+    } catch (error) {
+      return { success: false, errorMessage: error instanceof Error ? error.message : 'Erro ao salvar.' };
+    }
+  };
+
   // Libera a conta bloqueada por tentativas inválidas de senha.
   const unlockUser = async (userId: string) => {
     const profile = await api.patch(`/profiles/${userId}`, { unlock: true });
@@ -303,6 +318,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       fetchProfile,
       toggleUserRole,
       setUserSectorVisibility,
+      setUserReadOnly,
       unlockUser,
       setCurrentUser
     }}>

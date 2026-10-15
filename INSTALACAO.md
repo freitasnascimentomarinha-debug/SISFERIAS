@@ -161,17 +161,23 @@ também libera a conta.
 
 ## 6. Quem administra e como funciona a área de Segurança
 
-Existem três níveis de conta:
+Existem quatro níveis de conta:
 
 | Nível | O que pode fazer |
 |---|---|
 | **Usuário** (Acesso Padrão) | Lançar e imprimir as próprias férias, ver avisos, enviar sugestões |
 | **Encarregado de setor** (Acesso Administrativo, **Apenas Setor**) | Tudo o que o usuário faz, mais Painel, Diagnóstico, Calendário, Justificativas, Trâmite e relatórios, **somente do efetivo do próprio setor**: corrige lançamentos e NUP e imprime papeletas desse efetivo. **Não entra na área de Segurança**, não muda a própria visão nem o próprio setor, não mexe em contas e senhas, não exporta a base e não vê a auditoria |
+| **Direção (consulta)** (Acesso Administrativo, **Visão Global somente leitura**) | Diretor e Vice-Diretor: veem **toda a OM** (Painel, Diagnóstico, Calendário, Justificativas, Trâmite e relatórios), mas **não alteram** lançamentos ou NUP de outras pessoas e **não entram na área de Segurança**. Lançam e imprimem as próprias férias normalmente |
 | **Administrador** (Acesso Administrativo, **Visão Global**) | Departamento de Pessoal: tudo, para toda a OM, inclusive a área de **Segurança** (contas, desbloqueio e redefinição de senhas, níveis de visão, prazo, configurações, backups e auditoria) |
 
 Para tornar alguém encarregado: em **Segurança → Gestão de Contas**, mude a conta para
-**Acesso Administrativo** (ela começa como **Apenas Setor**). Só use **Visão Global** para quem
-administra o sistema. O sistema não deixa retirar a Visão Global do último administrador que a tem.
+**Acesso Administrativo** (ela começa como **Apenas Setor**). Para a Direção, em **Segurança →
+Visibilidade**, clique em **Liberar Todos os Setores** e depois em **Somente consulta (Direção)**.
+Só deixe a **Visão Global** sem "somente consulta" para quem administra o sistema (Departamento de Pessoal).
+
+O encarregado e o Departamento de Pessoal editam as férias e imprimem a papeleta de outra pessoa
+pelos botões de lápis e impressora de cada militar no **Painel**, ou por **Lançar / editar férias**
+no **Diagnóstico**. O sistema não deixa retirar a Visão Global do último administrador que a tem.
 O setor do encarregado é o do seu lançamento de férias mais recente; se ele mudar de setor,
 o Departamento de Pessoal corrige o lançamento dele.
 
@@ -421,7 +427,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.5**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.6**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e

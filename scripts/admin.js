@@ -65,7 +65,7 @@ try {
       await setAuthPassword(id, config.adminEmail, password, { mustChange: true });
       await upsertRow('profiles', {
         id, email: config.adminEmail, name: 'Administrador', war_name: 'ADMIN', nip: 'admin',
-        role: 'admin', is_blocked: false, view_all_sectors: true,
+        role: 'admin', is_blocked: false, view_all_sectors: true, read_only: false,
       });
     });
     console.log(`Administrador criado. Login: admin  |  e-mail: ${config.adminEmail}`);
