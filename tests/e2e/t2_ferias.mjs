@@ -88,6 +88,15 @@ await step('formulário reabre com os dados salvos', async () => {
   await p.waitForTimeout(800);
   const dates = await p.locator('form input[type=date]').evaluateAll(els => els.map(e => e.value));
   check('ao reabrir, o formulário mostra as parcelas salvas', dates.join(',') === '2026-01-05,2026-01-19,2026-07-01,2026-07-15', dates.join(','));
+  // "Restam cumprir": direito (30) menos os dias já gozados até hoje.
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const gozados = [['2026-01-05', '2026-01-19', 15], ['2026-07-01', '2026-07-15', 15]].reduce((acc, [i, f, d]) => {
+    const ini = new Date(i + 'T00:00:00'), fim = new Date(f + 'T00:00:00');
+    if (hoje < ini) return acc;
+    return acc + (hoje > fim ? d : Math.round((hoje - ini) / 86400000) + 1);
+  }, 0);
+  const card = (await p.locator('div[title^="Total de dias do direito"]').textContent() || '').replace(/\s+/g, ' ').trim();
+  check('destaque "Restam cumprir" com o total que falta gozar', card.includes(`${30 - gozados}d`), card);
 });
 await step('Bruno altera a 2ª parcela', async () => {
   const p = S.bruno.page; await openForm(p); await p.waitForTimeout(600);

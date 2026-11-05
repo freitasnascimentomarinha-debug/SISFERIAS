@@ -492,6 +492,16 @@ const VacationForm: React.FC = () => {
               return { idx: idx + 1, daysUntil, status, displayValue };
             })
             .filter((x): x is { idx: number; daysUntil: number; status: 'upcoming' | 'today' | 'ongoing' | 'done'; displayValue: string } => x !== null);
+          // Dias já gozados (parcelas concluídas e a parte já cumprida da parcela em andamento).
+          const cumpridos = parcels.reduce((acc, p) => {
+            if (!p.startDate || !p.endDate) return acc;
+            const s = new Date(p.startDate + 'T00:00:00');
+            const e = new Date(p.endDate + 'T00:00:00');
+            if (!isValid(s) || !isValid(e) || today < s) return acc;
+            if (today > e) return acc + (Number(p.days) || 0);
+            return acc + differenceInDays(today, s) + 1;
+          }, 0);
+          const restamCumprir = Math.max(0, totalVacationDays - cumpridos);
           const alertParcels = parcelCountdowns.filter(c => c.status !== 'done' && c.daysUntil >= 0 && c.daysUntil <= 15);
           return (
             <>
@@ -530,6 +540,10 @@ const VacationForm: React.FC = () => {
                       </p>
                     </div>
                   ))}
+                  <div className="bg-white text-orange-800 rounded-xl px-4 py-1.5 text-center shadow-md ring-2 ring-white/60" title="Total de dias do direito que ainda faltam cumprir (gozar)">
+                    <p className="text-[9px] uppercase tracking-widest font-black leading-none">Restam cumprir</p>
+                    <p className="text-lg font-black leading-none mt-0.5">{restamCumprir}d</p>
+                  </div>
                 </div>
               </div>
               {alertParcels.length > 0 && (
