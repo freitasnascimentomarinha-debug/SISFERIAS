@@ -15,10 +15,6 @@ const P = S.admin.page;
 
 setSection('Item 1 — Papeleta sem internet');
 await step('papeleta formatada sem internet', async () => {
-  // Este ambiente NÃO alcança a internet (a CDN antiga falha aqui), então
-  // é um teste real de rede interna sem internet.
-  const cdn = await P.evaluate(() => fetch('https://cdn.tailwindcss.com', { mode: 'no-cors' }).then(() => 'acessível', () => 'inacessível'));
-  check('ambiente de teste sem acesso à internet (CDN inacessível)', cdn === 'inacessível', cdn);
   await unlockSecurity(P, ADMIN.pass); await tab(P, 'Usuários');
   await P.locator('tr', { hasText: 'Carla Dias' }).locator('button[title="Imprimir Papeleta"]').click();
   await P.waitForTimeout(1800);
@@ -26,23 +22,30 @@ await step('papeleta formatada sem internet', async () => {
   const popupPromise = P.waitForEvent('popup', { timeout: 8000 });
   await P.click('button:has-text("Imprimir Documento")');
   const popup = await popupPromise;
-  const external = [];
-  popup.on('request', r => { if (!r.url().startsWith(new URL(BASE).origin)) external.push(r.url()); });
   await popup.waitForTimeout(1500);
   const html = await popup.content();
-  const r = await popup.evaluate(() => ({
+  fs.writeFileSync(`${QA}/papeleta-corrigida.html`, html);
+  await popup.close();
+  const origin = new URL(BASE).origin;
+  const externos = [...html.matchAll(/(?:href|src)="(https?:[^"]+)"/g)].map(m => m[1]).filter(u => !u.startsWith(origin));
+  check('papeleta não depende de internet (nenhum endereço externo)', !html.includes('cdn.tailwindcss.com') && externos.length === 0, externos.join(', '));
+
+  // Rede interna sem internet: abre a mesma papeleta num navegador que bloqueia
+  // qualquer endereço externo, com ou sem internet no ambiente de teste.
+  const ctx = await browser.newContext({ viewport: { width: 1200, height: 850 } });
+  const bloqueados = [];
+  await ctx.route(url => /^https?:$/.test(url.protocol) && url.origin !== origin, route => { bloqueados.push(route.request().url()); return route.abort('internetdisconnected'); });
+  const pg = await ctx.newPage();
+  await pg.goto(BASE + '/api/health');
+  const cdn = await pg.evaluate(() => fetch('https://cdn.tailwindcss.com', { mode: 'no-cors' }).then(() => 'acessível', () => 'inacessível'));
+  check('navegador de teste sem acesso à internet (CDN inacessível)', cdn === 'inacessível', cdn);
+  await pg.setContent(html.replace('onload="window.print()"', ''), { waitUntil: 'load' });
+  const r = await pg.evaluate(() => ({
     display: getComputedStyle(document.querySelector('.column .flex')).display,
     font: getComputedStyle(document.querySelector('.text-\\[12px\\]')).fontSize,
   }));
-  fs.writeFileSync(`${QA}/papeleta-corrigida.html`, html);
-  await popup.close();
-  check('papeleta não depende mais de internet (sem cdn.tailwindcss.com)', !html.includes('cdn.tailwindcss.com') && external.length === 0, external.join(', '));
   check('SEM internet, o layout da papeleta é aplicado', r.display === 'flex', `display = ${r.display}`);
   check('SEM internet, tamanhos de fonte da papeleta aplicados', r.font === '12px', `font-size = ${r.font}`);
-  const ctx = await browser.newContext({ viewport: { width: 1200, height: 850 } });
-  const pg = await ctx.newPage();
-  await pg.goto(BASE + '/api/health');
-  await pg.setContent(html.replace('onload="window.print()"', ''), { waitUntil: 'load' });
   await pg.screenshot({ path: `${SHOTS}/item1-papeleta-sem-internet.png` });
   await ctx.close();
 });

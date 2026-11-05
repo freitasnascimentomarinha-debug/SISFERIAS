@@ -415,11 +415,15 @@ const PrintVacation: React.FC = () => {
             .column { flex: 1; border: 1px solid #000; padding: 6mm; position: relative; display: flex; flex-direction: column; }
             .text-red-navy { color: #b91c1c !important; }
             .border-dotted-custom { border-bottom: 1px dotted #444; }
+            /* Os 4 campos de assinatura têm o mesmo espaço em branco acima da linha; a sobra
+               da coluna é distribuída entre os blocos, sem empurrar tudo para um só lugar. */
+            .column-main { justify-content: space-between; }
+            .sig-space { height: 14mm; }
           </style>
         </head>
         <body onload="window.print()">
           <div class="page-landscape">
-            <div class="column">
+            <div class="column column-main">
               <div class="flex justify-between items-start mb-2">
                 <div class="text-left">
                    <p class="text-[12px] font-bold text-red-navy italic uppercase">Faltam ${remainingDays} dias</p>
@@ -446,7 +450,7 @@ const PrintVacation: React.FC = () => {
                 <span class="text-[12px] font-bold text-black border-b border-black px-2">${nup.trim()}</span>
               </div>
 
-              <div class="text-center my-4">
+              <div class="text-center mt-4">
                 <h2 class="text-[14px] font-bold border-b border-black inline-block px-8 py-0.5 uppercase">${ship}</h2>
                 <p class="text-[8px] text-black uppercase mt-0.5 font-bold">Órgão</p>
               </div>
@@ -454,7 +458,8 @@ const PrintVacation: React.FC = () => {
               <div class="flex items-end justify-between mb-4 gap-6">
                 <div class="w-1/2 text-left pl-2">
                   <div class="inline-block min-w-[240px] text-center">
-                    <span class="border-b border-black w-full inline-block h-[16px]"></span>
+                    <div class="sig-space"></div>
+                    <span class="border-b border-black w-full inline-block"></span>
                     <p class="text-[9px] font-bold text-black uppercase mt-1">${viceDiretor.rank} ${viceDiretor.name}</p>
                     <p class="text-[7px] uppercase">${viceDiretor.function}</p>
                   </div>
@@ -531,14 +536,16 @@ const PrintVacation: React.FC = () => {
                   <span class="border-b border-black min-w-[72px] text-center font-bold text-black uppercase py-0.5 text-[12px]">${isDesmuniciado}</span>
               </div>
 
-              <div class="grid grid-cols-2 gap-6 mt-auto text-center">
+              <div class="grid grid-cols-2 gap-6 text-center">
                 <div class="flex-1 text-center">
+                  <div class="sig-space"></div>
                   <div class="border-t border-black pt-1">
                     <p class="text-[9px] font-bold text-black uppercase">${encarregadoDep.rank} ${encarregadoDep.name}</p>
                     <p class="text-[7px] uppercase">${encarregadoDep.function}</p>
                   </div>
                 </div>
                 <div class="flex-1 text-center">
+                  <div class="sig-space"></div>
                   <div class="border-t border-black pt-1">
                     <p class="text-[9px] font-bold text-black uppercase">${encarregado.rank} ${encarregado.name}</p>
                     <p class="text-[7px] uppercase">${encarregado.function}</p>
@@ -563,9 +570,10 @@ const PrintVacation: React.FC = () => {
               </ol>
 
               <div class="mt-auto pt-6 text-center">
-                <div class="mb-10 text-[10px] font-bold uppercase tracking-tight">
+                <div class="text-[10px] font-bold uppercase tracking-tight">
                   Grad: ${employee.rank} &nbsp;&nbsp;&nbsp;&nbsp; Esp: ${specialization} &nbsp;&nbsp;&nbsp;&nbsp; NIP: ${employee.nip}
                 </div>
+                <div class="sig-space"></div>
                 <div class="border-t border-black w-[75%] mx-auto pt-1">
                    <p class="text-[9px] font-bold uppercase leading-none">Assinatura do Militar</p>
                    <p class="text-[8px] text-slate-400">(${employee.warName})</p>
