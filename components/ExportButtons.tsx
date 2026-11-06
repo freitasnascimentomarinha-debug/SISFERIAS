@@ -383,7 +383,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
       <button 
         type="button"
         onClick={generatePDFReport}
-        className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-black shadow-lg shadow-slate-200"
+        className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-slate-50"
       >
         <FileDown size={18} /> Gerar Relatório (PDF)
       </button>
@@ -391,7 +391,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({ employees, filters, plann
         type="button"
         onClick={() => void exportExcel()}
         disabled={excelBusy}
-        className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-green-700 disabled:opacity-60"
+        className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold flex items-center gap-2 transition-all hover:bg-slate-50 disabled:opacity-60"
       >
         <FileSpreadsheet size={18} /> {excelBusy ? 'Gerando...' : 'Exportar Excel'}
       </button>

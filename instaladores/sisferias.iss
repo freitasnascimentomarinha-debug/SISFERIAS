@@ -67,6 +67,7 @@ Filename: "{app}\SISFERIAS.url"; Section: "InternetShortcut"; Key: "URL"; String
 [Icons]
 Name: "{group}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"; IconFilename: "{app}\sisferias.ico"
 Name: "{group}\Pasta do SISFERIAS"; Filename: "{app}"
+Name: "{group}\Manual do Usuário"; Filename: "{app}\Manual_do_Usuario_SISFERIAS.pdf"
 Name: "{group}\Guia de instalação"; Filename: "{app}\INSTALACAO.md"
 Name: "{group}\Desinstalar o SISFERIAS"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"; IconFilename: "{app}\sisferias.ico"; Tasks: atalho
@@ -77,6 +78,7 @@ Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""S
 Filename: "{app}\runtime\node.exe"; Parameters: """{app}\scripts\servico.js"" instalar"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; StatusMsg: "Instalando o serviço e iniciando o SISFERIAS. Na primeira vez o banco de dados é criado e isso pode levar até 2 minutos..."
 Filename: "{win}\notepad.exe"; Parameters: """{app}\data\ADMIN_INICIAL.txt"""; Description: "Ver a senha provisória do administrador (primeiro acesso)"; Flags: postinstall skipifsilent nowait; Check: ArquivoAdminExiste
 Filename: "{app}\SISFERIAS.url"; Description: "Abrir o SISFERIAS no navegador"; Flags: postinstall shellexec skipifsilent nowait
+Filename: "{app}\Manual_do_Usuario_SISFERIAS.pdf"; Description: "Abrir o Manual do Usuário"; Flags: postinstall shellexec skipifsilent nowait unchecked
 
 [UninstallRun]
 Filename: "{app}\runtime\node.exe"; Parameters: """{app}\scripts\servico.js"" remover"; WorkingDir: "{app}"; Flags: runhidden waituntilterminated; RunOnceId: "RemoverServico"

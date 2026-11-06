@@ -37,6 +37,9 @@ for (const item of items) {
   const src = path.join(root, item);
   if (fs.existsSync(src)) fs.cpSync(src, path.join(out, item), { recursive: true });
 }
+// Manual do Usuário (PDF) na raiz do pacote: vai junto nos instaladores e nos .zip.
+const manual = path.join(root, 'docs', 'Manual_do_Usuario_SISFERIAS.pdf');
+if (fs.existsSync(manual)) fs.copyFileSync(manual, path.join(out, 'Manual_do_Usuario_SISFERIAS.pdf'));
 
 console.log(`Instalando dependências de execução (${os}-x64)...`);
 // --os/--cpu: baixa os binários do PostgreSQL da plataforma de destino.
