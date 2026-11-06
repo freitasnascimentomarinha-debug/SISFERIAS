@@ -180,7 +180,7 @@ await step('requerimento de férias (Word)', async () => {
   await p.waitForSelector('[role=dialog][aria-labelledby=req-titulo]');
   check('botão Requerimento abre a janela com os dados do militar',
     (await p.inputValue('#req-nome')) === 'Bruno Costa' && (await p.inputValue('#req-nip')) === '20000002');
-  await p.fill('#req-nup', '63341.000563/2026-02');
+  await p.fill('#req-nup', '12345.000001/2026-01');
   await p.locator('[role=radiogroup][aria-label^="Adiantamento"] label:has-text("Sim")').click();
   await p.locator('[role=radiogroup][aria-label^="Remuneração"] label:has-text("Sim")').click();
   // Parcela de 05/01/2026: exercício de pagamento dez/2025–nov/2026 → 13º de 2026.
@@ -196,7 +196,7 @@ await step('requerimento de férias (Word)', async () => {
   const texto = xml.replace(/<[^>]+>/g, '');
   check('requerimento baixado em Word (.docx)', file.endsWith('.docx') && texto.includes('REQUERIMENTO'), download.suggestedFilename());
   check('requerimento com nome, NIP formatado e período da parcela',
-    texto.includes('BRUNO COSTA') && texto.includes('20.0000.02') && texto.includes('63341.000563/2026-02') && /\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}/.test(texto));
+    texto.includes('BRUNO COSTA') && texto.includes('20.0000.02') && texto.includes('12345.000001/2026-01') && /\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}/.test(texto));
   check('requerimento com as escolhas Sim/Não',
     texto.includes('( S ) Adiantamento do Adicional Natalino do ano de 2027 (50%)') && texto.includes('( S ) Adicional de Férias (1/3)') && texto.includes('( S ) Remuneração de Férias (70%)'));
   check('requerimento traz o brasão', execSync(`unzip -l "${file}"`).toString().includes('word/media/'));

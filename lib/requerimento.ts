@@ -36,7 +36,7 @@ export const exercicioPagamento = (isoData: string) => {
 /** 1SG → 1ºSG; CB → CB. */
 export const formatarPosto = (posto: string) => (posto || '').trim().toUpperCase().replace(/^(\d)\s*º?\s*/, '$1º');
 
-/** 05030692 → 05.0306.92 (outros formatos ficam como estão). */
+/** 12345678 → 12.3456.78 (outros formatos ficam como estão). */
 export const formatarNip = (nip: string) => {
   const d = (nip || '').replace(/\D/g, '');
   return d.length === 8 ? `${d.slice(0, 2)}.${d.slice(2, 6)}.${d.slice(6)}` : (nip || '').trim();
