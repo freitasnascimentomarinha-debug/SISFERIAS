@@ -13,7 +13,7 @@ import pg from 'pg';
 import { TABLES, MIGRATIONS, APPEND_ONLY_TABLES } from './schema.js';
 import { config } from './config.js';
 import {
-  encrypt, decrypt, blindIndex, hashPassword, passwordProblems, loadMasterKey, useMasterKey, keyFingerprint,
+  encrypt, decrypt, blindIndex, hashPassword, verifyPassword, passwordProblems, loadMasterKey, useMasterKey, keyFingerprint,
 } from './crypto.js';
 
 export const nowIso = () => new Date().toISOString();
@@ -390,6 +390,7 @@ export async function seed() {
     await run(`UPDATE profiles SET view_all_sectors = TRUE, read_only = FALSE
       WHERE role = 'admin' AND NOT EXISTS (
         SELECT 1 FROM profiles WHERE role = 'admin' AND view_all_sectors AND NOT read_only)`);
+    await limparSenhaInicial();
     return;
   }
 
@@ -432,11 +433,31 @@ export async function seed() {
     `Login (NIP): admin    ou e-mail: ${email}`,
     `Senha provisória: ${password}`,
     '',
-    'No primeiro acesso o sistema pedirá uma nova senha. Depois, apague este arquivo.',
+    'No primeiro acesso o sistema pedirá uma nova senha. Este arquivo é apagado sozinho quando ela for trocada.',
     'Guia completo: INSTALACAO.md',
   ].join('\n');
   if (!config.adminPassword) {
     fs.writeFileSync(path.join(config.dataDir, 'ADMIN_INICIAL.txt'), info + '\n', { mode: 0o600 });
   }
   console.log('\n' + '='.repeat(60) + '\n' + info + '\n' + '='.repeat(60) + '\n');
+}
+
+export const ADMIN_INICIAL_FILE = () => path.join(config.dataDir, 'ADMIN_INICIAL.txt');
+
+/**
+ * Apaga data/ADMIN_INICIAL.txt quando a senha provisória gravada nele não vale mais
+ * (o administrador já a trocou, ou ela foi redefinida). Assim uma atualização ou o
+ * instalador não mostram uma senha que não funciona. Devolve true se apagou.
+ */
+export async function limparSenhaInicial() {
+  const file = ADMIN_INICIAL_FILE();
+  let texto;
+  try { texto = fs.readFileSync(file, 'utf8'); } catch { return false; }
+  const senha = texto.match(/^Senha provisória: (.+)$/m)?.[1]?.trim();
+  const login = texto.match(/^Login \(NIP\): (\S+)/m)?.[1] || 'admin';
+  const admin = await findAuthByLogin(login);
+  const valida = !!(senha && admin && await verifyPassword(admin.id, senha, admin.password_hash));
+  if (valida) return false;
+  fs.rmSync(file, { force: true });
+  return true;
 }
