@@ -168,22 +168,21 @@ Windows) e roda em segundo plano, sem janela. O atalho **SISFERIAS** só abre o 
 fechar o navegador não desliga o sistema.
 
 - **No próprio servidor:** abra <https://localhost:3000>.
-- **Nos outros computadores e no celular:** use o **IP do servidor**, e não `localhost`
-  (no celular, `localhost` é o próprio celular). Exemplo: `https://192.168.0.15:3000`.
+- **Nos outros computadores da rede:** use o **nome ou o IP do servidor**, e não `localhost`
+  (em outro computador, `localhost` é o próprio computador). Exemplo: `https://192.168.0.15:3000`.
   - Para descobrir o IP no Windows: tecla Windows → `cmd` → `ipconfig` → **Endereço IPv4** do adaptador
     em uso (Wi-Fi ou Ethernet). No Ubuntu: `hostname -I`. O instalador do Ubuntu também mostra o endereço no final.
   - Digite o endereço completo, com **`https://`** e **`:3000`**.
 
-**Para os outros aparelhos conseguirem acessar:**
+**Para os outros computadores conseguirem acessar:**
 - O servidor precisa estar **ligado e conectado à rede**. Se ele desligar, hibernar ou entrar em suspensão,
   o sistema sai do ar até ele voltar. No Windows, em **Configurações → Sistema → Energia → Tela e suspensão**,
   ponha **"Nunca"** em "Colocar o dispositivo em suspensão".
-- No Windows, a rede deve estar como **Rede privada** (Configurações → Rede e Internet → Wi-Fi ou Ethernet →
-  clique na rede → "Rede privada"). Em rede "pública", o Windows costuma bloquear o acesso de outros aparelhos.
-- O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Ubuntu). Se houver
-  **antivírus com firewall próprio** (Avast, McAfee, Norton…), libere a porta 3000 ou o SISFERIAS nele.
-- Redes de visitante e alguns roteadores domésticos usam **"isolamento de clientes"**, que impede um aparelho
-  de enxergar o outro. Nesse caso o acesso pela rede não funciona; na rede interna da OM isso não acontece.
+- No Windows, a rede do servidor deve estar como **rede de domínio** ou **rede privada**. Em rede "pública", o
+  Windows bloqueia o acesso vindo de outros computadores (Configurações → Rede e Internet → clique na rede →
+  "Rede privada").
+- O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Ubuntu). Se a OM usar
+  **antivírus ou firewall corporativo**, a Divisão de Informática deve liberar a porta 3000 do servidor na rede interna.
 
 **Conferir se o serviço está funcionando:** no Windows, abra o Prompt de Comando como administrador e execute
 `C:\SISFERIAS\sisferias.cmd servico status` (ou procure a tarefa **SISFERIAS** no Agendador de Tarefas,
@@ -546,7 +545,7 @@ No **Painel**, o botão verde **Exportar Excel** gera uma planilha com o que est
 
 ### Fotos e logo
 
-Pode enviar fotos direto do celular, mesmo grandes: o sistema reduz a imagem automaticamente antes de gravar (foto até 400 pixels, logo até 600 pixels). Isso mantém o banco de dados leve.
+Pode enviar fotos grandes: o sistema reduz a imagem automaticamente antes de gravar (foto até 400 pixels, logo até 600 pixels). Isso mantém o banco de dados leve.
 
 ---
 
