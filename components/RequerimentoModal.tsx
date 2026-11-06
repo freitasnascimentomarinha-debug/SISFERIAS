@@ -115,7 +115,7 @@ const RequerimentoModal: React.FC<Props> = ({ employee, om, especialidade, ano, 
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label htmlFor="req-nup" className="text-[10px] font-bold text-slate-500 uppercase">NUP do requerimento (SIGAD)</label>
-              <input id="req-nup" autoComplete="off" className={inputClass} placeholder="Ex: 63341.000563/2026-02" value={nup} onChange={e => setNup(e.target.value)} />
+              <input id="req-nup" autoComplete="off" className={inputClass} placeholder="Ex: 12345.000001/2026-01" value={nup} onChange={e => setNup(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label htmlFor="req-ao" className="text-[10px] font-bold text-slate-500 uppercase">Ao</label>
