@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, Sun, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X, MessageSquare, Key } from 'lucide-react';
+import icone from '../assets/marca/icone.webp';
+import { LogOut, LayoutDashboard, Calendar, FileText, ShieldAlert, PlusCircle, Home, Menu, X, MessageSquare, Key } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -41,9 +42,7 @@ const Header: React.FC = () => {
               <Menu size={24} />
             </button>
 
-            <div className="p-2 bg-orange-100 rounded-lg text-orange-500">
-              <Sun size={24} />
-            </div>
+            <img src={icone} alt="" className="w-10 h-10 rounded-xl shadow-sm" />
             <div>
               <h1 className="font-bold text-lg text-slate-900 leading-tight">SISFERIAS</h1>
               <p className="text-[10px] font-bold text-orange-600 tracking-widest">MARINHA DO BRASIL</p>
@@ -104,7 +103,7 @@ const Header: React.FC = () => {
           <nav className="absolute top-0 bottom-0 left-0 w-64 bg-orange-500 p-4 shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
             <div className="flex items-center justify-between mb-8 border-b border-orange-400 pb-4">
               <div className="flex items-center gap-2 text-white">
-                <Sun size={24} className="text-white" />
+                <img src={icone} alt="" className="w-8 h-8 rounded-lg ring-2 ring-white/40" />
                 <div>
                   <h2 className="font-bold text-lg leading-tight">SISFERIAS</h2>
                   <p className="text-[10px] font-bold opacity-75 tracking-widest">MARINHA DO BRASIL</p>

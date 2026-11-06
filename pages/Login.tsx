@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sun, Mail, Lock, Eye, EyeOff, Info, User } from 'lucide-react';
+import logo from '../assets/marca/logo-sisferias.webp';
+import { Mail, Lock, Eye, EyeOff, Info, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PrivacyNoticeModal } from '../components/PrivacyNotice';
 
@@ -33,11 +34,9 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 relative">
       <div className="mb-8 text-center">
-        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-orange-400 mx-auto mb-4">
-          <Sun size={32} />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">SISFERIAS</h1>
-        <p className="text-slate-500">Gerencie suas férias de forma simples</p>
+        <h1 className="sr-only">SISFERIAS</h1>
+        <img src={logo} alt="SISFÉRIAS" className="h-32 md:h-36 w-auto mx-auto mb-3 drop-shadow-sm" />
+        <p className="text-slate-600 font-semibold">Suas férias bem organizadas!</p>
       </div>
 
       <div className="w-full max-w-md bg-white rounded-[32px] shadow-2xl border border-slate-100 p-10 relative z-50">

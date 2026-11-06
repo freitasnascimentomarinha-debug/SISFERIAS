@@ -16,7 +16,22 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/opt/sisferias" "$TMP/DEBIAN"
 (cd "$SRC" && tar --exclude=./data -cf - .) | (cd "$TMP/opt/sisferias" && tar -xf -)
 
-TAMANHO="$(du -sk "$TMP/opt" | cut -f1)"
+# Atalho e ícone para quem usa o Ubuntu com área de trabalho (abre o sistema no navegador).
+RAIZ="$(cd "$(dirname "$0")" && pwd)"
+mkdir -p "$TMP/usr/share/applications" "$TMP/usr/share/icons/hicolor/256x256/apps"
+cp "$RAIZ/marca/sisferias.png" "$TMP/usr/share/icons/hicolor/256x256/apps/sisferias.png"
+cat > "$TMP/usr/share/applications/sisferias.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=SISFERIAS
+Comment=Planejamento e controle de férias
+Exec=xdg-open https://localhost:3000
+Icon=sisferias
+Terminal=false
+Categories=Office;
+DESKTOP
+
+TAMANHO="$(du -sk "$TMP/opt" "$TMP/usr" | awk '{s+=$1} END {print s}')"
 cat > "$TMP/DEBIAN/control" <<CONTROL
 Package: sisferias
 Version: $VERSAO
