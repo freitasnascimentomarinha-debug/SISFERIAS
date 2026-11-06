@@ -48,7 +48,7 @@ Na primeira execução é criado um administrador:
 - **Login:** `admin` (ou `admin@sisferias.local`)
 - **Senha provisória:** aparece na janela e fica gravada em `data/ADMIN_INICIAL.txt`
 
-No primeiro acesso o sistema exige uma nova senha. Depois, apague o arquivo `ADMIN_INICIAL.txt` e **guarde uma cópia de `data/chave-dados.key`** fora do servidor: sem ela os dados cifrados não podem ser lidos.
+No primeiro acesso o sistema exige uma nova senha. Assim que ela é trocada, o arquivo `ADMIN_INICIAL.txt` é apagado sozinho (numa atualização ele também é apagado se a senha provisória não valer mais). **Guarde uma cópia de `data/chave-dados.key`** fora do servidor: sem ela os dados cifrados não podem ser lidos.
 
 ### Quem acessa a área de Segurança
 
@@ -201,6 +201,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.1.6** | **Senha provisória do administrador:** o arquivo `data/ADMIN_INICIAL.txt` é apagado sozinho quando a senha provisória é trocada, e também ao iniciar o sistema se ela não valer mais. Assim, ao atualizar uma instalação em que o administrador já trocou a senha, o instalador não mostra mais uma senha antiga que não funciona. | Nenhuma: a atualização apaga o arquivo antigo, se houver. |
 | **3.1.5** | **Volta sozinho depois de desligar o computador:** o banco embutido remove a trava deixada por um desligamento sem encerrar o sistema (no Windows, o número do processo antigo pode passar a outro programa e o PostgreSQL se recusava a iniciar); a tarefa do Windows passa a iniciar também quando alguém entra no Windows (com a "Inicialização rápida", desligar e ligar não dispara o gatilho de inicialização). Testado no Windows simulando a queda: o serviço volta sozinho. | Execute o instalador da versão nova (a tarefa do Windows é recriada com o gatilho novo). |
 | **3.1.4** | **Manual do Usuário junto com o sistema:** o PDF vem no instalador do Windows (menu Iniciar → "Manual do Usuário" e opção "Abrir o Manual do Usuário" no fim da instalação), no `.deb` (menu de aplicativos → "Manual do SISFERIAS"), nos `.zip` e no `SISFERIAS-completo.zip`. Painel: os botões Gerar Relatório (PDF), Exportar Excel e Exportar CSV passam a ter o mesmo estilo (fundo branco). Cabeçalho: o logo não sobrepõe mais o menu; para administradores, o menu completo aparece em telas a partir de 1360 px de largura e, abaixo disso, fica no botão ☰ (menu lateral). | Nenhuma. |
 | **3.1.3** | **Download com um clique:** links diretos no README para o instalador da última versão (Windows e Ubuntu) e o novo **SISFERIAS-completo.zip** (os dois instaladores, o guia e um LEIA-ME: extrair e clicar). Os exemplos de NUP e NIP nas telas, nos testes e no código passam a ser números fictícios (`12345.000001/2026-01`, `12345678`). | Nenhuma. |

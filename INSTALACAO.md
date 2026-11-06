@@ -222,7 +222,8 @@ Siga esta sequência:
 
 1. Entre no sistema com o login `admin` e a senha provisória.
 2. O sistema pede **imediatamente uma nova senha** (troca obrigatória da senha provisória).
-3. **Apague o arquivo `data\ADMIN_INICIAL.txt`.**
+3. Ao trocar a senha, o arquivo `data\ADMIN_INICIAL.txt` é **apagado sozinho**: a senha provisória não vale mais.
+   Numa atualização, o instalador só oferece "Ver a senha provisória" se ela ainda não foi trocada.
 4. **Guarde uma cópia do arquivo `data\chave-dados.key`** em local seguro, fora do servidor (seção 8).
 5. Em **Segurança → Sistema → Proteção de Dados (LGPD)**, informe o **Encarregado pelo tratamento
    de dados** (o cargo ou a função, não o nome de uma pessoa) e um **contato institucional** (e-mail
@@ -533,7 +534,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.5**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.6**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e

@@ -91,6 +91,8 @@ Type: files; Name: "{app}\SISFERIAS.url"
 pt.FinishedLabel=O SISFERIAS foi instalado e já está funcionando como serviço (inicia junto com o Windows).%n%nNos outros computadores da rede, acesse https://NOME-OU-IP-DESTE-COMPUTADOR:{#Porta}%n%nGUARDE UMA CÓPIA do arquivo C:\SISFERIAS\data\chave-dados.key fora deste computador.
 
 [Code]
+{ O sistema apaga o arquivo ao iniciar quando a senha provisória já foi trocada:
+  numa atualização a opção só aparece se ela ainda vale. }
 function ArquivoAdminExiste: Boolean;
 begin
   Result := FileExists(ExpandConstant('{app}\data\ADMIN_INICIAL.txt'));

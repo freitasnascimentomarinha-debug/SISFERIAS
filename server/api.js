@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import {
   q, one, run, rowOut, rowsOut, upsertRow, updateRow, transaction, newId, nowIso, addAudit,
-  findAuthByLogin, setAuthPassword, dbInfo,
+  findAuthByLogin, setAuthPassword, dbInfo, limparSenhaInicial,
 } from './db.js';
 import {
   createSession, destroySession, destroyUserSessions, requireAuth, requireGlobalAdmin, requireElevated, isGlobalAdmin, seesAllSectors,
@@ -202,6 +202,8 @@ api.post('/auth/password', requireAuth, async (req, res) => {
   await setAuthPassword(req.user.id, decrypt(auth.email), password);
   // As demais sessões abertas com a senha antiga são encerradas.
   await destroyUserSessions(req.user.id, { exceptTokenHash: req.session.tokenHash });
+  // A senha provisória do 1º acesso deixou de valer: o arquivo com ela é apagado.
+  await limparSenhaInicial().catch(() => {});
   res.json({ ok: true, user: await getProfile(req.user.id) });
 });
 
