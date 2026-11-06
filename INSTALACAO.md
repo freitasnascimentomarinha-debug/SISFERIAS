@@ -72,7 +72,7 @@ Os arquivos ficam na página **Releases** do GitHub do projeto:
    - cria o atalho **SISFERIAS** na área de trabalho e no menu Iniciar (abre o sistema no navegador);
    - na primeira instalação, abre o arquivo com a **senha provisória do administrador** (seção 4).
 
-Telas do assistente (capturadas num Windows real, na versão 3.1.2):
+Telas do assistente (capturadas num Windows real):
 
 | | |
 |---|---|
