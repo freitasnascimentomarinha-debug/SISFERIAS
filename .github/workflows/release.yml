@@ -5,8 +5,8 @@
 #  - sisferias-instalador-windows.exe / sisferias-instalador-ubuntu.deb: os mesmos
 #    instaladores com nome fixo, para o link "releases/latest/download/..." do
 #    README baixar sempre a última versão com um clique
-#  - SISFERIAS-completo.zip: os dois instaladores, o guia de instalação e um
-#    LEIA-ME (extrair e clicar)
+#  - SISFERIAS-completo.zip: os dois instaladores, o Manual do Usuário, o guia de
+#    instalação e um LEIA-ME (extrair e clicar)
 # Todos com o Node.js e o PostgreSQL embutidos (nada para instalar antes).
 # Antes de publicar, os testes rodam e os dois instaladores são instalados e
 # desinstalados de verdade (workflow "Instaladores").
@@ -73,6 +73,7 @@ jobs:
           cp sisferias-instalador-windows.exe "$P/Windows/"
           cp sisferias-instalador-ubuntu.deb "$P/Ubuntu/"
           cp ../codigo/INSTALACAO.md "$P/"
+          cp ../codigo/docs/Manual_do_Usuario_SISFERIAS.pdf "$P/"
           cp -r ../codigo/docs/capturas-instalador "$P/docs/"
           cat > "$P/LEIA-ME.txt" <<EOF
           SISFERIAS ${VERSAO} - Sistema de Planejamento e Controle de Férias
@@ -90,7 +91,8 @@ jobs:
           Não é preciso instalar mais nada nem ter internet.
           No final aparece a senha provisória do administrador.
           GUARDE UMA CÓPIA do arquivo data/chave-dados.key fora do servidor.
-          Guia completo: INSTALACAO.md
+          Manual do Usuário: Manual_do_Usuario_SISFERIAS.pdf
+          Guia de instalação: INSTALACAO.md
           EOF
           sed -i 's/^          //' "$P/LEIA-ME.txt"
           zip -qr SISFERIAS-completo.zip "$P"

@@ -30,6 +30,18 @@ Icon=sisferias
 Terminal=false
 Categories=Office;
 DESKTOP
+if [ -f "$SRC/Manual_do_Usuario_SISFERIAS.pdf" ]; then
+cat > "$TMP/usr/share/applications/sisferias-manual.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Manual do SISFERIAS
+Comment=Manual do Usuário do SISFERIAS (PDF)
+Exec=xdg-open /opt/sisferias/Manual_do_Usuario_SISFERIAS.pdf
+Icon=sisferias
+Terminal=false
+Categories=Office;
+DESKTOP
+fi
 
 TAMANHO="$(du -sk "$TMP/opt" "$TMP/usr" | awk '{s+=$1} END {print s}')"
 cat > "$TMP/DEBIAN/control" <<CONTROL

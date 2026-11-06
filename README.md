@@ -25,7 +25,7 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 |---|---|
 | **Windows** | **[sisferias-instalador-windows.exe](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-windows.exe)**: dois cliques e siga o assistente |
 | **Ubuntu** | **[sisferias-instalador-ubuntu.deb](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-ubuntu.deb)**: dois cliques, ou `sudo apt install ./sisferias-instalador-ubuntu.deb` |
-| **Os dois + guia** | **[SISFERIAS-completo.zip](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/SISFERIAS-completo.zip)**: extraia e dê dois cliques no instalador da pasta Windows ou Ubuntu |
+| **Os dois + manual e guia** | **[SISFERIAS-completo.zip](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/SISFERIAS-completo.zip)**: extraia e dê dois cliques no instalador da pasta Windows ou Ubuntu |
 
 > O botão verde **Code → Download ZIP** baixa só o código-fonte, **sem** os instaladores. Use os links acima.
 
@@ -201,6 +201,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.1.4** | **Manual do Usuário junto com o sistema:** o PDF vem no instalador do Windows (menu Iniciar → "Manual do Usuário" e opção "Abrir o Manual do Usuário" no fim da instalação), no `.deb` (menu de aplicativos → "Manual do SISFERIAS"), nos `.zip` e no `SISFERIAS-completo.zip`. Painel: os botões Gerar Relatório (PDF), Exportar Excel e Exportar CSV passam a ter o mesmo estilo (fundo branco). Cabeçalho: o logo não sobrepõe mais o menu; para administradores, o menu completo aparece em telas a partir de 1360 px de largura e, abaixo disso, fica no botão ☰ (menu lateral). | Nenhuma. |
 | **3.1.3** | **Download com um clique:** links diretos no README para o instalador da última versão (Windows e Ubuntu) e o novo **SISFERIAS-completo.zip** (os dois instaladores, o guia e um LEIA-ME: extrair e clicar). Os exemplos de NUP e NIP nas telas, nos testes e no código passam a ser números fictícios (`12345.000001/2026-01`, `12345678`). | Nenhuma. |
 | **3.1.2** | Instalador do Windows passa a exibir a tela de boas-vindas com o logo e o mascote (o Inno Setup 6 a omitia por padrão). Fotos das telas do instalador geradas automaticamente numa máquina Windows (workflow "Capturas do instalador"); as fotos estão no INSTALACAO.md e no Manual do Usuário. | Nenhuma. |
 | **3.1.1** | **Identidade visual:** logo e mascote do SISFERIAS na tela de entrada, no topo das telas (ícone), no ícone da aba do navegador e numa faixa de boas-vindas na tela Início (o logo também substitui o quadro "MB" enquanto a OM não cadastra o próprio). Instalador do Windows com o logo e o mascote nas telas do assistente e ícone próprio nos atalhos e no Painel de Controle; no Ubuntu com área de trabalho, o .deb cria o atalho SISFERIAS no menu de aplicativos. | Nenhuma. |

@@ -15,28 +15,32 @@ const Header: React.FC = () => {
   if (!user) return null;
 
   const allNavItems = [
-    { label: 'Início', path: '/home', icon: <Home size={18} /> },
-    { label: 'Painel', path: '/', icon: <LayoutDashboard size={18} />, adminOnly: true },
-    { label: 'Calendário', path: '/calendar', icon: <Calendar size={18} />, adminOnly: true },
-    { label: 'Justificativas', path: '/justifications', icon: <MessageSquare size={18} />, adminOnly: true },
-    { label: 'Minhas Férias', path: '/vacation-form', icon: <PlusCircle size={18} /> },
-    { label: 'Impressão', path: '/print', icon: <FileText size={18} /> },
-    { label: 'Trâmite', path: '/tramite', icon: <FileText size={18} />, adminOnly: true },
-    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={18} />, adminOnly: true, globalOnly: true },
+    { label: 'Início', path: '/home', icon: <Home size={16} /> },
+    { label: 'Painel', path: '/', icon: <LayoutDashboard size={16} />, adminOnly: true },
+    { label: 'Calendário', path: '/calendar', icon: <Calendar size={16} />, adminOnly: true },
+    { label: 'Justificativas', path: '/justifications', icon: <MessageSquare size={16} />, adminOnly: true },
+    { label: 'Minhas Férias', path: '/vacation-form', icon: <PlusCircle size={16} /> },
+    { label: 'Impressão', path: '/print', icon: <FileText size={16} /> },
+    { label: 'Trâmite', path: '/tramite', icon: <FileText size={16} />, adminOnly: true },
+    { label: 'Segurança', path: '/security', icon: <ShieldAlert size={16} />, adminOnly: true, globalOnly: true },
   ];
 
   // Segurança: só o administrador com Visão Global (o encarregado de setor não gerencia o sistema).
   const navItems = allNavItems.filter(item =>
     (!item.adminOnly || user.role === 'admin') && (!item.globalOnly || (user.viewAllSectors && !user.readOnly)));
+  // Com muitos itens (administradores), o menu completo só cabe em telas largas; abaixo disso usa o menu lateral.
+  const muitos = navItems.length > 4;
+  const navDesktop = muitos ? 'hidden min-[1360px]:flex' : 'hidden md:flex';
+  const soMenuLateral = muitos ? 'min-[1360px]:hidden' : 'md:hidden';
 
   return (
     <>
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 no-print">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-screen-2xl mx-auto px-4 h-20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Mobile Menu Button - Visible only on mobile */}
             <button
-              className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+              className={`${soMenuLateral} p-2 text-slate-600 hover:bg-slate-100 rounded-lg`}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu size={24} />
@@ -49,12 +53,12 @@ const Header: React.FC = () => {
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className={`${navDesktop} items-center gap-0.5 min-w-0`}>
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${location.pathname === item.path
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${location.pathname === item.path
                     ? 'bg-orange-500 text-white'
                     : 'text-slate-600 hover:bg-slate-100'
                   }`}
@@ -65,7 +69,7 @@ const Header: React.FC = () => {
             ))}
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-slate-900">Olá, {user.name.split(' ')[0]}</p>
               <p className="text-xs text-slate-500 font-bold">{user.role !== 'admin' ? 'Usuário' : user.readOnly ? 'Direção (consulta)' : user.viewAllSectors ? 'Administrador' : 'Encarregado (setor)'}</p>
@@ -92,7 +96,7 @@ const Header: React.FC = () => {
 
       {/* Mobile Sidebar (Drawer) */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className={`fixed inset-0 z-50 ${soMenuLateral}`}>
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
