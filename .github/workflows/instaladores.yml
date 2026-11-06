@@ -104,7 +104,25 @@ jobs:
       - name: Extrair o pacote do Windows
         shell: pwsh
         run: Expand-Archive -Path "sisferias-$env:VERSAO-windows.zip" -DestinationPath pacote
+      - name: Teste do pacote .zip no Windows (sem instalador, usuário comum)
+        shell: pwsh
+        run: |
+          $dir = Resolve-Path pacote\sisferias
+          $env:PORT = '3100'; $env:PG_PORT = '5440'; $env:DATA_DIR = "$env:RUNNER_TEMP\sisferias-zip"
+          $p = Start-Process -PassThru -NoNewWindow -FilePath "$dir\runtime\node.exe" -ArgumentList "`"$dir\server\start.js`"" -WorkingDirectory $dir -RedirectStandardOutput zip-out.log -RedirectStandardError zip-err.log
+          $ok = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            $r = & curl.exe -sk https://localhost:3100/api/health
+            if ($r -match '"ok":true') { $ok = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          Get-Content zip-out.log -Tail 30; Get-Content zip-err.log -Tail 30
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Get-Process | Where-Object { $_.ProcessName -match 'postgres' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw 'O pacote .zip não respondeu no Windows' }
+          Write-Host 'Pacote .zip OK no Windows.'
       - name: Gerar o instalador (Inno Setup)
+        if: always()
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -114,6 +132,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           Get-ChildItem instaladores\*.exe
       - name: Teste real do instalador (instala, acessa, desinstala)
+        if: always()
         shell: pwsh
         run: |
           $v = $env:VERSAO.TrimStart('v')
@@ -128,6 +147,9 @@ jobs:
           if (-not $ok) {
             Get-Content instalacao.log -Tail 40
             if (Test-Path C:\SISFERIAS\data\logs\sisferias.log) { Get-Content C:\SISFERIAS\data\logs\sisferias.log -Tail 60 }
+            Get-ChildItem C:\SISFERIAS\data -Recurse -Depth 1 -ErrorAction SilentlyContinue | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200
+            if (Test-Path C:\SISFERIAS\data\postgres\inicializacao.log) { Get-Content C:\SISFERIAS\data\postgres\inicializacao.log -Tail 40 }
+            Get-Process | Where-Object { $_.ProcessName -match 'node|postgres|initdb|pg_ctl' } | Format-Table Id, ProcessName, StartTime -AutoSize
             throw 'O sistema não respondeu após a instalação'
           }
           if (-not (Test-Path C:\SISFERIAS\data\ADMIN_INICIAL.txt)) { throw 'Senha inicial não gerada' }

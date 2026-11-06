@@ -75,10 +75,18 @@ function run(file, args, ids, { quiet = false } = {}) {
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { out += d; });
     child.on('error', reject);
-    child.on('close', code => {
+    let done = false;
+    const finish = (code) => {
+      if (done) return;
+      done = true;
       if (code === 0 || quiet) resolve({ code, out });
       else reject(new Error(`${path.basename(file)} terminou com código ${code}:\n${out.trim()}`));
-    });
+    };
+    child.on('close', finish);
+    // No Windows, o "pg_ctl start" termina, mas o PostgreSQL que ele inicia herda
+    // a saída do processo e a mantém aberta: o evento "close" nunca chegaria.
+    // Por isso também se conclui pelo término do próprio processo ("exit").
+    child.on('exit', code => setTimeout(() => finish(code), 300));
   });
 }
 
