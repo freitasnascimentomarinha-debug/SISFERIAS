@@ -87,6 +87,13 @@ export function windowsTaskXml() {
       <Enabled>true</Enabled>
       <Delay>PT30S</Delay>
     </BootTrigger>
+    <!-- Com a "Inicialização rápida" do Windows, desligar e ligar não é uma inicialização
+         completa e o gatilho acima não dispara: inicia também quando alguém entra no Windows
+         (se já estiver rodando, não abre outra instância). -->
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT15S</Delay>
+    </LogonTrigger>
   </Triggers>
   <Principals>
     <Principal id="Author">

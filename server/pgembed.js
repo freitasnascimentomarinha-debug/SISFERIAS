@@ -142,6 +142,11 @@ export async function startEmbedded() {
   }
   if (!creds) throw new Error(`Credenciais do banco não encontradas (${config.database.credentialsFile}).`);
 
+  // Desligamento sem encerrar o banco (falta de energia, botão de desligar) deixa a trava
+  // postmaster.pid para trás. Se o número de processo dela agora pertence a outro programa,
+  // o PostgreSQL se recusa a iniciar: a trava antiga é removida.
+  removerTravaAntiga(dir);
+
   // Já está rodando (ex.: o SISFERIAS caiu e foi reiniciado)? Então reaproveita.
   const status = await run(pgCtl, ['status', '-D', dir], ids, { quiet: true });
   const startedHere = status.code !== 0;
@@ -175,6 +180,33 @@ export async function startEmbedded() {
       return run(pgCtl, ['stop', '-D', dir, '-m', 'fast', '-w'], ids, { quiet: true });
     },
   };
+}
+
+/** Nome do programa com esse número de processo, ou null se não existe. */
+function nomeDoProcesso(pid) {
+  try {
+    if (process.platform === 'win32') {
+      const out = execFileSync('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], { encoding: 'utf8', windowsHide: true });
+      const m = out.match(/^"([^"]+)","(\d+)"/m);
+      return m && Number(m[2]) === pid ? m[1].toLowerCase() : null;
+    }
+    return fs.readFileSync(`/proc/${pid}/comm`, 'utf8').trim().toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/** Remove o postmaster.pid deixado por um desligamento inesperado (o processo dele não é mais o PostgreSQL). */
+export function removerTravaAntiga(dir, nome = nomeDoProcesso) {
+  const lock = path.join(dir, 'postmaster.pid');
+  let pid;
+  try { pid = Number(fs.readFileSync(lock, 'utf8').split('\n')[0].trim()); } catch { return false; }
+  if (!Number.isInteger(pid) || pid <= 0) { fs.rmSync(lock, { force: true }); return true; }
+  const atual = nome(pid);
+  if (atual && atual.startsWith('postgres')) return false; // o banco está rodando de verdade
+  console.log(`[banco] removendo a trava de um desligamento anterior (processo ${pid} ${atual ? `agora é ${atual}` : 'não existe mais'}).`);
+  fs.rmSync(lock, { force: true });
+  return true;
 }
 
 /** Cria o dono do banco, o usuário da aplicação e o banco (idempotente). */

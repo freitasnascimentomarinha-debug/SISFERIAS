@@ -175,6 +175,28 @@ jobs:
           netsh advfirewall firewall show rule name=SISFERIAS | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'Regra de firewall não criada' }
           if (-not (Test-Path "$env:PUBLIC\Desktop\SISFERIAS.lnk")) { Write-Host 'Aviso: atalho da área de trabalho não encontrado' }
+          # Simula desligamento sem encerrar o sistema (falta de energia): mata tudo à força e deixa
+          # a trava do banco apontando para um processo que não é o PostgreSQL. O serviço tem de voltar.
+          Get-Process node, postgres -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          $pidFile = 'C:\SISFERIAS\data\postgres\postmaster.pid'
+          if (-not (Test-Path $pidFile)) { throw 'Esperava a trava postmaster.pid após matar o banco' }
+          $linhas = Get-Content $pidFile; $linhas[0] = "$PID"; Set-Content -Path $pidFile -Value $linhas
+          schtasks /End /TN SISFERIAS | Out-Null
+          schtasks /Run /TN SISFERIAS | Out-Null
+          $volta = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            $r = & curl.exe -sk https://localhost:3000/api/health
+            if ($r -match '"ok":true') { $volta = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $volta) {
+            Get-Content C:\SISFERIAS\data\logs\sisferias.log -Tail 60
+            throw 'O sistema não voltou após um desligamento inesperado'
+          }
+          Write-Host 'Volta após desligamento inesperado OK.'
+          $xml = schtasks /Query /TN SISFERIAS /XML | Out-String
+          if ($xml -notmatch 'LogonTrigger') { throw 'Tarefa sem o gatilho de entrada no Windows' }
           Start-Process -Wait -FilePath C:\SISFERIAS\unins000.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'
           Start-Sleep -Seconds 5
           schtasks /Query /TN SISFERIAS 2>$null | Out-Null

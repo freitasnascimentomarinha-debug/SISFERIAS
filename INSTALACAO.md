@@ -187,6 +187,11 @@ fechar o navegador não desliga o sistema.
 - O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Ubuntu). Se a OM usar
   **antivírus ou firewall corporativo**, a Divisão de Informática deve liberar a porta 3000 do servidor na rede interna.
 
+**Depois de ligar o computador:** o sistema volta sozinho em até 1 minuto, mesmo que o computador tenha sido
+desligado sem encerrar o sistema (falta de energia, botão de desligar). Com a "Inicialização rápida" do Windows
+ativa, ele volta assim que alguém entra no Windows. Se não voltar, reinicie o computador pela opção **Reiniciar**
+ou inicie o serviço com o comando abaixo.
+
 **Conferir se o serviço está funcionando:** no Windows, abra o Prompt de Comando como administrador e execute
 `C:\SISFERIAS\sisferias.cmd servico status` (ou procure a tarefa **SISFERIAS** no Agendador de Tarefas,
 `taskschd.msc`). No Ubuntu: `systemctl status sisferias`. Para reiniciar: `sisferias.cmd servico parar` e
@@ -528,7 +533,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.4**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.5**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
