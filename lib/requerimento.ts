@@ -23,6 +23,16 @@ export interface DadosRequerimento {
   local: string;              // ex.: Rio de Janeiro, RJ
 }
 
+/**
+ * Exercício (para efeito de pagamento) que contém a data: de 1º de dezembro de um ano
+ * a 30 de novembro do seguinte, com o nome do ano em que termina. É o ano do 13º
+ * cujo adiantamento é pedido. Ex.: 20/12/2025 → 2026; 06/07/2026 → 2026.
+ */
+export const exercicioPagamento = (isoData: string) => {
+  const [a, m] = (isoData || '').split('-').map(Number);
+  return m === 12 ? a + 1 : a;
+};
+
 /** 1SG → 1ºSG; CB → CB. */
 export const formatarPosto = (posto: string) => (posto || '').trim().toUpperCase().replace(/^(\d)\s*º?\s*/, '$1º');
 

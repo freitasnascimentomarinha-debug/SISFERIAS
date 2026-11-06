@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FileSignature, X, Download, AlertTriangle } from 'lucide-react';
 import { Employee } from '../types';
-import { DadosRequerimento, SimNao, gerarRequerimento, nomeArquivoRequerimento, formatarNip, formatarPosto } from '../lib/requerimento';
+import { DadosRequerimento, SimNao, gerarRequerimento, nomeArquivoRequerimento, formatarNip, formatarPosto, exercicioPagamento } from '../lib/requerimento';
 
 const inputClass = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500';
 const LOCAL_KEY = 'sisferias_requerimento_local';
@@ -46,7 +46,8 @@ const RequerimentoModal: React.FC<Props> = ({ employee, om, especialidade, ano, 
   const parcelas = employee.vacationParcels.filter(p => p.startDate && p.endDate);
   const [parcelaIdx, setParcelaIdx] = useState(Math.min(parcelaInicial, Math.max(0, parcelas.length - 1)));
   const parcela = parcelas[parcelaIdx];
-  const anoInicio = parcela ? Number(parcela.startDate.slice(0, 4)) : ano;
+  // Ano do 13º: exercício de pagamento (dez–nov) em que a parcela começa.
+  const anoInicio = parcela ? exercicioPagamento(parcela.startDate) : ano;
 
   const [nup, setNup] = useState('');
   const [destinatario, setDestinatario] = useState('Encarregado de Pessoal');
@@ -140,7 +141,7 @@ const RequerimentoModal: React.FC<Props> = ({ employee, om, especialidade, ano, 
             </div>
             <div className="space-y-1">
               <label htmlFor="req-parcela" className="text-[10px] font-bold text-slate-500 uppercase">Período (parcela)</label>
-              <select id="req-parcela" className={inputClass} value={parcelaIdx} onChange={e => { const i = Number(e.target.value); setParcelaIdx(i); setAnoNatalino(Number(parcelas[i].startDate.slice(0, 4))); }}>
+              <select id="req-parcela" className={inputClass} value={parcelaIdx} onChange={e => { const i = Number(e.target.value); setParcelaIdx(i); setAnoNatalino(exercicioPagamento(parcelas[i].startDate)); }}>
                 {parcelas.length === 0 && <option value={0}>Nenhuma parcela com datas</option>}
                 {parcelas.map((p, i) => <option key={p.id} value={i}>Parcela {employee.vacationParcels.indexOf(p) + 1}: {dataBR(p.startDate)} a {dataBR(p.endDate)} ({p.days}d)</option>)}
               </select>
@@ -156,7 +157,7 @@ const RequerimentoModal: React.FC<Props> = ({ employee, om, especialidade, ano, 
             <SimNaoField id="req-natalino" label="Adiantamento do Adicional Natalino (50%)" ajuda="Art. 24.3 da SGM-302, Vol. II" value={natalino} onChange={setNatalino}
               extra={natalino === 'S' && (
                 <div className="mt-2 flex items-center gap-2">
-                  <label htmlFor="req-ano-natalino" className="text-[11px] font-bold text-slate-500">Do ano de</label>
+                  <label htmlFor="req-ano-natalino" className="text-[11px] font-bold text-slate-500">Do ano (exercício dez–nov) de</label>
                   <input id="req-ano-natalino" type="number" autoComplete="off" className={`${inputClass} w-28`} value={anoNatalino} onChange={e => setAnoNatalino(Number(e.target.value) || anoInicio)} />
                 </div>
               )} />
