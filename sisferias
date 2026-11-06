@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+# Comandos de administração no servidor (pacote com o Node.js embutido).
+#   sudo /opt/sisferias/sisferias admin --senha NovaSenha@2026
+#   sudo /opt/sisferias/sisferias backup | restaurar ARQUIVO | banco status | https status | servico status
+# Instalado pelo .deb/instalar.sh, os comandos rodam com o usuário "sisferias"
+# (dono dos dados), exceto "servico", que precisa de root.
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$DIR"
+NODE="$DIR/runtime/bin/node"
+[ -x "$NODE" ] || NODE="$(command -v node)"
+CMD="${1:-}"
+[ -n "$CMD" ] || { echo "Uso: $0 admin|backup|restaurar|banco|https|servico|dados-ficticios [opções]"; exit 1; }
+shift
+case "$CMD" in
+  https) ALVO="scripts/https.js" ;;
+  servico) exec "$NODE" scripts/servico.js "$@" ;;
+  admin|backup|restaurar|banco|dados-ficticios) ALVO="server/start.js $CMD" ;;
+  *) echo "Comando desconhecido: $CMD"; exit 1 ;;
+esac
+if [ "$(id -u)" = 0 ] && id -u sisferias >/dev/null 2>&1 && [ "$(stat -c %U "$DIR/data" 2>/dev/null)" = sisferias ]; then
+  exec runuser -u sisferias -- "$NODE" $ALVO "$@"
+fi
+exec "$NODE" $ALVO "$@"

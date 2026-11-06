@@ -4,6 +4,9 @@
 set -e
 cd "$(dirname "$0")"
 
+# Pacote com o Node.js embutido (pasta runtime): não precisa instalar nada.
+[ -x runtime/bin/node ] && PATH="$PWD/runtime/bin:$PATH" && export PATH
+
 if ! command -v node >/dev/null 2>&1; then
   echo "O Node.js não está instalado. Instale a versão LTS (https://nodejs.org) e tente novamente."
   exit 1
@@ -22,4 +25,4 @@ if [ ! -f dist/index.html ]; then
   npm run build
 fi
 
-exec npm start
+exec node server/start.js

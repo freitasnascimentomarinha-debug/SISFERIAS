@@ -55,7 +55,8 @@ function checkHealth() {
   });
 }
 
-async function waitHealth(seconds = 20) {
+// Na primeira execução o banco é criado, o que pode levar mais de um minuto.
+async function waitHealth(seconds = 120) {
   for (let i = 0; i < seconds; i += 1) {
     if (await checkHealth()) return true;
     await new Promise(r => setTimeout(r, 1000));
@@ -193,7 +194,9 @@ const windows = {
 
 const UNIT_FILE = `/etc/systemd/system/${NAME.toLowerCase()}.service`;
 
-export function systemdUnit(user = process.env.SUDO_USER || os.userInfo().username) {
+// O instalador do Ubuntu (instalar.sh / .deb) usa um usuário de sistema próprio, sem
+// login (SISFERIAS_USUARIO=sisferias): o PostgreSQL embutido não roda como root.
+export function systemdUnit(user = process.env.SISFERIAS_USUARIO || process.env.SUDO_USER || os.userInfo().username) {
   return `[Unit]
 Description=SISFERIAS - sistema de férias (rede interna)
 After=network.target
