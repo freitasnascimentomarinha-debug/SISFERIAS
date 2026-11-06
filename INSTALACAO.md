@@ -72,6 +72,21 @@ Os arquivos ficam na página **Releases** do GitHub do projeto:
    - cria o atalho **SISFERIAS** na área de trabalho e no menu Iniciar (abre o sistema no navegador);
    - na primeira instalação, abre o arquivo com a **senha provisória do administrador** (seção 4).
 
+Telas do assistente (capturadas num Windows real, na versão 3.1.2):
+
+| | |
+|---|---|
+| ![Boas-vindas](docs/capturas-instalador/1-boas-vindas.png) | ![Pasta de instalação](docs/capturas-instalador/2-pasta.png) |
+| 1. Boas-vindas: clique em **Avançar** | 2. Pasta: mantenha `C:\SISFERIAS` |
+| ![Atalho](docs/capturas-instalador/3-tarefas.png) | ![Pronto para instalar](docs/capturas-instalador/4-pronto.png) |
+| 3. Deixe marcado o atalho na área de trabalho | 4. Confira e clique em **Instalar** |
+| ![Instalando](docs/capturas-instalador/5-instalando.png) | ![Concluído](docs/capturas-instalador/6-concluido.png) |
+| 5. Aguarde (até 2 minutos na primeira vez) | 6. Deixe as opções marcadas e clique em **Concluir** |
+
+![Atalho na área de trabalho](docs/capturas-instalador/7-area-de-trabalho.png)
+
+7. O atalho **SISFERIAS** na área de trabalho abre o sistema no navegador.
+
 **Atualizar:** faça um backup (seção 10) e execute o instalador da versão nova. Ele para o serviço, troca os
 arquivos e inicia de novo, **mantendo os dados**.
 

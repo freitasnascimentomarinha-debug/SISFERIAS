@@ -4,14 +4,10 @@
 # do assistente (logo, mascote, ícone) e para o Manual.
 name: Capturas do instalador
 
+# Executar manualmente (Actions → Capturas do instalador → Run workflow) no branch desejado.
+# As fotos saem com a tela inteira; recorte a janela do instalador antes de usar no manual.
 on:
   workflow_dispatch:
-  push:
-    branches: ['ccr-*']
-    paths:
-      - 'instaladores/sisferias.iss'
-      - 'instaladores/marca/**'
-      - '.github/workflows/capturas-instalador.yml'
 
 permissions:
   contents: write
