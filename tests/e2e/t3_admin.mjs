@@ -174,6 +174,34 @@ await step('usuário gera a própria papeleta', async () => {
   check('NUP do Bruno gravado', emp(A.bruno.email).parcels[0].nup === '62012.000888/2026-22');
   await popup.close();
 });
+await step('requerimento de férias (Word)', async () => {
+  const p = S.bruno.page;
+  await p.click('button:has-text("Requerimento")');
+  await p.waitForSelector('[role=dialog][aria-labelledby=req-titulo]');
+  check('botão Requerimento abre a janela com os dados do militar',
+    (await p.inputValue('#req-nome')) === 'Bruno Costa' && (await p.inputValue('#req-nip')) === '20000002');
+  await p.fill('#req-nup', '63341.000563/2026-02');
+  await p.locator('[role=radiogroup][aria-label^="Adiantamento"] label:has-text("Sim")').click();
+  await p.locator('[role=radiogroup][aria-label^="Remuneração"] label:has-text("Sim")').click();
+  await p.fill('#req-ano-natalino', '2027');
+  const downloadPromise = p.waitForEvent('download', { timeout: 15000 });
+  await p.click('button:has-text("OK, baixar requerimento")');
+  const download = await downloadPromise;
+  const file = `${QA}/${download.suggestedFilename()}`;
+  await download.saveAs(file);
+  const { execSync } = await import('node:child_process');
+  const xml = execSync(`unzip -p "${file}" word/document.xml`).toString();
+  const texto = xml.replace(/<[^>]+>/g, '');
+  check('requerimento baixado em Word (.docx)', file.endsWith('.docx') && texto.includes('REQUERIMENTO'), download.suggestedFilename());
+  check('requerimento com nome, NIP formatado e período da parcela',
+    texto.includes('BRUNO COSTA') && texto.includes('20.0000.02') && texto.includes('63341.000563/2026-02') && /\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}/.test(texto));
+  check('requerimento com as escolhas Sim/Não',
+    texto.includes('( S ) Adiantamento do Adicional Natalino do ano de 2027 (50%)') && texto.includes('( S ) Adicional de Férias (1/3)') && texto.includes('( S ) Remuneração de Férias (70%)'));
+  check('requerimento traz o brasão', execSync(`unzip -l "${file}"`).toString().includes('word/media/'));
+  await p.waitForTimeout(800);
+  const a = db("SELECT field, new_value FROM audit_logs WHERE field LIKE 'Requerimento de férias%' ORDER BY timestamp DESC LIMIT 1")[0];
+  check('geração do requerimento registrada na auditoria', !!a && a.new_value.includes('Adiant. natalino: S'), a ? a.new_value : 'sem registro');
+});
 await step('usuário não acessa papeleta de outro', async () => {
   const carlaUid = uid(A.carla.email);
   const r = await api(S.bruno.page, 'GET', `/print-preferences/${carlaUid}`);
