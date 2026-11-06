@@ -181,6 +181,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) { throw 'Serviço continua instalado após desinstalar' }
           if (-not (Test-Path C:\SISFERIAS\data\chave-dados.key)) { throw 'Desinstalar apagou os dados' }
           Write-Host 'Instalação e desinstalação no Windows OK (dados mantidos).'
+          exit 0  # o último schtasks devolve erro de propósito (serviço já removido)
       - uses: actions/upload-artifact@v4
         with:
           name: instalador-windows
