@@ -2,6 +2,9 @@
 setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
+
+rem Pacote com o Node.js embutido (pasta runtime): nao precisa instalar nada.
+if exist "%~dp0runtime\node.exe" set "PATH=%~dp0runtime;%PATH%"
 title SISFERIAS
 
 where node >nul 2>nul
@@ -35,7 +38,7 @@ if not exist "dist\index.html" (
   if errorlevel 1 goto erro
 )
 
-call npm start
+node server\start.js
 goto fim
 
 :erro

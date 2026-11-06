@@ -75,10 +75,18 @@ function run(file, args, ids, { quiet = false } = {}) {
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { out += d; });
     child.on('error', reject);
-    child.on('close', code => {
+    let done = false;
+    const finish = (code) => {
+      if (done) return;
+      done = true;
       if (code === 0 || quiet) resolve({ code, out });
       else reject(new Error(`${path.basename(file)} terminou com código ${code}:\n${out.trim()}`));
-    });
+    };
+    child.on('close', finish);
+    // No Windows, o "pg_ctl start" termina, mas o PostgreSQL que ele inicia herda
+    // a saída do processo e a mantém aberta: o evento "close" nunca chegaria.
+    // Por isso também se conclui pelo término do próprio processo ("exit").
+    child.on('exit', code => setTimeout(() => finish(code), 300));
   });
 }
 
@@ -103,7 +111,9 @@ export async function startEmbedded() {
   if (!fs.existsSync(path.join(dir, 'PG_VERSION'))) {
     console.log('[banco] criando o banco de dados PostgreSQL (primeira execução)...');
     fs.mkdirSync(path.dirname(dir), { recursive: true });
-    fs.mkdirSync(dir, { mode: 0o700 });
+    // No Windows o initdb cria a pasta: se ela já existir, ele não consegue
+    // ajustar as permissões (Permission denied) quando roda com token restrito.
+    if (process.platform !== 'win32') fs.mkdirSync(dir, { mode: 0o700 });
     if (ids.uid !== undefined) { fs.chownSync(dir, ids.uid, ids.gid); allowTraverse(path.dirname(dir)); }
     creds = { superPassword: randomPassword(), ownerPassword: randomPassword(), appPassword: randomPassword(), configured: false };
     fs.writeFileSync(config.database.credentialsFile, JSON.stringify(creds, null, 2) + '\n', { mode: 0o600 });

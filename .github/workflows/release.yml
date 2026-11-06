@@ -1,11 +1,15 @@
-# Gera o pacote pronto para uso (sem precisar de internet na instalação) e o
-# publica na página "Releases" do GitHub, como sisferias-vX.Y.Z.zip.
+# Publica uma versão na página "Releases" do GitHub com:
+#  - sisferias-vX.Y.Z-instalador-windows.exe  (instalador do Windows)
+#  - sisferias_X.Y.Z_amd64.deb                 (pacote do Ubuntu)
+#  - sisferias-vX.Y.Z-windows.zip / -linux.zip (pacotes completos, sem instalador)
+# Todos com o Node.js e o PostgreSQL embutidos (nada para instalar antes).
+# Antes de publicar, os testes rodam e os dois instaladores são instalados e
+# desinstalados de verdade (workflow "Instaladores").
 #
 # Duas formas de publicar uma versão:
-#  - enviar uma etiqueta "v*" (ex.: git tag v2.0.0 && git push origin v2.0.0);
+#  - enviar uma etiqueta "v*" (ex.: git tag v3.1.0 && git push origin v3.1.0);
 #  - ou, pelo GitHub: Actions > "Pacote de instalação" > Run workflow,
-#    informando a versão (ex.: v2.0.0). A etiqueta é criada automaticamente
-#    no commit mais recente da branch principal.
+#    informando a versão (ex.: v3.1.0).
 name: Pacote de instalação
 
 on:
@@ -14,61 +18,66 @@ on:
   workflow_dispatch:
     inputs:
       versao:
-        description: 'Versão a publicar (ex.: v2.0.0)'
+        description: 'Versão a publicar (ex.: v3.1.0)'
         required: true
 
 permissions:
   contents: write
 
 jobs:
-  pacote:
+  conferir:
     runs-on: ubuntu-latest
-    env:
-      VERSAO: ${{ github.event.inputs.versao || github.ref_name }}
+    outputs:
+      versao: ${{ steps.v.outputs.versao }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Conferir o nome da versão
+      - id: v
+        env:
+          VERSAO: ${{ github.event.inputs.versao || github.ref_name }}
         run: |
           if ! echo "$VERSAO" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Versão inválida: '$VERSAO' (use o formato v2.0.0)"; exit 1
+            echo "Versão inválida: '$VERSAO' (use o formato v3.1.0)"; exit 1
           fi
-      - uses: actions/setup-node@v4
+          echo "versao=$VERSAO" >> "$GITHUB_OUTPUT"
+
+  instaladores:
+    needs: conferir
+    uses: ./.github/workflows/instaladores.yml
+    with:
+      versao: ${{ needs.conferir.outputs.versao }}
+
+  publicar:
+    needs: [conferir, instaladores]
+    runs-on: ubuntu-latest
+    env:
+      VERSAO: ${{ needs.conferir.outputs.versao }}
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - name: Pacote para Windows
-        run: |
-          npm run pacote -- --plataforma windows
-          cd pacote && zip -rq "../sisferias-${VERSAO}-windows.zip" sisferias
-      - name: Pacote para Linux
-        run: |
-          npm run pacote -- --plataforma linux
-          cd pacote && zip -rqy "../sisferias-${VERSAO}-linux.zip" sisferias
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sisferias-${{ env.VERSAO }}
-          path: sisferias-*.zip
+          path: arquivos
+          merge-multiple: true
+      - run: ls -la arquivos
       - name: Publicar na página de Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSAO }}
           target_commitish: ${{ github.sha }}
           name: SISFERIAS ${{ env.VERSAO }}
-          files: sisferias-*.zip
+          files: arquivos/*
           body: |
-            ## Como instalar (Windows)
-            1. Instale o **Node.js LTS** (22.13 ou mais recente): https://nodejs.org
-            2. Baixe **sisferias-${{ env.VERSAO }}-windows.zip** abaixo e extraia em uma pasta fixa (ex.: `C:\SISFERIAS`).
-               (Em Linux, use o arquivo `-linux.zip` e o `iniciar.sh`.)
-            3. Dê dois cliques em **iniciar.bat** (ou em **instalar-servico.bat** para iniciar junto com o Windows, sem janela).
-            4. Abra no navegador o endereço mostrado em "Na rede".
+            ## Como instalar
 
-            O banco de dados é o **PostgreSQL** (já incluído no pacote, sem instalação separada) ou um PostgreSQL externo do CLTI.
-            Não é preciso internet para instalar. O guia completo está no arquivo **INSTALACAO.md** e a relação com as normas
-            da DCTIM em **CONFORMIDADE.md**, dentro do pacote.
+            **Windows:** baixe **sisferias-${{ env.VERSAO }}-instalador-windows.exe**, dê dois cliques e siga o assistente
+            (Avançar, Avançar, Concluir). O sistema fica em `C:\SISFERIAS`, inicia sozinho com o Windows e ganha um atalho
+            "SISFERIAS" na área de trabalho. No final aparece a senha provisória do administrador.
+            Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo**.
 
-            **Atualizando uma instalação existente:** faça um backup, substitua os arquivos **mantendo a pasta `data`** e inicie de novo.
-            Vindo da versão 2.x, os dados do arquivo `data/sisferias.db` são migrados automaticamente para o PostgreSQL na primeira execução.
-            **Guarde uma cópia do arquivo `data/chave-dados.key`** (chave dos dados cifrados) fora do servidor.
+            **Ubuntu:** baixe o arquivo **.deb** e instale com dois cliques ou pelo terminal:
+            `sudo apt install ./sisferias_*.deb`. O sistema fica em `/opt/sisferias` e inicia sozinho com o computador;
+            o endereço e a senha provisória aparecem no final.
+
+            Não é preciso instalar Node.js nem banco de dados, nem ter internet: tudo vem junto.
+            Os arquivos **.zip** são os mesmos pacotes sem instalador (extrair e executar `iniciar.bat` / `iniciar.sh`).
+
+            **Atualizar:** faça um backup e execute o instalador (ou o .deb) da versão nova por cima. Os dados são mantidos.
+            **Guarde uma cópia da chave dos dados** (`data/chave-dados.key`) fora do servidor.
+            O guia completo está em **INSTALACAO.md** e a relação com as normas da DCTIM em **CONFORMIDADE.md**.

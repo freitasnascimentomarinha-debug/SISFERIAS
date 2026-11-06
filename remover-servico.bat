@@ -2,6 +2,9 @@
 setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
+
+rem Pacote com o Node.js embutido (pasta runtime): nao precisa instalar nada.
+if exist "%~dp0runtime\node.exe" set "PATH=%~dp0runtime;%PATH%"
 title SISFERIAS - servico
 
 rem Pede permissao de administrador, se ainda nao tiver.

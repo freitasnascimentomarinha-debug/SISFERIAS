@@ -40,41 +40,80 @@ fazer se ninguém conseguir entrar.
 
 | Item | Detalhe |
 |---|---|
-| Um computador para ser o servidor | Windows 10/11 (64 bits) ou Linux, ligado durante o expediente |
-| Node.js versão 22.13 ou mais nova | Gratuito: <https://nodejs.org> (botão "LTS") |
+| Um computador para ser o servidor | Windows 10/11 ou Windows Server (64 bits), ou **Ubuntu** (20.04 ou mais novo, 64 bits), ligado durante o expediente |
+| Nada mais para instalar | O Node.js e o banco PostgreSQL **já vêm dentro** do instalador. Não é preciso internet |
 | Rede interna | Os demais computadores precisam enxergar o servidor |
 | Certificado do servidor | Emitido pelo **CTIM** (DCTIMBOTEC 31/002, item 3.1.c). Até chegar, o sistema usa um provisório |
 
+Os arquivos ficam na página **Releases** do GitHub do projeto:
+
+| Arquivo | Para quê |
+|---|---|
+| `sisferias-vX.Y.Z-instalador-windows.exe` | **Instalador do Windows** (recomendado) |
+| `sisferias_X.Y.Z_amd64.deb` | **Instalador do Ubuntu** (recomendado) |
+| `sisferias-vX.Y.Z-windows.zip` / `-linux.zip` | O mesmo sistema sem instalador (extrair e executar) |
+
 ---
 
-## 3. Instalação no Windows (passo a passo)
+## 3. Instalação
 
-### Passo 1 — Instalar o Node.js (uma única vez)
+### 3.1 Windows: instalador (Avançar, Avançar, Concluir)
 
-1. Acesse <https://nodejs.org> e baixe a versão **LTS**.
-2. Execute o instalador e clique em **Próximo** até concluir, mantendo as opções padrão.
+1. Baixe **`sisferias-vX.Y.Z-instalador-windows.exe`** e dê dois cliques nele.
+   É preciso ser administrador do computador (o Windows pede a confirmação).
+   - Se aparecer **"O Windows protegeu o computador"**, clique em **Mais informações → Executar assim mesmo**.
+     O aviso aparece porque o instalador não tem assinatura digital de empresa. Se a política da OM bloquear
+     executáveis baixados, peça à Divisão de Informática para executar a instalação.
+2. Siga o assistente. A pasta padrão é **`C:\SISFERIAS`** (mantenha).
+3. Ao concluir, o instalador:
+   - instala o sistema com o Node.js e o PostgreSQL embutidos;
+   - instala o **serviço**: o SISFERIAS inicia sozinho com o Windows, mesmo sem ninguém fazer login, e volta sozinho se parar;
+   - libera a **porta 3000** no firewall do Windows;
+   - cria o atalho **SISFERIAS** na área de trabalho e no menu Iniciar (abre o sistema no navegador);
+   - na primeira instalação, abre o arquivo com a **senha provisória do administrador** (seção 4).
 
-Se o servidor não tiver internet, baixe o instalador em outro computador e leve-o por pen drive.
+**Atualizar:** faça um backup (seção 10) e execute o instalador da versão nova. Ele para o serviço, troca os
+arquivos e inicia de novo, **mantendo os dados**.
 
-### Passo 2 — Baixar o SISFERIAS
+**Desinstalar:** Configurações do Windows → Aplicativos → **SISFERIAS** → Desinstalar (ou "Desinstalar o
+SISFERIAS" no menu Iniciar). O serviço e os arquivos do sistema são removidos, mas a pasta
+**`C:\SISFERIAS\data`** (banco, backups e chave) é mantida.
 
-| Forma | Quando usar | Como |
-|---|---|---|
-| **Pacote pronto** (recomendado) | Sempre que possível. Não precisa de internet na instalação | No GitHub do projeto, página **Releases**, baixe `sisferias-vX.Y.Z-windows.zip` |
-| **Código-fonte** | Quando não houver pacote publicado | No GitHub, botão verde **Code → Download ZIP**. A primeira execução precisa de internet |
+### 3.2 Ubuntu: pacote .deb
 
-### Passo 3 — Extrair
+1. Copie **`sisferias_X.Y.Z_amd64.deb`** para o servidor.
+2. Instale com dois cliques (Central de Aplicativos) ou pelo terminal:
 
-Extraia o `.zip` em uma pasta **fixa**, por exemplo `C:\SISFERIAS`.
-Não rode de dentro do `.zip` nem da pasta Downloads.
+```
+sudo apt install ./sisferias_X.Y.Z_amd64.deb
+```
 
-### Passo 4 — Iniciar
+3. O instalador:
+   - instala o sistema em **`/opt/sisferias`** (dados em `/opt/sisferias/data`);
+   - cria o usuário de sistema **`sisferias`** (sem login), com o qual o sistema e o banco rodam;
+   - instala o **serviço** (systemd): inicia sozinho com o computador e volta se parar;
+   - libera a porta 3000 no firewall (`ufw`), se estiver ativo;
+   - mostra no final o **endereço de acesso** e a **senha provisória do administrador**.
 
-Dê dois cliques em **`iniciar.bat`**. Uma janela preta abrirá.
+Comandos úteis: `systemctl status sisferias` (situação), `journalctl -u sisferias -f` (registros),
+`sudo systemctl restart sisferias` (reiniciar).
 
-- Na primeira vez o sistema cria o banco de dados PostgreSQL e a chave dos dados (alguns segundos).
-  Se for o código-fonte, antes ele instala os componentes (1 a 3 minutos).
-- Quando aparecer a mensagem abaixo, o sistema está funcionando:
+**Atualizar:** faça um backup e instale o `.deb` da versão nova do mesmo jeito. Os dados são mantidos.
+**Remover:** `sudo apt remove sisferias`. A pasta `/opt/sisferias/data` é mantida.
+
+Sem o `.deb`, o pacote `sisferias-vX.Y.Z-linux.zip` faz o mesmo: extraia e execute `sudo ./instalar.sh`
+(para remover, `sudo /opt/sisferias/desinstalar.sh`).
+
+### 3.3 Sem instalador (pacote .zip)
+
+Para testar rapidamente ou quando não for possível executar o instalador:
+
+1. Baixe `sisferias-vX.Y.Z-windows.zip` (ou `-linux.zip`) e extraia em uma pasta **fixa**, por exemplo
+   `C:\SISFERIAS` (não rode de dentro do `.zip` nem da pasta Downloads).
+2. Dê dois cliques em **`iniciar.bat`** (no Linux, `./iniciar.sh`). Uma janela preta abrirá. O Node.js já vem
+   no pacote (pasta `runtime`), não é preciso instalar nada.
+3. Na primeira vez o sistema cria o banco de dados PostgreSQL e a chave dos dados. Quando aparecer a mensagem
+   abaixo, está funcionando:
 
 ```
 SISFERIAS em execução.
@@ -83,18 +122,30 @@ SISFERIAS em execução.
   Banco de dados:    PostgreSQL embutido (C:\SISFERIAS\data\postgres, porta 5433, somente localhost)
 ```
 
-**Não feche essa janela** (ou instale como serviço, seção 9). Ela pode ficar minimizada.
+**Não feche essa janela**, ou instale como serviço com `instalar-servico.bat` (seção 14).
+Na primeira execução o Windows pode perguntar se permite o acesso pela rede: marque **Redes privadas** e
+**permita só o Node.js** (o PostgreSQL não precisa ser acessado pela rede). Se os outros computadores não
+conseguirem abrir o sistema, peça à TI para liberar a **porta TCP 3000** para conexões de entrada.
 
-### Passo 5 — Liberar no Firewall
+Para desenvolvedores: o código-fonte (botão **Code → Download ZIP** no GitHub) precisa do Node.js 22.13 ou
+mais novo e de internet na primeira execução (`iniciar.bat` instala os componentes e compila a interface).
 
-Na primeira execução o Windows pode perguntar se permite o acesso pela rede.
-Marque **Redes privadas** e clique em **Permitir acesso**. Se aparecerem duas perguntas
-(Node.js e PostgreSQL), **permita só o Node.js**: o PostgreSQL não precisa ser acessado pela rede.
+### 3.4 Comandos de administração no servidor
 
-Se os outros computadores não conseguirem abrir o sistema, peça à TI para liberar a
-**porta TCP 3000** para conexões de entrada.
+Os comandos deste guia escritos como `npm run COMANDO -- opções` (backup, restaurar, banco, https,
+admin) são para quem roda o código-fonte. Na instalação pelo instalador ou pelo pacote `.zip`, use:
 
-### Passo 6 — Acessar
+| Sistema | Forma |
+|---|---|
+| **Windows** | Prompt de Comando **como administrador**, na pasta `C:\SISFERIAS`: `sisferias.cmd COMANDO opções` |
+| **Ubuntu** | Terminal: `sudo /opt/sisferias/sisferias COMANDO opções` |
+
+Exemplo: `npm run https -- status` vira `sisferias.cmd https status` (Windows) ou
+`sudo /opt/sisferias/sisferias https status` (Ubuntu). Depois de mudar configurações, reinicie o sistema
+(Windows: reinicie o computador ou `sisferias.cmd servico parar` e `sisferias.cmd servico iniciar`;
+Ubuntu: `sudo systemctl restart sisferias`).
+
+### 3.5 Acessar
 
 - **No próprio servidor:** abra <https://localhost:3000>.
 - **Nos outros computadores:** abra o endereço mostrado em **"Na rede"**
@@ -243,27 +294,31 @@ Proteções contra ficar sem administrador:
 
 ### Comandos de recuperação
 
-No **computador servidor** (pode ser com o SISFERIAS ligado):
+No **computador servidor** (pode ser com o SISFERIAS ligado). Use o comando de administração
+`sisferias` da pasta do sistema (seção 3.4):
 
-1. Abra a pasta do SISFERIAS no Explorador de Arquivos, clique na barra de endereço,
-   digite `cmd` e pressione Enter.
-2. Execute um dos comandos:
+| Instalação | Como executar |
+|---|---|
+| **Windows** | Abra o **Prompt de Comando como administrador**, digite `cd /d C:\SISFERIAS` e use `sisferias.cmd ...` |
+| **Ubuntu** | No terminal: `sudo /opt/sisferias/sisferias ...` |
+
+Exemplos (no Ubuntu, troque `sisferias.cmd` por `sudo /opt/sisferias/sisferias`):
 
 ```
-npm run admin -- --senha NovaSenha@2026
+sisferias.cmd admin --senha NovaSenha@2026
 ```
 
 Redefine a senha da conta `admin` (provisória: o sistema pede outra no primeiro acesso),
-desbloqueia e a torna administradora. Se ela não existir, ele a cria.
+desbloqueia e a torna administradora com Visão Global. Se ela não existir, ele a cria.
 
 ```
-npm run admin -- --login 12345678 --senha NovaSenha@2026
+sisferias.cmd admin --login 12345678 --senha NovaSenha@2026
 ```
 
 Faz o mesmo para a conta com esse NIP (ou e-mail).
 
 ```
-npm run admin -- --login 12345678 --desbloquear
+sisferias.cmd admin --login 12345678 --desbloquear
 ```
 
 Só libera a conta bloqueada por tentativas, sem mudar a senha.
@@ -406,6 +461,8 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
 
 ## 14. Uso no dia a dia
 
+- **Instalado pelo instalador (Windows) ou pelo .deb (Ubuntu):** o serviço já está instalado e não há nada a fazer;
+  os itens abaixo sobre `instalar-servico.bat` valem para quem usa o pacote `.zip`.
 - **Iniciar junto com o Windows, sem janela (recomendado):** dê dois cliques em **`instalar-servico.bat`**
   e confirme a permissão de administrador. O SISFERIAS passa a rodar como serviço:
   - inicia sozinho quando o computador liga, mesmo sem ninguém fazer login;
@@ -416,18 +473,21 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   Para voltar ao modo com janela, execute **`remover-servico.bat`**.
 - **Desligar o sistema:** no modo com janela, feche a janela preta ou pressione `Ctrl + C`
   (o PostgreSQL embutido é desligado junto). No modo serviço, execute `remover-servico.bat` (ou, para só
-  parar até o próximo reinício do computador, `node scripts\servico.js parar` como administrador).
+  parar até o próximo reinício do computador, `runtime\node scripts\servico.js parar` como administrador).
+  No Ubuntu: `sudo systemctl stop sisferias` (e `start` para ligar de novo).
 - **Trocar a própria senha:** qualquer usuário clica no ícone de **chave**, no canto superior direito,
   ao lado de "Sair". O sistema pede a senha atual e a nova (regra da seção 5).
 - **Atualizar para uma versão nova:**
   1. Faça um backup e confira se há cópia da chave (seção 8).
-  2. Pare o sistema: feche a janela ou, no modo serviço, execute `node scripts\servico.js parar`
-     como administrador.
-  3. Extraia o pacote novo por cima da pasta atual, **mantendo a pasta `data`**.
+  2. **Com o instalador:** execute o instalador da versão nova (Windows `.exe` ou Ubuntu `.deb`). Ele para o
+     serviço, troca os arquivos e inicia de novo, mantendo os dados. Siga para o passo 6.
+  3. **Com o pacote .zip:** pare o sistema (feche a janela ou, no modo serviço, execute
+     `runtime\node scripts\servico.js parar` como administrador) e extraia o pacote novo por cima da pasta
+     atual, **mantendo a pasta `data`**.
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.9**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.0**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
@@ -470,9 +530,14 @@ Outro programa usa essa porta. Escolha outra em `data\config.json`: `{ "database
 **Aparece "A chave de criptografia dos dados não foi encontrada" ou "não corresponde a este banco".**
 O arquivo `data\chave-dados.key` foi apagado ou trocado. Devolva o arquivo original (da sua cópia, seção 8).
 
-**A janela fechou logo ao abrir.**
-Verifique a versão do Node.js: abra o Prompt de Comando e digite `node -v`. Precisa ser
+**A janela fechou logo ao abrir (pacote .zip ou código-fonte).**
+Confira se a pasta `runtime` existe dentro da pasta do sistema (o pacote completo traz o Node.js nela).
+No código-fonte, verifique a versão do Node.js: abra o Prompt de Comando e digite `node -v`. Precisa ser
 22.13 ou maior.
+
+**O instalador do Windows não abre ou é bloqueado.**
+Clique em **Mais informações → Executar assim mesmo**. Se a política da OM bloquear, peça à Divisão de
+Informática para executar a instalação (é preciso ser administrador do computador).
 
 **Os outros computadores não abrem o sistema.**
 Confira se usam o endereço **"Na rede"** (começando com `https://`), se o servidor está ligado com o

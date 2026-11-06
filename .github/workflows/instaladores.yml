@@ -1,0 +1,188 @@
+# Gera e TESTA os pacotes de instalação:
+#  - Windows: zip completo e instalador .exe (Inno Setup), instalado e
+#    desinstalado de verdade numa máquina Windows do GitHub;
+#  - Ubuntu: zip completo e pacote .deb, instalado e removido de verdade
+#    (serviço do systemd) numa máquina Ubuntu do GitHub.
+# Roda nas mudanças que mexem na instalação e é usado pela publicação de
+# versões (release.yml), que só publica se tudo passar.
+name: Instaladores
+
+on:
+  pull_request:
+    paths:
+      - 'instaladores/**'
+      - 'scripts/pacote.js'
+      - 'scripts/servico.js'
+      - 'instalar.sh'
+      - 'desinstalar.sh'
+      - 'iniciar.sh'
+      - '*.bat'
+      - 'server/start.js'
+      - 'server/config.js'
+      - 'package.json'
+      - '.github/workflows/instaladores.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      versao:
+        description: 'Versão (ex.: v3.1.0); vazio = a do package.json'
+        type: string
+        required: false
+
+jobs:
+  pacotes:
+    name: Pacotes e instalação no Ubuntu
+    runs-on: ubuntu-latest
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Versão
+        id: versao
+        run: |
+          V="${{ inputs.versao }}"
+          [ -n "$V" ] || V="v$(node -p "require('./package.json').version")"
+          echo "versao=$V" >> "$GITHUB_OUTPUT"
+          echo "VERSAO=$V" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm test
+      - name: Pacote completo para Windows (com Node.js embutido)
+        run: |
+          npm run pacote -- --plataforma windows
+          cd pacote && zip -rq "../sisferias-${VERSAO}-windows.zip" sisferias
+      - name: Pacote completo para Linux (com Node.js embutido) e .deb
+        run: |
+          npm run pacote -- --plataforma linux
+          (cd pacote && zip -rqy "../sisferias-${VERSAO}-linux.zip" sisferias)
+          instaladores/gerar-deb.sh pacote/sisferias "${VERSAO#v}" "sisferias_${VERSAO#v}_amd64.deb"
+      - name: Teste real do .deb (instala, acessa, remove)
+        run: |
+          set -e
+          sudo apt-get install -y "./sisferias_${VERSAO#v}_amd64.deb"
+          ok=""
+          for i in $(seq 1 90); do
+            if curl -sk https://localhost:3000/api/health | grep -q '"ok":true'; then ok=1; break; fi
+            sleep 2
+          done
+          systemctl status sisferias --no-pager || true
+          [ -n "$ok" ] || { sudo journalctl -u sisferias --no-pager | tail -50; echo "O sistema não respondeu após a instalação"; exit 1; }
+          sudo test -f /opt/sisferias/data/ADMIN_INICIAL.txt
+          sudo test -f /opt/sisferias/data/chave-dados.key
+          systemctl is-enabled sisferias
+          [ "$(stat -c %U /opt/sisferias/data/postgres)" = "sisferias" ]
+          echo "Atualização (reinstala por cima) mantém os dados:"
+          K1="$(sudo sha256sum /opt/sisferias/data/chave-dados.key)"
+          sudo apt-get install -y --reinstall "./sisferias_${VERSAO#v}_amd64.deb"
+          for i in $(seq 1 90); do curl -sk https://localhost:3000/api/health | grep -q '"ok":true' && break; sleep 2; done
+          [ "$K1" = "$(sudo sha256sum /opt/sisferias/data/chave-dados.key)" ]
+          sudo apt-get remove -y sisferias
+          if systemctl is-enabled sisferias 2>/dev/null; then echo "Serviço continua instalado"; exit 1; fi
+          sudo test -f /opt/sisferias/data/chave-dados.key
+          echo "Instalação, atualização e remoção do .deb OK (dados mantidos)."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacotes
+          path: |
+            sisferias-*.zip
+            sisferias_*.deb
+
+  windows:
+    name: Instalador e instalação no Windows
+    needs: pacotes
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      VERSAO: ${{ needs.pacotes.outputs.versao }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacotes
+      - name: Extrair o pacote do Windows
+        shell: pwsh
+        run: Expand-Archive -Path "sisferias-$env:VERSAO-windows.zip" -DestinationPath pacote
+      - name: Diagnóstico do PostgreSQL embutido (initdb direto)
+        shell: pwsh
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          $initdb = (Get-ChildItem pacote\sisferias\node_modules\@embedded-postgres -Recurse -Filter initdb.exe | Select-Object -First 1).FullName
+          Write-Host "initdb: $initdb"
+          $d = "$env:RUNNER_TEMP\pgteste"
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $p = Start-Process -PassThru -NoNewWindow -FilePath $initdb -ArgumentList '-D', $d, '-U', 'postgres', '-A', 'trust', '-E', 'UTF8', '--locale=C' -RedirectStandardOutput initdb-out.log -RedirectStandardError initdb-err.log
+          if (-not $p.WaitForExit(180000)) { Write-Host 'initdb NÃO terminou em 3 minutos'; Stop-Process -Id $p.Id -Force }
+          Write-Host "initdb terminou com código $($p.ExitCode) em $($sw.Elapsed.TotalSeconds) s"
+          Get-Content initdb-out.log -Tail 25; Get-Content initdb-err.log -Tail 25
+      - name: Teste do pacote .zip no Windows (sem instalador, usuário comum)
+        shell: pwsh
+        timeout-minutes: 8
+        run: |
+          $dir = Resolve-Path pacote\sisferias
+          $env:PORT = '3100'; $env:PG_PORT = '5440'; $env:DATA_DIR = "$env:RUNNER_TEMP\sisferias-zip"
+          $p = Start-Process -PassThru -NoNewWindow -FilePath "$dir\runtime\node.exe" -ArgumentList "`"$dir\server\start.js`"" -WorkingDirectory $dir -RedirectStandardOutput zip-out.log -RedirectStandardError zip-err.log
+          $ok = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            $r = & curl.exe -sk https://localhost:3100/api/health
+            if ($r -match '"ok":true') { $ok = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          Get-Content zip-out.log -Tail 30; Get-Content zip-err.log -Tail 30
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Get-Process | Where-Object { $_.ProcessName -match 'postgres' } | Stop-Process -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { throw 'O pacote .zip não respondeu no Windows' }
+          Write-Host 'Pacote .zip OK no Windows.'
+      - name: Gerar o instalador (Inno Setup)
+        if: always()
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Null }
+          $v = $env:VERSAO.TrimStart('v')
+          & $iscc "/DVersao=$v" "/DOrigem=..\pacote\sisferias" instaladores\sisferias.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-ChildItem instaladores\*.exe
+      - name: Teste real do instalador (instala, acessa, desinstala)
+        if: always()
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          $v = $env:VERSAO.TrimStart('v')
+          $exe = "instaladores\sisferias-v$v-instalador-windows.exe"
+          Start-Process -Wait -FilePath $exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/LOG=instalacao.log'
+          $ok = $false
+          for ($i = 0; $i -lt 90; $i++) {
+            $r = & curl.exe -sk https://localhost:3000/api/health
+            if ($r -match '"ok":true') { $ok = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ok) {
+            Get-Content instalacao.log -Tail 40
+            if (Test-Path C:\SISFERIAS\data\logs\sisferias.log) { Get-Content C:\SISFERIAS\data\logs\sisferias.log -Tail 60 }
+            Get-ChildItem C:\SISFERIAS\data -Recurse -Depth 1 -ErrorAction SilentlyContinue | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 200
+            if (Test-Path C:\SISFERIAS\data\postgres\inicializacao.log) { Get-Content C:\SISFERIAS\data\postgres\inicializacao.log -Tail 40 }
+            Get-Process | Where-Object { $_.ProcessName -match 'node|postgres|initdb|pg_ctl' } | Format-Table Id, ProcessName, StartTime -AutoSize
+            throw 'O sistema não respondeu após a instalação'
+          }
+          if (-not (Test-Path C:\SISFERIAS\data\ADMIN_INICIAL.txt)) { throw 'Senha inicial não gerada' }
+          schtasks /Query /TN SISFERIAS | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Serviço (tarefa) não instalado' }
+          netsh advfirewall firewall show rule name=SISFERIAS | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Regra de firewall não criada' }
+          if (-not (Test-Path "$env:PUBLIC\Desktop\SISFERIAS.lnk")) { Write-Host 'Aviso: atalho da área de trabalho não encontrado' }
+          Start-Process -Wait -FilePath C:\SISFERIAS\unins000.exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'
+          Start-Sleep -Seconds 5
+          schtasks /Query /TN SISFERIAS 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) { throw 'Serviço continua instalado após desinstalar' }
+          if (-not (Test-Path C:\SISFERIAS\data\chave-dados.key)) { throw 'Desinstalar apagou os dados' }
+          Write-Host 'Instalação e desinstalação no Windows OK (dados mantidos).'
+          exit 0  # o último schtasks devolve erro de propósito (serviço já removido)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instalador-windows
+          path: instaladores/sisferias-*-instalador-windows.exe

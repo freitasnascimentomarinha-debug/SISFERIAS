@@ -3,7 +3,7 @@
 Sistema web para planejamento, lançamento, acompanhamento, impressão e administração de férias do efetivo, feito para rodar **em um computador da rede interna** e ser acessado pelo navegador nos demais.
 
 - **Banco de dados PostgreSQL** (padrão da DCTIM): embutido, sem instalação separada (os binários oficiais vêm junto e o sistema o liga sozinho), ou um PostgreSQL externo do CLTI.
-- **Instalação simples:** só é preciso ter o Node.js.
+- **Instalação simples:** instalador para **Windows** (`.exe`, Avançar, Avançar, Concluir) e pacote para **Ubuntu** (`.deb`), com o Node.js e o banco já dentro. Nada para instalar antes, sem internet.
 - **Segurança conforme as normas da DCTIM:** HTTPS obrigatório, dados pessoais cifrados (AES-256), regra de senha forte, bloqueio após 5 tentativas, troca obrigatória de senha provisória, registro de todas as operações e usuário de banco com privilégio mínimo. Detalhes em **[CONFORMIDADE.md](CONFORMIDADE.md)**.
 - **Funciona sem internet:** interface, fontes e estilos vão empacotados.
 - **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário (com os dados pessoais cifrados).
@@ -15,24 +15,19 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 
 ---
 
-## 1. Instalação rápida (Windows)
+## 1. Instalação rápida
 
-1. Instale o **Node.js LTS** (versão 22.13 ou mais recente) em <https://nodejs.org>, aceitando as opções padrão.
-2. Baixe o SISFERIAS de uma das duas formas:
-   - **Pacote pronto (recomendado, não precisa de internet na instalação):** na página **Releases** do GitHub, baixe `sisferias-vX.Y.Z-windows.zip` (ou `-linux.zip`).
-   - **Código-fonte:** botão verde **Code → Download ZIP**. Nesse caso a primeira execução precisa de internet para baixar as dependências.
-3. Extraia o `.zip` em uma pasta fixa, por exemplo `C:\SISFERIAS`.
-4. Dê dois cliques em **`iniciar.bat`**.
-5. A janela mostra os endereços de acesso:
-   ```
-   SISFERIAS em execução.
-     Neste computador:  https://localhost:3000
-     Na rede:           https://192.168.0.15:3000
-     Banco de dados:    PostgreSQL embutido (C:\SISFERIAS\data\postgres, porta 5433, somente localhost)
-   ```
-   Nos outros computadores da rede, abra o endereço **"Na rede"** no navegador.
+Na página **Releases** do GitHub:
 
-A janela precisa ficar aberta enquanto o sistema estiver em uso. Ao fechá-la, o sistema para.
+- **Windows:** baixe `sisferias-vX.Y.Z-instalador-windows.exe`, dê dois cliques e siga o assistente. O sistema fica em `C:\SISFERIAS`, roda como serviço (inicia com o Windows), a porta 3000 é liberada no firewall e o atalho **SISFERIAS** é criado na área de trabalho. Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo** (o instalador não tem assinatura digital de empresa).
+- **Ubuntu:** baixe `sisferias_X.Y.Z_amd64.deb` e instale com `sudo apt install ./sisferias_X.Y.Z_amd64.deb`. O sistema fica em `/opt/sisferias`, roda como serviço do systemd com o usuário de sistema `sisferias`, e o endereço e a senha provisória aparecem no final.
+- **Sem instalador:** `sisferias-vX.Y.Z-windows.zip` / `-linux.zip`: extraia numa pasta fixa e execute `iniciar.bat` / `./iniciar.sh` (no Linux, `sudo ./instalar.sh` instala como serviço).
+
+Todos trazem o **Node.js** (pasta `runtime`) e o **PostgreSQL** embutidos. Nos outros computadores da rede, abra `https://IP-DO-SERVIDOR:3000` no navegador. Comandos de administração no servidor: `sisferias.cmd COMANDO` (Windows) ou `sudo /opt/sisferias/sisferias COMANDO` (Ubuntu), equivalentes a `npm run COMANDO --` do código-fonte.
+
+Os instaladores são gerados pelo GitHub a cada versão e **testados de verdade** antes de publicar: instalados, acessados e desinstalados numa máquina Windows e numa Ubuntu (workflow "Instaladores").
+
+Para rodar o **código-fonte** (desenvolvimento): Node.js 22.13+, `npm install` e `iniciar.bat` (ou `npm run build && npm start`).
 
 ### Primeiro acesso
 
@@ -194,6 +189,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.1.0** | **Instaladores:** instalador para Windows (`.exe`: pasta `C:\SISFERIAS`, serviço, firewall, atalhos, senha inicial; desinstalador mantém os dados) e pacote para Ubuntu (`.deb`: `/opt/sisferias`, usuário de sistema `sisferias`, serviço do systemd, `ufw`). Os pacotes `.zip` passam a trazer o **Node.js embutido** (nada para instalar antes). Comando de administração `sisferias.cmd` / `sisferias`. Instalação, atualização e remoção testadas de verdade no Windows e no Ubuntu a cada versão. | Quem já usa o `.zip` pode continuar igual, ou instalar o `.exe`/`.deb` por cima na mesma pasta (Windows: `C:\SISFERIAS`), mantendo a pasta `data`. |
 | **3.0.9** | **Requerimento de férias:** o ano do adiantamento do adicional natalino passa a vir preenchido com o **exercício de pagamento** (1º de dezembro a 30 de novembro) em que a parcela começa. Exemplo: parcela iniciada em 20/12/2025 → 13º de 2026. Continua editável. | Nenhuma. |
 | **3.0.8** | **Requerimento de férias:** botão **Requerimento** na tela Impressão. Abre uma janela para conferir os dados do militar e marcar Sim/Não para o adiantamento do adicional natalino (50%), o adicional de férias (1/3) e a remuneração de férias (70%) (SGM-302, Vol. II, arts. 24.3, 24.4 e 24.7). Ao confirmar, baixa o requerimento em Word, no modelo da OM, com o brasão. A geração fica registrada na auditoria. | Nenhuma. |
 | **3.0.7** | **Minhas Férias:** novo destaque "Restam cumprir" com o total de dias do direito que ainda faltam gozar. **Papeleta:** os quatro campos de assinatura (Vice-Diretor, Encarregado do Dep. Pessoal, Encarregado e militar) passam a ter o mesmo espaço para assinar, mantendo o layout. | Nenhuma. |
