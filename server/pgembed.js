@@ -111,7 +111,9 @@ export async function startEmbedded() {
   if (!fs.existsSync(path.join(dir, 'PG_VERSION'))) {
     console.log('[banco] criando o banco de dados PostgreSQL (primeira execução)...');
     fs.mkdirSync(path.dirname(dir), { recursive: true });
-    fs.mkdirSync(dir, { mode: 0o700 });
+    // No Windows o initdb cria a pasta: se ela já existir, ele não consegue
+    // ajustar as permissões (Permission denied) quando roda com token restrito.
+    if (process.platform !== 'win32') fs.mkdirSync(dir, { mode: 0o700 });
     if (ids.uid !== undefined) { fs.chownSync(dir, ids.uid, ids.gid); allowTraverse(path.dirname(dir)); }
     creds = { superPassword: randomPassword(), ownerPassword: randomPassword(), appPassword: randomPassword(), configured: false };
     fs.writeFileSync(config.database.credentialsFile, JSON.stringify(creds, null, 2) + '\n', { mode: 0o600 });

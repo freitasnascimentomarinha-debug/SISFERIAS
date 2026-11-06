@@ -104,7 +104,7 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if CurUninstallStep = usPostUninstall then
+  if (CurUninstallStep = usPostUninstall) and not UninstallSilent then
     MsgBox('O SISFERIAS foi removido. Os dados (banco, backups e chave de criptografia) continuam em ' +
       ExpandConstant('{app}') + '\data. Apague essa pasta somente se não for mais usar o sistema e depois de guardar um backup.',
       mbInformation, MB_OK);
