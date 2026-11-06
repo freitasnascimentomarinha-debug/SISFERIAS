@@ -162,9 +162,33 @@ Ubuntu: `sudo systemctl restart sisferias`).
 
 ### 3.5 Acessar
 
+**O sistema funciona sozinho, como serviço.** Depois de instalado, não é preciso deixar nada aberto nem
+abrir nada para funcionar em rede. O serviço liga junto com o computador (mesmo antes de alguém entrar no
+Windows) e roda em segundo plano, sem janela. O atalho **SISFERIAS** só abre o navegador na tela de entrada:
+fechar o navegador não desliga o sistema.
+
 - **No próprio servidor:** abra <https://localhost:3000>.
-- **Nos outros computadores:** abra o endereço mostrado em **"Na rede"**
-  (exemplo: `https://192.168.0.15:3000`).
+- **Nos outros computadores e no celular:** use o **IP do servidor**, e não `localhost`
+  (no celular, `localhost` é o próprio celular). Exemplo: `https://192.168.0.15:3000`.
+  - Para descobrir o IP no Windows: tecla Windows → `cmd` → `ipconfig` → **Endereço IPv4** do adaptador
+    em uso (Wi-Fi ou Ethernet). No Ubuntu: `hostname -I`. O instalador do Ubuntu também mostra o endereço no final.
+  - Digite o endereço completo, com **`https://`** e **`:3000`**.
+
+**Para os outros aparelhos conseguirem acessar:**
+- O servidor precisa estar **ligado e conectado à rede**. Se ele desligar, hibernar ou entrar em suspensão,
+  o sistema sai do ar até ele voltar. No Windows, em **Configurações → Sistema → Energia → Tela e suspensão**,
+  ponha **"Nunca"** em "Colocar o dispositivo em suspensão".
+- No Windows, a rede deve estar como **Rede privada** (Configurações → Rede e Internet → Wi-Fi ou Ethernet →
+  clique na rede → "Rede privada"). Em rede "pública", o Windows costuma bloquear o acesso de outros aparelhos.
+- O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Ubuntu). Se houver
+  **antivírus com firewall próprio** (Avast, McAfee, Norton…), libere a porta 3000 ou o SISFERIAS nele.
+- Redes de visitante e alguns roteadores domésticos usam **"isolamento de clientes"**, que impede um aparelho
+  de enxergar o outro. Nesse caso o acesso pela rede não funciona; na rede interna da OM isso não acontece.
+
+**Conferir se o serviço está funcionando:** no Windows, abra o Prompt de Comando como administrador e execute
+`C:\SISFERIAS\sisferias.cmd servico status` (ou procure a tarefa **SISFERIAS** no Agendador de Tarefas,
+`taskschd.msc`). No Ubuntu: `systemctl status sisferias`. Para reiniciar: `sisferias.cmd servico parar` e
+`sisferias.cmd servico iniciar` (Windows) ou `sudo systemctl restart sisferias` (Ubuntu).
 
 Enquanto o certificado do CTIM não for instalado (seção 12), o navegador mostra o aviso
 "conexão não é particular". A conexão já é criptografada; o aviso só indica que o certificado
