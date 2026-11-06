@@ -183,6 +183,8 @@ await step('requerimento de férias (Word)', async () => {
   await p.fill('#req-nup', '63341.000563/2026-02');
   await p.locator('[role=radiogroup][aria-label^="Adiantamento"] label:has-text("Sim")').click();
   await p.locator('[role=radiogroup][aria-label^="Remuneração"] label:has-text("Sim")').click();
+  // Parcela de 05/01/2026: exercício de pagamento dez/2025–nov/2026 → 13º de 2026.
+  check('ano do adicional natalino sugerido pelo exercício de pagamento (dez–nov)', (await p.inputValue('#req-ano-natalino')) === '2026', await p.inputValue('#req-ano-natalino'));
   await p.fill('#req-ano-natalino', '2027');
   const downloadPromise = p.waitForEvent('download', { timeout: 15000 });
   await p.click('button:has-text("OK, baixar requerimento")');
