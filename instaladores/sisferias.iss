@@ -39,6 +39,8 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+; Mostra a tela de boas-vindas (com o logo e o mascote), que o Inno Setup 6 pula por padrão.
+DisableWelcomePage=no
 ; Identidade visual: logo e mascote do SISFERIAS (várias escalas para telas de alta resolução).
 WizardImageFile=marca\instalador-grande-0.bmp,marca\instalador-grande-1.bmp,marca\instalador-grande-2.bmp,marca\instalador-grande-3.bmp,marca\instalador-grande-4.bmp
 WizardSmallImageFile=marca\instalador-pequena-0.bmp,marca\instalador-pequena-1.bmp,marca\instalador-pequena-2.bmp,marca\instalador-pequena-3.bmp,marca\instalador-pequena-4.bmp

@@ -1,0 +1,107 @@
+# Tira fotos das telas do instalador do Windows numa máquina Windows real do
+# GitHub (instalação interativa, avançando tela a tela) e grava as imagens em
+# docs/capturas-instalador/ neste mesmo branch. Serve para conferir a aparência
+# do assistente (logo, mascote, ícone) e para o Manual.
+name: Capturas do instalador
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['ccr-*']
+    paths:
+      - 'instaladores/sisferias.iss'
+      - 'instaladores/marca/**'
+      - '.github/workflows/capturas-instalador.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  pacote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: |
+          npm run pacote -- --plataforma windows
+          cd pacote && zip -rq ../pacote-windows.zip sisferias
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacote-windows
+          path: pacote-windows.zip
+
+  capturas:
+    needs: pacote
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacote-windows
+      - name: Gerar o instalador
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          Expand-Archive pacote-windows.zip -DestinationPath pacote
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Null }
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          & $iscc "/DVersao=$v" "/DOrigem=..\pacote\sisferias" instaladores\sisferias.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Fotos das telas (instalação interativa)
+        shell: pwsh
+        timeout-minutes: 12
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          New-Item -ItemType Directory -Force docs\capturas-instalador | Out-Null
+          function Foto($nome) {
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("docs\capturas-instalador\$nome.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            Write-Host "foto $nome"
+          }
+          $ws = New-Object -ComObject WScript.Shell
+          function Avancar { $ws.AppActivate('SISFERIAS') | Out-Null; Start-Sleep -Milliseconds 800; $ws.SendKeys('{ENTER}'); Start-Sleep -Seconds 4 }
+          $exe = (Get-ChildItem instaladores\*-instalador-windows.exe | Select-Object -First 1).FullName
+          Start-Process -FilePath $exe
+          Start-Sleep -Seconds 10
+          $ws.AppActivate('SISFERIAS') | Out-Null; Start-Sleep -Seconds 1
+          Foto '1-boas-vindas'
+          Avancar; Foto '2-pasta'
+          Avancar; Foto '3-tarefas'
+          Avancar; Foto '4-pronto'
+          Avancar; Start-Sleep -Seconds 6; Foto '5-instalando'
+          for ($i = 0; $i -lt 90; $i++) {
+            if ((& curl.exe -sk https://localhost:3000/api/health) -match '"ok":true') { break }
+            Start-Sleep -Seconds 2
+          }
+          Start-Sleep -Seconds 8
+          $ws.AppActivate('SISFERIAS') | Out-Null; Start-Sleep -Seconds 1
+          Foto '6-concluido'
+          $atalho = "$env:PUBLIC\Desktop\SISFERIAS.lnk"
+          if (Test-Path $atalho) {
+            # mostra a área de trabalho com o atalho
+            $ws.SendKeys('^{ESC}'); Start-Sleep 1; $ws.SendKeys('{ESC}')
+            (New-Object -ComObject Shell.Application).MinimizeAll(); Start-Sleep -Seconds 3
+            Foto '7-area-de-trabalho'
+          }
+      - name: Gravar as fotos no branch
+        if: always()
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/capturas-instalador
+          git commit -m "Capturas das telas do instalador do Windows [skip ci]"
+          if ($LASTEXITCODE -eq 0) { git push origin "HEAD:${{ github.ref_name }}" }
+          exit 0
