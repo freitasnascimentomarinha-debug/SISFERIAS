@@ -59,7 +59,7 @@ Os arquivos ficam na página **Releases** do GitHub do projeto:
 
 ### 3.1 Windows: instalador (Avançar, Avançar, Concluir)
 
-1. Baixe **`sisferias-vX.Y.Z-instalador-windows.exe`** e dê dois cliques nele.
+1. Baixe o instalador pelo link direto **[sisferias-instalador-windows.exe](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-windows.exe)** (sempre a última versão; na página Releases ele também aparece como `sisferias-vX.Y.Z-instalador-windows.exe`) e dê dois cliques nele.
    É preciso ser administrador do computador (o Windows pede a confirmação).
    - Se aparecer **"O Windows protegeu o computador"**, clique em **Mais informações → Executar assim mesmo**.
      O aviso aparece porque o instalador não tem assinatura digital de empresa. Se a política da OM bloquear

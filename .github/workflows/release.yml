@@ -2,6 +2,11 @@
 #  - sisferias-vX.Y.Z-instalador-windows.exe  (instalador do Windows)
 #  - sisferias_X.Y.Z_amd64.deb                 (pacote do Ubuntu)
 #  - sisferias-vX.Y.Z-windows.zip / -linux.zip (pacotes completos, sem instalador)
+#  - sisferias-instalador-windows.exe / sisferias-instalador-ubuntu.deb: os mesmos
+#    instaladores com nome fixo, para o link "releases/latest/download/..." do
+#    README baixar sempre a última versão com um clique
+#  - SISFERIAS-completo.zip: os dois instaladores, o guia de instalação e um
+#    LEIA-ME (extrair e clicar)
 # Todos com o Node.js e o PostgreSQL embutidos (nada para instalar antes).
 # Antes de publicar, os testes rodam e os dois instaladores são instalados e
 # desinstalados de verdade (workflow "Instaladores").
@@ -51,11 +56,46 @@ jobs:
     env:
       VERSAO: ${{ needs.conferir.outputs.versao }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: codigo
       - uses: actions/download-artifact@v4
         with:
           path: arquivos
           merge-multiple: true
-      - run: ls -la arquivos
+      - name: Instaladores com nome fixo e pacote completo
+        run: |
+          cd arquivos
+          cp sisferias-*-instalador-windows.exe sisferias-instalador-windows.exe
+          cp sisferias_*_amd64.deb sisferias-instalador-ubuntu.deb
+          P="SISFERIAS-${VERSAO}"
+          mkdir -p "$P/Windows" "$P/Ubuntu" "$P/docs"
+          cp sisferias-instalador-windows.exe "$P/Windows/"
+          cp sisferias-instalador-ubuntu.deb "$P/Ubuntu/"
+          cp ../codigo/INSTALACAO.md "$P/"
+          cp -r ../codigo/docs/capturas-instalador "$P/docs/"
+          cat > "$P/LEIA-ME.txt" <<EOF
+          SISFERIAS ${VERSAO} - Sistema de Planejamento e Controle de Férias
+
+          WINDOWS
+            Abra a pasta "Windows" e dê dois cliques em sisferias-instalador-windows.exe.
+            Siga o assistente (Avançar, Avançar, Instalar, Concluir).
+            Se aparecer "O Windows protegeu o computador", clique em
+            "Mais informações" e depois em "Executar assim mesmo".
+
+          UBUNTU
+            Abra a pasta "Ubuntu" e dê dois cliques em sisferias-instalador-ubuntu.deb,
+            ou no terminal: sudo apt install ./Ubuntu/sisferias-instalador-ubuntu.deb
+
+          Não é preciso instalar mais nada nem ter internet.
+          No final aparece a senha provisória do administrador.
+          GUARDE UMA CÓPIA do arquivo data/chave-dados.key fora do servidor.
+          Guia completo: INSTALACAO.md
+          EOF
+          sed -i 's/^          //' "$P/LEIA-ME.txt"
+          zip -qr SISFERIAS-completo.zip "$P"
+          rm -rf "$P"
+          ls -la
       - name: Publicar na página de Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -65,6 +105,9 @@ jobs:
           files: arquivos/*
           body: |
             ## Como instalar
+
+            **Mais fácil:** baixe **SISFERIAS-completo.zip**, extraia e dê dois cliques no instalador da pasta
+            **Windows** ou **Ubuntu** (o LEIA-ME.txt explica).
 
             **Windows:** baixe **sisferias-${{ env.VERSAO }}-instalador-windows.exe**, dê dois cliques e siga o assistente
             (Avançar, Avançar, Concluir). O sistema fica em `C:\SISFERIAS`, inicia sozinho com o Windows e ganha um atalho
