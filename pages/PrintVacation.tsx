@@ -2,11 +2,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVacation } from '../contexts/VacationContext';
-import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock, User, Camera } from 'lucide-react';
+import { Printer, ArrowLeft, Save, MapPin, Shield, CheckCircle2, FileText, Clock, User, Camera, FileSignature } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, isValid, addDays, startOfDay, isAfter } from 'date-fns';
 import { MilitaryCategory, PRACA_RANKS, OFICIAL_RANKS, CIVIL_RANKS, StaffMember } from '../types';
 import { api } from '../lib/api';
+import RequerimentoModal from '../components/RequerimentoModal';
 
 const inputClass = "w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-orange-500 transition-all";
 
@@ -62,6 +63,7 @@ const PrintVacation: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [nup, setNup] = useState('');
   const [printError, setPrintError] = useState<string | null>(null);
+  const [showRequerimento, setShowRequerimento] = useState(false);
 
   // Estados dos campos de preenchimento
   const [ship, setShip] = useState(defaultShip);
@@ -661,6 +663,23 @@ const PrintVacation: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
+      {showRequerimento && employee && (
+        <RequerimentoModal
+          employee={employee}
+          om={ship}
+          especialidade={specialization}
+          ano={selectedYear}
+          parcelaInicial={selectedParcelIdx}
+          onClose={() => setShowRequerimento(false)}
+          onGerado={(d, n) => addAuditLog({
+            userName: user?.name || 'Sistema',
+            action: 'Impressão',
+            field: `Requerimento de férias: ${employee.rank} ${employee.warName}`,
+            oldValue: '-',
+            newValue: `Ano: ${d.anoFerias} | Parcela: ${n} | Adiant. natalino: ${d.adiantamentoNatalino} | Adicional 1/3: ${d.adicionalFerias} | Remuneração 70%: ${d.remuneracaoFerias}${d.nup ? ` | NUP: ${d.nup}` : ''}`,
+          })}
+        />
+      )}
       {showToast && (
         <div className="fixed top-24 right-8 z-[100] bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-right-4 border-l-4 border-green-500">
           <CheckCircle2 className="text-green-400" size={24} />
@@ -680,7 +699,18 @@ const PrintVacation: React.FC = () => {
               <p className="text-orange-100 text-sm">A pág. 2 (anexo) só é gerada quando houver texto preenchido no anexo.</p>
             </div>
           </div>
-          <button onClick={() => navigate(-1)} aria-label="Voltar" className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowRequerimento(true)}
+              disabled={!employee}
+              title={employee ? 'Gerar o requerimento de adiantamento natalino, adicional e remuneração de férias' : 'Selecione um ano com férias lançadas'}
+              className="px-4 py-2 bg-white text-orange-700 hover:bg-orange-50 rounded-xl text-sm font-black shadow-lg ring-2 ring-white/50 flex items-center gap-2 transition-all disabled:opacity-60"
+            >
+              <FileSignature size={16} /> Requerimento
+            </button>
+            <button onClick={() => navigate(-1)} aria-label="Voltar" className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"><ArrowLeft size={24}/></button>
+          </div>
         </div>
 
         <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">

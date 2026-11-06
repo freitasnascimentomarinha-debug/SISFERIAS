@@ -427,7 +427,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.7**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.0.8**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
