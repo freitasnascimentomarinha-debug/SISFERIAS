@@ -6,10 +6,12 @@ import { Megaphone, Users, UserCheck, Info, Clock, BarChart as ChartIcon, Pin, H
 import { startOfDay, isBefore, isAfter, isValid, format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import mascote from '../assets/marca/mascote-redondo.webp';
+import logoSisferias from '../assets/marca/logo-sisferias.webp';
 
 const Home: React.FC = () => {
   const { employees, settings } = useVacation();
-  const { users } = useAuth();
+  const { users, user } = useAuth();
   const now = startOfDay(new Date());
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [showLearningModal, setShowLearningModal] = useState(false);
@@ -97,7 +99,7 @@ const Home: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
       {/* Cabeçalho Institucional */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16 items-center animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10 items-center animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="lg:col-span-1 flex justify-center">
           {settings.logoUrl ? (
             <img
@@ -106,9 +108,7 @@ const Home: React.FC = () => {
               className="h-52 md:h-64 object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
             />
           ) : (
-            <div className="w-40 h-40 md:w-52 md:h-52 bg-slate-900 rounded-[52px] shadow-xl flex items-center justify-center text-white font-black text-6xl">
-              MB
-            </div>
+            <img src={logoSisferias} alt="SISFÉRIAS" className="h-44 md:h-56 object-contain drop-shadow-sm" />
           )}
         </div>
 
@@ -126,6 +126,19 @@ const Home: React.FC = () => {
       </div>
 
       {/* Grid Principal */}
+      {/* Boas-vindas com o mascote do SISFERIAS */}
+      <div className="mb-10 flex flex-col sm:flex-row items-center gap-5 bg-gradient-to-r from-orange-50 via-white to-white border border-orange-100 rounded-[32px] p-5 shadow-sm">
+        <img src={mascote} alt="Mascote do SISFERIAS" className="w-20 h-20 shrink-0 drop-shadow-md" />
+        <div className="flex-1 text-center sm:text-left">
+          <p className="text-lg font-black text-slate-900">Olá, {user?.warName || user?.name?.split(' ')[0] || 'militar'}!</p>
+          <p className="text-sm text-slate-600 font-medium">Suas férias bem organizadas: lance os períodos, acompanhe a contagem e imprima a papeleta por aqui.</p>
+        </div>
+        <button type="button" onClick={() => navigate('/vacation-form')}
+          className="px-5 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-black shadow-md shrink-0">
+          Minhas Férias
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
         <div className="flex flex-col gap-6 lg:col-span-1 h-full">
           {/* Lotação Total do Sistema */}

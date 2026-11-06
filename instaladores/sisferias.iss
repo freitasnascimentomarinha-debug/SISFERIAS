@@ -39,6 +39,12 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+; Identidade visual: logo e mascote do SISFERIAS (várias escalas para telas de alta resolução).
+WizardImageFile=marca\instalador-grande-0.bmp,marca\instalador-grande-1.bmp,marca\instalador-grande-2.bmp,marca\instalador-grande-3.bmp,marca\instalador-grande-4.bmp
+WizardSmallImageFile=marca\instalador-pequena-0.bmp,marca\instalador-pequena-1.bmp,marca\instalador-pequena-2.bmp,marca\instalador-pequena-3.bmp,marca\instalador-pequena-4.bmp
+WizardImageStretch=no
+SetupIconFile=marca\sisferias.ico
+UninstallDisplayIcon={app}\sisferias.ico
 CloseApplications=no
 UninstallDisplayName=SISFERIAS
 SetupLogging=yes
@@ -51,16 +57,17 @@ Name: "atalho"; Description: "Criar atalho do SISFERIAS na área de trabalho"
 
 [Files]
 Source: "{#Origem}\*"; DestDir: "{app}"; Excludes: "\data,\data\*,*.sh,\sisferias"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "marca\sisferias.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [INI]
 Filename: "{app}\SISFERIAS.url"; Section: "InternetShortcut"; Key: "URL"; String: "https://localhost:{#Porta}"
 
 [Icons]
-Name: "{group}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"
+Name: "{group}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"; IconFilename: "{app}\sisferias.ico"
 Name: "{group}\Pasta do SISFERIAS"; Filename: "{app}"
 Name: "{group}\Guia de instalação"; Filename: "{app}\INSTALACAO.md"
 Name: "{group}\Desinstalar o SISFERIAS"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"; Tasks: atalho
+Name: "{autodesktop}\SISFERIAS"; Filename: "{app}\SISFERIAS.url"; IconFilename: "{app}\sisferias.ico"; Tasks: atalho
 
 [Run]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""SISFERIAS"""; Flags: runhidden; StatusMsg: "Liberando a porta {#Porta} no firewall do Windows..."
