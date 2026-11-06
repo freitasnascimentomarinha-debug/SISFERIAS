@@ -94,6 +94,7 @@ jobs:
     name: Instalador e instalação no Windows
     needs: pacotes
     runs-on: windows-latest
+    timeout-minutes: 45
     env:
       VERSAO: ${{ needs.pacotes.outputs.versao }}
     steps:
@@ -104,8 +105,22 @@ jobs:
       - name: Extrair o pacote do Windows
         shell: pwsh
         run: Expand-Archive -Path "sisferias-$env:VERSAO-windows.zip" -DestinationPath pacote
+      - name: Diagnóstico do PostgreSQL embutido (initdb direto)
+        shell: pwsh
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          $initdb = (Get-ChildItem pacote\sisferias\node_modules\@embedded-postgres -Recurse -Filter initdb.exe | Select-Object -First 1).FullName
+          Write-Host "initdb: $initdb"
+          $d = "$env:RUNNER_TEMP\pgteste"
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $p = Start-Process -PassThru -NoNewWindow -FilePath $initdb -ArgumentList '-D', $d, '-U', 'postgres', '-A', 'trust', '-E', 'UTF8', '--locale=C' -RedirectStandardOutput initdb-out.log -RedirectStandardError initdb-err.log
+          if (-not $p.WaitForExit(180000)) { Write-Host 'initdb NÃO terminou em 3 minutos'; Stop-Process -Id $p.Id -Force }
+          Write-Host "initdb terminou com código $($p.ExitCode) em $($sw.Elapsed.TotalSeconds) s"
+          Get-Content initdb-out.log -Tail 25; Get-Content initdb-err.log -Tail 25
       - name: Teste do pacote .zip no Windows (sem instalador, usuário comum)
         shell: pwsh
+        timeout-minutes: 8
         run: |
           $dir = Resolve-Path pacote\sisferias
           $env:PORT = '3100'; $env:PG_PORT = '5440'; $env:DATA_DIR = "$env:RUNNER_TEMP\sisferias-zip"
@@ -123,6 +138,7 @@ jobs:
           Write-Host 'Pacote .zip OK no Windows.'
       - name: Gerar o instalador (Inno Setup)
         if: always()
+        timeout-minutes: 10
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -133,6 +149,7 @@ jobs:
           Get-ChildItem instaladores\*.exe
       - name: Teste real do instalador (instala, acessa, desinstala)
         if: always()
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $v = $env:VERSAO.TrimStart('v')
