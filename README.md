@@ -9,6 +9,8 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 - **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário (com os dados pessoais cifrados).
 - **Importação e exportação** pela própria tela (CSV ou backup JSON), inclusive com as senhas já criptografadas.
 
+> **Quer só instalar?** Baixe o instalador na seção **[1. Instalação rápida](#1-instalação-rápida)** (links diretos para Windows e Ubuntu).
+>
 > **Vai instalar ou administrar o sistema?** Comece pelo guia passo a passo **[INSTALACAO.md](INSTALACAO.md)**: instalação, primeiro acesso, quem administra, recuperação de acesso, chave dos dados e backups, em linguagem simples.
 >
 > **Homologação na DCTIM?** Veja **[CONFORMIDADE.md](CONFORMIDADE.md)**: cada requisito das normas DCTIMARINST 33-06B, DCTIMBOTEC 31/002/2020, DCTIMBOTEC 30/002/2023 e DCTIMARINST 30-17, como é atendido e como verificar.
@@ -17,7 +19,17 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 
 ## 1. Instalação rápida
 
-Na página **Releases** do GitHub:
+### ⬇️ Baixar o instalador (última versão)
+
+| Computador | Baixar |
+|---|---|
+| **Windows** | **[sisferias-instalador-windows.exe](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-windows.exe)**: dois cliques e siga o assistente |
+| **Ubuntu** | **[sisferias-instalador-ubuntu.deb](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-ubuntu.deb)**: dois cliques, ou `sudo apt install ./sisferias-instalador-ubuntu.deb` |
+| **Os dois + guia** | **[SISFERIAS-completo.zip](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/SISFERIAS-completo.zip)**: extraia e dê dois cliques no instalador da pasta Windows ou Ubuntu |
+
+> O botão verde **Code → Download ZIP** baixa só o código-fonte, **sem** os instaladores. Use os links acima.
+
+Detalhes de cada arquivo, na página **[Releases](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest)**:
 
 - **Windows:** baixe `sisferias-vX.Y.Z-instalador-windows.exe`, dê dois cliques e siga o assistente. O sistema fica em `C:\SISFERIAS`, roda como serviço (inicia com o Windows), a porta 3000 é liberada no firewall e o atalho **SISFERIAS** é criado na área de trabalho. Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo** (o instalador não tem assinatura digital de empresa).
 - **Ubuntu:** baixe `sisferias_X.Y.Z_amd64.deb` e instale com `sudo apt install ./sisferias_X.Y.Z_amd64.deb`. O sistema fica em `/opt/sisferias`, roda como serviço do systemd com o usuário de sistema `sisferias`, e o endereço e a senha provisória aparecem no final.
@@ -189,6 +201,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.1.3** | **Download com um clique:** links diretos no README para o instalador da última versão (Windows e Ubuntu) e o novo **SISFERIAS-completo.zip** (os dois instaladores, o guia e um LEIA-ME: extrair e clicar). Os exemplos de NUP e NIP nas telas, nos testes e no código passam a ser números fictícios (`12345.000001/2026-01`, `12345678`). | Nenhuma. |
 | **3.1.2** | Instalador do Windows passa a exibir a tela de boas-vindas com o logo e o mascote (o Inno Setup 6 a omitia por padrão). Fotos das telas do instalador geradas automaticamente numa máquina Windows (workflow "Capturas do instalador"); as fotos estão no INSTALACAO.md e no Manual do Usuário. | Nenhuma. |
 | **3.1.1** | **Identidade visual:** logo e mascote do SISFERIAS na tela de entrada, no topo das telas (ícone), no ícone da aba do navegador e numa faixa de boas-vindas na tela Início (o logo também substitui o quadro "MB" enquanto a OM não cadastra o próprio). Instalador do Windows com o logo e o mascote nas telas do assistente e ícone próprio nos atalhos e no Painel de Controle; no Ubuntu com área de trabalho, o .deb cria o atalho SISFERIAS no menu de aplicativos. | Nenhuma. |
 | **3.1.0** | **Instaladores:** instalador para Windows (`.exe`: pasta `C:\SISFERIAS`, serviço, firewall, atalhos, senha inicial; desinstalador mantém os dados) e pacote para Ubuntu (`.deb`: `/opt/sisferias`, usuário de sistema `sisferias`, serviço do systemd, `ufw`). Os pacotes `.zip` passam a trazer o **Node.js embutido** (nada para instalar antes). Comando de administração `sisferias.cmd` / `sisferias`. Instalação, atualização e remoção testadas de verdade no Windows e no Ubuntu a cada versão. | Quem já usa o `.zip` pode continuar igual, ou instalar o `.exe`/`.deb` por cima na mesma pasta (Windows: `C:\SISFERIAS`), mantendo a pasta `data`. |

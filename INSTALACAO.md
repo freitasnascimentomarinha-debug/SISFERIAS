@@ -59,7 +59,7 @@ Os arquivos ficam na página **Releases** do GitHub do projeto:
 
 ### 3.1 Windows: instalador (Avançar, Avançar, Concluir)
 
-1. Baixe **`sisferias-vX.Y.Z-instalador-windows.exe`** e dê dois cliques nele.
+1. Baixe o instalador pelo link direto **[sisferias-instalador-windows.exe](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-windows.exe)** (sempre a última versão; na página Releases ele também aparece como `sisferias-vX.Y.Z-instalador-windows.exe`) e dê dois cliques nele.
    É preciso ser administrador do computador (o Windows pede a confirmação).
    - Se aparecer **"O Windows protegeu o computador"**, clique em **Mais informações → Executar assim mesmo**.
      O aviso aparece porque o instalador não tem assinatura digital de empresa. Se a política da OM bloquear
@@ -502,7 +502,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.2**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.3**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e
