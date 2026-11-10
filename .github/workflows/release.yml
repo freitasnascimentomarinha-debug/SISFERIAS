@@ -1,8 +1,9 @@
 # Publica uma versão na página "Releases" do GitHub com:
 #  - sisferias-vX.Y.Z-instalador-windows.exe  (instalador do Windows)
 #  - sisferias_X.Y.Z_amd64.deb                 (pacote do Ubuntu)
+#  - sisferias-X.Y.Z-1.x86_64.rpm              (pacote do Oracle Linux / Red Hat 8 e 9)
 #  - sisferias-vX.Y.Z-windows.zip / -linux.zip (pacotes completos, sem instalador)
-#  - sisferias-instalador-windows.exe / sisferias-instalador-ubuntu.deb: os mesmos
+#  - sisferias-instalador-windows.exe / -ubuntu.deb / -oracle-linux.rpm: os mesmos
 #    instaladores com nome fixo, para o link "releases/latest/download/..." do
 #    README baixar sempre a última versão com um clique
 #  - SISFERIAS-completo.zip: os dois instaladores, o Manual do Usuário, o guia de
@@ -68,10 +69,12 @@ jobs:
           cd arquivos
           cp sisferias-*-instalador-windows.exe sisferias-instalador-windows.exe
           cp sisferias_*_amd64.deb sisferias-instalador-ubuntu.deb
+          cp sisferias-*.x86_64.rpm sisferias-instalador-oracle-linux.rpm
           P="SISFERIAS-${VERSAO}"
-          mkdir -p "$P/Windows" "$P/Ubuntu" "$P/docs"
+          mkdir -p "$P/Windows" "$P/Ubuntu" "$P/Oracle Linux" "$P/docs"
           cp sisferias-instalador-windows.exe "$P/Windows/"
           cp sisferias-instalador-ubuntu.deb "$P/Ubuntu/"
+          cp sisferias-instalador-oracle-linux.rpm "$P/Oracle Linux/"
           cp ../codigo/INSTALACAO.md "$P/"
           cp ../codigo/docs/Manual_do_Usuario_SISFERIAS.pdf "$P/"
           cp -r ../codigo/docs/capturas-instalador "$P/docs/"
@@ -87,6 +90,10 @@ jobs:
           UBUNTU
             Abra a pasta "Ubuntu" e dê dois cliques em sisferias-instalador-ubuntu.deb,
             ou no terminal: sudo apt install ./Ubuntu/sisferias-instalador-ubuntu.deb
+
+          ORACLE LINUX (e Red Hat, Rocky, AlmaLinux 8 ou 9)
+            No terminal, dentro da pasta extraída:
+            sudo dnf install "./Oracle Linux/sisferias-instalador-oracle-linux.rpm"
 
           Não é preciso instalar mais nada nem ter internet.
           No final aparece a senha provisória do administrador.
@@ -115,6 +122,10 @@ jobs:
             (Avançar, Avançar, Concluir). O sistema fica em `C:\SISFERIAS`, inicia sozinho com o Windows e ganha um atalho
             "SISFERIAS" na área de trabalho. No final aparece a senha provisória do administrador.
             Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo**.
+
+            **Oracle Linux (e Red Hat, Rocky, AlmaLinux) 8 ou 9:** baixe **sisferias-instalador-oracle-linux.rpm** e instale com
+            `sudo dnf install ./sisferias-instalador-oracle-linux.rpm`. Fica em `/opt/sisferias`, inicia sozinho com o computador;
+            o endereço e a senha provisória aparecem no final.
 
             **Ubuntu:** baixe o arquivo **.deb** e instale com dois cliques ou pelo terminal:
             `sudo apt install ./sisferias_*.deb`. O sistema fica em `/opt/sisferias` e inicia sozinho com o computador;

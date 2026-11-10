@@ -3,13 +3,13 @@
 Sistema web para planejamento, lançamento, acompanhamento, impressão e administração de férias do efetivo, feito para rodar **em um computador da rede interna** e ser acessado pelo navegador nos demais.
 
 - **Banco de dados PostgreSQL** (padrão da DCTIM): embutido, sem instalação separada (os binários oficiais vêm junto e o sistema o liga sozinho), ou um PostgreSQL externo do CLTI.
-- **Instalação simples:** instalador para **Windows** (`.exe`, Avançar, Avançar, Concluir) e pacote para **Ubuntu** (`.deb`), com o Node.js e o banco já dentro. Nada para instalar antes, sem internet.
+- **Instalação simples:** instalador para **Windows** (`.exe`, Avançar, Avançar, Concluir) e pacotes para **Ubuntu** (`.deb`) e **Oracle Linux / Red Hat 8 e 9** (`.rpm`), com o Node.js e o banco já dentro. Nada para instalar antes, sem internet.
 - **Segurança conforme as normas da DCTIM:** HTTPS obrigatório, dados pessoais cifrados (AES-256), regra de senha forte, bloqueio após 5 tentativas, troca obrigatória de senha provisória, registro de todas as operações e usuário de banco com privilégio mínimo. Detalhes em **[CONFORMIDADE.md](CONFORMIDADE.md)**.
 - **Funciona sem internet:** interface, fontes e estilos vão empacotados.
 - **Backup automático:** um por dia, e também antes de cada importação ou exclusão de usuário (com os dados pessoais cifrados).
 - **Importação e exportação** pela própria tela (CSV ou backup JSON), inclusive com as senhas já criptografadas.
 
-> **Quer só instalar?** Baixe o instalador na seção **[1. Instalação rápida](#1-instalação-rápida)** (links diretos para Windows e Ubuntu).
+> **Quer só instalar?** Baixe o instalador na seção **[1. Instalação rápida](#1-instalação-rápida)** (links diretos para Windows, Ubuntu e Oracle Linux).
 >
 > **Vai instalar ou administrar o sistema?** Comece pelo guia passo a passo **[INSTALACAO.md](INSTALACAO.md)**: instalação, primeiro acesso, quem administra, recuperação de acesso, chave dos dados e backups, em linguagem simples.
 >
@@ -25,7 +25,8 @@ Sistema web para planejamento, lançamento, acompanhamento, impressão e adminis
 |---|---|
 | **Windows** | **[sisferias-instalador-windows.exe](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-windows.exe)**: dois cliques e siga o assistente |
 | **Ubuntu** | **[sisferias-instalador-ubuntu.deb](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-ubuntu.deb)**: dois cliques, ou `sudo apt install ./sisferias-instalador-ubuntu.deb` |
-| **Os dois + manual e guia** | **[SISFERIAS-completo.zip](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/SISFERIAS-completo.zip)**: extraia e dê dois cliques no instalador da pasta Windows ou Ubuntu |
+| **Oracle Linux / Red Hat 8 e 9** | **[sisferias-instalador-oracle-linux.rpm](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/sisferias-instalador-oracle-linux.rpm)**: `sudo dnf install ./sisferias-instalador-oracle-linux.rpm` |
+| **Todos + manual e guia** | **[SISFERIAS-completo.zip](https://github.com/freitasnascimentomarinha-debug/SISFERIAS/releases/latest/download/SISFERIAS-completo.zip)**: extraia e use o instalador da pasta Windows, Ubuntu ou Oracle Linux |
 
 > O botão verde **Code → Download ZIP** baixa só o código-fonte, **sem** os instaladores. Use os links acima.
 
@@ -33,11 +34,12 @@ Detalhes de cada arquivo, na página **[Releases](https://github.com/freitasnasc
 
 - **Windows:** baixe `sisferias-vX.Y.Z-instalador-windows.exe`, dê dois cliques e siga o assistente. O sistema fica em `C:\SISFERIAS`, roda como serviço (inicia com o Windows), a porta 3000 é liberada no firewall e o atalho **SISFERIAS** é criado na área de trabalho. Se o Windows mostrar "O Windows protegeu o computador", clique em **Mais informações → Executar assim mesmo** (o instalador não tem assinatura digital de empresa).
 - **Ubuntu:** baixe `sisferias_X.Y.Z_amd64.deb` e instale com `sudo apt install ./sisferias_X.Y.Z_amd64.deb`. O sistema fica em `/opt/sisferias`, roda como serviço do systemd com o usuário de sistema `sisferias`, e o endereço e a senha provisória aparecem no final.
+- **Oracle Linux (e Red Hat, Rocky, AlmaLinux) 8 ou 9:** baixe `sisferias-X.Y.Z-1.x86_64.rpm` e instale com `sudo dnf install ./sisferias-X.Y.Z-1.x86_64.rpm`. Mesmo funcionamento do Ubuntu: `/opt/sisferias`, serviço do systemd, usuário `sisferias`, porta liberada no `firewalld`.
 - **Sem instalador:** `sisferias-vX.Y.Z-windows.zip` / `-linux.zip`: extraia numa pasta fixa e execute `iniciar.bat` / `./iniciar.sh` (no Linux, `sudo ./instalar.sh` instala como serviço).
 
-Todos trazem o **Node.js** (pasta `runtime`) e o **PostgreSQL** embutidos. Nos outros computadores da rede, abra `https://IP-DO-SERVIDOR:3000` no navegador. Comandos de administração no servidor: `sisferias.cmd COMANDO` (Windows) ou `sudo /opt/sisferias/sisferias COMANDO` (Ubuntu), equivalentes a `npm run COMANDO --` do código-fonte.
+Todos trazem o **Node.js** (pasta `runtime`) e o **PostgreSQL** embutidos. Nos outros computadores da rede, abra `https://IP-DO-SERVIDOR:3000` no navegador. Comandos de administração no servidor: `sisferias.cmd COMANDO` (Windows) ou `sudo /opt/sisferias/sisferias COMANDO` (Ubuntu e Oracle Linux), equivalentes a `npm run COMANDO --` do código-fonte.
 
-Os instaladores são gerados pelo GitHub a cada versão e **testados de verdade** antes de publicar: instalados, acessados e desinstalados numa máquina Windows e numa Ubuntu (workflow "Instaladores").
+Os instaladores são gerados pelo GitHub a cada versão e **testados de verdade** antes de publicar: instalados, acessados e desinstalados numa máquina Windows, numa Ubuntu e em Oracle Linux 8 e 9 (workflow "Instaladores").
 
 Para rodar o **código-fonte** (desenvolvimento): Node.js 22.13+, `npm install` e `iniciar.bat` (ou `npm run build && npm start`).
 
@@ -201,6 +203,7 @@ Atenção: com `--senha`, o comando também **torna a conta administradora** e a
 
 | Versão | Principais mudanças | Ação na atualização |
 |---|---|---|
+| **3.1.7** | **Instalador para Oracle Linux (e Red Hat, Rocky, AlmaLinux) 8 e 9:** pacote `.rpm` com o Node.js e o PostgreSQL embutidos (`sudo dnf install ./sisferias-instalador-oracle-linux.rpm`), com o mesmo funcionamento do `.deb`: `/opt/sisferias`, usuário de sistema, serviço do systemd, `firewalld`, atalhos e Manual. Instalação, atualização e remoção testadas de verdade em contêineres Oracle Linux 8 e 9 a cada versão. O `SISFERIAS-completo.zip` ganha a pasta "Oracle Linux". | Nenhuma. |
 | **3.1.6** | **Senha provisória do administrador:** o arquivo `data/ADMIN_INICIAL.txt` é apagado sozinho quando a senha provisória é trocada, e também ao iniciar o sistema se ela não valer mais. Assim, ao atualizar uma instalação em que o administrador já trocou a senha, o instalador não mostra mais uma senha antiga que não funciona. | Nenhuma: a atualização apaga o arquivo antigo, se houver. |
 | **3.1.5** | **Volta sozinho depois de desligar o computador:** o banco embutido remove a trava deixada por um desligamento sem encerrar o sistema (no Windows, o número do processo antigo pode passar a outro programa e o PostgreSQL se recusava a iniciar); a tarefa do Windows passa a iniciar também quando alguém entra no Windows (com a "Inicialização rápida", desligar e ligar não dispara o gatilho de inicialização). Testado no Windows simulando a queda: o serviço volta sozinho. | Execute o instalador da versão nova (a tarefa do Windows é recriada com o gatilho novo). |
 | **3.1.4** | **Manual do Usuário junto com o sistema:** o PDF vem no instalador do Windows (menu Iniciar → "Manual do Usuário" e opção "Abrir o Manual do Usuário" no fim da instalação), no `.deb` (menu de aplicativos → "Manual do SISFERIAS"), nos `.zip` e no `SISFERIAS-completo.zip`. Painel: os botões Gerar Relatório (PDF), Exportar Excel e Exportar CSV passam a ter o mesmo estilo (fundo branco). Cabeçalho: o logo não sobrepõe mais o menu; para administradores, o menu completo aparece em telas a partir de 1360 px de largura e, abaixo disso, fica no botão ☰ (menu lateral). | Nenhuma. |
