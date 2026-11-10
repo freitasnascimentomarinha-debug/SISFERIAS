@@ -2,7 +2,9 @@
 #  - Windows: zip completo e instalador .exe (Inno Setup), instalado e
 #    desinstalado de verdade numa máquina Windows do GitHub;
 #  - Ubuntu: zip completo e pacote .deb, instalado e removido de verdade
-#    (serviço do systemd) numa máquina Ubuntu do GitHub.
+#    (serviço do systemd) numa máquina Ubuntu do GitHub;
+#  - Oracle Linux 8 e 9: pacote .rpm, instalado, atualizado e removido de verdade
+#    num contêiner Oracle Linux com systemd.
 # Roda nas mudanças que mexem na instalação e é usado pela publicação de
 # versões (release.yml), que só publica se tudo passar.
 name: Instaladores
@@ -19,6 +21,7 @@ on:
       - '*.bat'
       - 'server/start.js'
       - 'server/config.js'
+      - 'server/pgembed.js'
       - 'package.json'
       - '.github/workflows/instaladores.yml'
   workflow_dispatch:
@@ -59,6 +62,10 @@ jobs:
           npm run pacote -- --plataforma linux
           (cd pacote && zip -rqy "../sisferias-${VERSAO}-linux.zip" sisferias)
           instaladores/gerar-deb.sh pacote/sisferias "${VERSAO#v}" "sisferias_${VERSAO#v}_amd64.deb"
+      - name: Pacote .rpm (Oracle Linux, Red Hat, Rocky, AlmaLinux)
+        run: |
+          sudo apt-get install -y -qq rpm >/dev/null
+          instaladores/gerar-rpm.sh pacote/sisferias "${VERSAO#v}" "sisferias-${VERSAO#v}-1.x86_64.rpm"
       - name: Teste real do .deb (instala, acessa, remove)
         run: |
           set -e
@@ -83,12 +90,86 @@ jobs:
           if systemctl is-enabled sisferias 2>/dev/null; then echo "Serviço continua instalado"; exit 1; fi
           sudo test -f /opt/sisferias/data/chave-dados.key
           echo "Instalação, atualização e remoção do .deb OK (dados mantidos)."
-      - uses: actions/upload-artifact@v4
+      # Os arquivos passam para as outras etapas pelo cache do GitHub (cota própria de 10 GB),
+      # não por "artifacts" (cota pequena, que esgotou com os pacotes de várias versões).
+      - name: Guardar os pacotes para as próximas etapas
+        uses: actions/cache/save@v4
         with:
-          name: pacotes
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
           path: |
             sisferias-*.zip
             sisferias_*.deb
+            sisferias-*.x86_64.rpm
+
+  oracle-linux:
+    name: Instalação no Oracle Linux ${{ matrix.versao }}
+    needs: pacotes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        versao: ['8', '9']
+    env:
+      VERSAO: ${{ needs.pacotes.outputs.versao }}
+    steps:
+      - name: Pacotes da etapa anterior
+        uses: actions/cache/restore@v4
+        with:
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            sisferias-*.zip
+            sisferias_*.deb
+            sisferias-*.x86_64.rpm
+      - name: Contêiner Oracle Linux com systemd
+        timeout-minutes: 10
+        run: |
+          cat > Dockerfile <<'EOF'
+          ARG VERSAO_OL
+          FROM oraclelinux:${VERSAO_OL}
+          RUN dnf -y install systemd hostname procps-ng && (command -v curl || dnf -y install --allowerasing curl) && dnf clean all
+          STOPSIGNAL SIGRTMIN+3
+          CMD ["/usr/sbin/init"]
+          EOF
+          docker build -q --build-arg VERSAO_OL=${{ matrix.versao }} -t ol-systemd .
+          docker run -d --name ol --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v "$PWD":/w ol-systemd
+          for i in $(seq 1 30); do docker exec ol systemctl is-system-running 2>/dev/null | grep -qE 'running|degraded' && break; sleep 2; done
+          docker exec ol cat /etc/oracle-release
+      - name: Teste real do .rpm (instala, acessa, atualiza, remove)
+        timeout-minutes: 15
+        run: |
+          set -e
+          RPM="/w/sisferias-${VERSAO#v}-1.x86_64.rpm"
+          ol() { docker exec ol "$@"; }
+          saude() {
+            for i in $(seq 1 90); do
+              ol curl -sk https://localhost:3000/api/health | grep -q '"ok":true' && return 0
+              sleep 2
+            done
+            ol systemctl status sisferias --no-pager || true
+            ol journalctl -u sisferias --no-pager | tail -60
+            return 1
+          }
+          ol dnf -y install "$RPM"
+          saude || { echo "O sistema não respondeu após a instalação"; exit 1; }
+          ol test -f /opt/sisferias/data/ADMIN_INICIAL.txt
+          ol test -f /opt/sisferias/data/chave-dados.key
+          ol systemctl is-enabled sisferias
+          [ "$(ol stat -c %U /opt/sisferias/data/postgres)" = "sisferias" ]
+          ol test -f /opt/sisferias/Manual_do_Usuario_SISFERIAS.pdf
+          echo "Atualização (reinstala por cima) mantém os dados:"
+          K1="$(ol sha256sum /opt/sisferias/data/chave-dados.key)"
+          ol dnf -y reinstall "$RPM"
+          saude || { echo "O sistema não voltou após a atualização"; exit 1; }
+          [ "$K1" = "$(ol sha256sum /opt/sisferias/data/chave-dados.key)" ]
+          ol systemctl is-active sisferias
+          ol dnf -y remove sisferias
+          if ol systemctl is-enabled sisferias 2>/dev/null; then echo "Serviço continua instalado"; exit 1; fi
+          ol test -f /opt/sisferias/data/chave-dados.key
+          echo "Instalação, atualização e remoção do .rpm no Oracle Linux ${{ matrix.versao }} OK (dados mantidos)."
 
   windows:
     name: Instalador e instalação no Windows
@@ -99,9 +180,16 @@ jobs:
       VERSAO: ${{ needs.pacotes.outputs.versao }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Pacotes da etapa anterior
+        uses: actions/cache/restore@v4
         with:
-          name: pacotes
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            sisferias-*.zip
+            sisferias_*.deb
+            sisferias-*.x86_64.rpm
       - name: Extrair o pacote do Windows
         shell: pwsh
         run: Expand-Archive -Path "sisferias-$env:VERSAO-windows.zip" -DestinationPath pacote
@@ -204,7 +292,9 @@ jobs:
           if (-not (Test-Path C:\SISFERIAS\data\chave-dados.key)) { throw 'Desinstalar apagou os dados' }
           Write-Host 'Instalação e desinstalação no Windows OK (dados mantidos).'
           exit 0  # o último schtasks devolve erro de propósito (serviço já removido)
-      - uses: actions/upload-artifact@v4
+      - name: Guardar o instalador para a publicação
+        uses: actions/cache/save@v4
         with:
-          name: instalador-windows
+          key: instalador-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
           path: instaladores/sisferias-*-instalador-windows.exe

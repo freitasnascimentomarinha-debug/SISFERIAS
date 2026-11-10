@@ -40,7 +40,7 @@ fazer se ninguém conseguir entrar.
 
 | Item | Detalhe |
 |---|---|
-| Um computador para ser o servidor | Windows 10/11 ou Windows Server (64 bits), ou **Ubuntu** (20.04 ou mais novo, 64 bits), ligado durante o expediente |
+| Um computador para ser o servidor | Windows 10/11 ou Windows Server (64 bits), ou **Ubuntu** (20.04 ou mais novo, 64 bits), ou **Oracle Linux / Red Hat / Rocky / AlmaLinux** (8 ou 9, 64 bits), ligado durante o expediente |
 | Nada mais para instalar | O Node.js e o banco PostgreSQL **já vêm dentro** do instalador. Não é preciso internet |
 | Rede interna | Os demais computadores precisam enxergar o servidor |
 | Certificado do servidor | Emitido pelo **CTIM** (DCTIMBOTEC 31/002, item 3.1.c). Até chegar, o sistema usa um provisório |
@@ -51,6 +51,7 @@ Os arquivos ficam na página **Releases** do GitHub do projeto:
 |---|---|
 | `sisferias-vX.Y.Z-instalador-windows.exe` | **Instalador do Windows** (recomendado) |
 | `sisferias_X.Y.Z_amd64.deb` | **Instalador do Ubuntu** (recomendado) |
+| `sisferias-X.Y.Z-1.x86_64.rpm` | **Instalador do Oracle Linux / Red Hat 8 e 9** (recomendado) |
 | `sisferias-vX.Y.Z-windows.zip` / `-linux.zip` | O mesmo sistema sem instalador (extrair e executar) |
 
 ---
@@ -88,7 +89,7 @@ Telas do assistente (capturadas num Windows real):
 7. O atalho **SISFERIAS** na área de trabalho abre o sistema no navegador.
 
 O **Manual do Usuário** (PDF) fica em `C:\SISFERIAS\Manual_do_Usuario_SISFERIAS.pdf`, com atalho no menu Iniciar
-("Manual do Usuário"). No Ubuntu: `/opt/sisferias/Manual_do_Usuario_SISFERIAS.pdf` (menu de aplicativos → "Manual do SISFERIAS").
+("Manual do Usuário"). No Ubuntu e no Oracle Linux: `/opt/sisferias/Manual_do_Usuario_SISFERIAS.pdf` (menu de aplicativos → "Manual do SISFERIAS").
 
 **Atualizar:** faça um backup (seção 10) e execute o instalador da versão nova. Ele para o serviço, troca os
 arquivos e inicia de novo, **mantendo os dados**.
@@ -121,6 +122,31 @@ Comandos úteis: `systemctl status sisferias` (situação), `journalctl -u sisfe
 
 Sem o `.deb`, o pacote `sisferias-vX.Y.Z-linux.zip` faz o mesmo: extraia e execute `sudo ./instalar.sh`
 (para remover, `sudo /opt/sisferias/desinstalar.sh`).
+
+### 3.2.1 Oracle Linux (e Red Hat, Rocky, AlmaLinux) 8 ou 9: pacote .rpm
+
+1. Copie **`sisferias-X.Y.Z-1.x86_64.rpm`** (ou `sisferias-instalador-oracle-linux.rpm`) para o servidor.
+2. Instale pelo terminal:
+
+```
+sudo dnf install ./sisferias-X.Y.Z-1.x86_64.rpm
+```
+
+3. O instalador faz o mesmo que o do Ubuntu:
+   - instala em **`/opt/sisferias`** (dados em `/opt/sisferias/data`);
+   - cria o usuário de sistema **`sisferias`**;
+   - instala o **serviço** do systemd;
+   - libera a porta 3000 no **`firewalld`**, se estiver ativo;
+   - mostra o **endereço de acesso** e a **senha provisória do administrador**.
+
+Não precisa de internet nem de outros pacotes: o Node.js e o PostgreSQL vêm dentro do `.rpm`.
+
+**Atualizar:** faça um backup e instale o `.rpm` da versão nova do mesmo jeito. Os dados são mantidos.
+**Remover:** `sudo dnf remove sisferias`. A pasta `/opt/sisferias/data` é mantida.
+
+**SELinux:** os testes automáticos rodam em contêiner, onde o SELinux não atua. Se o servidor da OM usa o
+SELinux em modo *Enforcing* (padrão do Oracle Linux) e o serviço não subir, a Divisão de Informática confere os
+bloqueios com `sudo ausearch -m avc -ts recent` antes de qualquer ajuste.
 
 ### 3.3 Sem instalador (pacote .zip)
 
@@ -156,12 +182,12 @@ admin) são para quem roda o código-fonte. Na instalação pelo instalador ou p
 | Sistema | Forma |
 |---|---|
 | **Windows** | Prompt de Comando **como administrador**, na pasta `C:\SISFERIAS`: `sisferias.cmd COMANDO opções` |
-| **Ubuntu** | Terminal: `sudo /opt/sisferias/sisferias COMANDO opções` |
+| **Ubuntu / Oracle Linux** | Terminal: `sudo /opt/sisferias/sisferias COMANDO opções` |
 
 Exemplo: `npm run https -- status` vira `sisferias.cmd https status` (Windows) ou
-`sudo /opt/sisferias/sisferias https status` (Ubuntu). Depois de mudar configurações, reinicie o sistema
+`sudo /opt/sisferias/sisferias https status` (Ubuntu e Oracle Linux). Depois de mudar configurações, reinicie o sistema
 (Windows: reinicie o computador ou `sisferias.cmd servico parar` e `sisferias.cmd servico iniciar`;
-Ubuntu: `sudo systemctl restart sisferias`).
+Ubuntu e Oracle Linux: `sudo systemctl restart sisferias`).
 
 ### 3.5 Acessar
 
@@ -174,7 +200,7 @@ fechar o navegador não desliga o sistema.
 - **Nos outros computadores da rede:** use o **nome ou o IP do servidor**, e não `localhost`
   (em outro computador, `localhost` é o próprio computador). Exemplo: `https://192.168.0.15:3000`.
   - Para descobrir o IP no Windows: tecla Windows → `cmd` → `ipconfig` → **Endereço IPv4** do adaptador
-    em uso (Wi-Fi ou Ethernet). No Ubuntu: `hostname -I`. O instalador do Ubuntu também mostra o endereço no final.
+    em uso (Wi-Fi ou Ethernet). No Ubuntu e no Oracle Linux: `hostname -I`. Os instaladores do Linux também mostram o endereço no final.
   - Digite o endereço completo, com **`https://`** e **`:3000`**.
 
 **Para os outros computadores conseguirem acessar:**
@@ -184,7 +210,7 @@ fechar o navegador não desliga o sistema.
 - No Windows, a rede do servidor deve estar como **rede de domínio** ou **rede privada**. Em rede "pública", o
   Windows bloqueia o acesso vindo de outros computadores (Configurações → Rede e Internet → clique na rede →
   "Rede privada").
-- O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Ubuntu). Se a OM usar
+- O instalador libera a porta 3000 só no firewall do Windows (ou no `ufw`/`firewalld` do Linux). Se a OM usar
   **antivírus ou firewall corporativo**, a Divisão de Informática deve liberar a porta 3000 do servidor na rede interna.
 
 **Depois de ligar o computador:** o sistema volta sozinho em até 1 minuto, mesmo que o computador tenha sido
@@ -194,8 +220,8 @@ ou inicie o serviço com o comando abaixo.
 
 **Conferir se o serviço está funcionando:** no Windows, abra o Prompt de Comando como administrador e execute
 `C:\SISFERIAS\sisferias.cmd servico status` (ou procure a tarefa **SISFERIAS** no Agendador de Tarefas,
-`taskschd.msc`). No Ubuntu: `systemctl status sisferias`. Para reiniciar: `sisferias.cmd servico parar` e
-`sisferias.cmd servico iniciar` (Windows) ou `sudo systemctl restart sisferias` (Ubuntu).
+`taskschd.msc`). No Ubuntu e no Oracle Linux: `systemctl status sisferias`. Para reiniciar: `sisferias.cmd servico parar` e
+`sisferias.cmd servico iniciar` (Windows) ou `sudo systemctl restart sisferias` (Ubuntu e Oracle Linux).
 
 Enquanto o certificado do CTIM não for instalado (seção 12), o navegador mostra o aviso
 "conexão não é particular". A conexão já é criptografada; o aviso só indica que o certificado
@@ -347,9 +373,9 @@ No **computador servidor** (pode ser com o SISFERIAS ligado). Use o comando de a
 | Instalação | Como executar |
 |---|---|
 | **Windows** | Abra o **Prompt de Comando como administrador**, digite `cd /d C:\SISFERIAS` e use `sisferias.cmd ...` |
-| **Ubuntu** | No terminal: `sudo /opt/sisferias/sisferias ...` |
+| **Ubuntu / Oracle Linux** | No terminal: `sudo /opt/sisferias/sisferias ...` |
 
-Exemplos (no Ubuntu, troque `sisferias.cmd` por `sudo /opt/sisferias/sisferias`):
+Exemplos (no Ubuntu e no Oracle Linux, troque `sisferias.cmd` por `sudo /opt/sisferias/sisferias`):
 
 ```
 sisferias.cmd admin --senha NovaSenha@2026
@@ -508,7 +534,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
 
 ## 14. Uso no dia a dia
 
-- **Instalado pelo instalador (Windows) ou pelo .deb (Ubuntu):** o serviço já está instalado e não há nada a fazer;
+- **Instalado pelo instalador (Windows), pelo .deb (Ubuntu) ou pelo .rpm (Oracle Linux):** o serviço já está instalado e não há nada a fazer;
   os itens abaixo sobre `instalar-servico.bat` valem para quem usa o pacote `.zip`.
 - **Iniciar junto com o Windows, sem janela (recomendado):** dê dois cliques em **`instalar-servico.bat`**
   e confirme a permissão de administrador. O SISFERIAS passa a rodar como serviço:
@@ -521,12 +547,12 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
 - **Desligar o sistema:** no modo com janela, feche a janela preta ou pressione `Ctrl + C`
   (o PostgreSQL embutido é desligado junto). No modo serviço, execute `remover-servico.bat` (ou, para só
   parar até o próximo reinício do computador, `runtime\node scripts\servico.js parar` como administrador).
-  No Ubuntu: `sudo systemctl stop sisferias` (e `start` para ligar de novo).
+  No Ubuntu e no Oracle Linux: `sudo systemctl stop sisferias` (e `start` para ligar de novo).
 - **Trocar a própria senha:** qualquer usuário clica no ícone de **chave**, no canto superior direito,
   ao lado de "Sair". O sistema pede a senha atual e a nova (regra da seção 5).
 - **Atualizar para uma versão nova:**
   1. Faça um backup e confira se há cópia da chave (seção 8).
-  2. **Com o instalador:** execute o instalador da versão nova (Windows `.exe` ou Ubuntu `.deb`). Ele para o
+  2. **Com o instalador:** execute o instalador da versão nova (Windows `.exe`, Ubuntu `.deb` ou Oracle Linux `.rpm`). Ele para o
      serviço, troca os arquivos e inicia de novo, mantendo os dados. Siga para o passo 6.
   3. **Com o pacote .zip:** pare o sistema (feche a janela ou, no modo serviço, execute
      `runtime\node scripts\servico.js parar` como administrador) e extraia o pacote novo por cima da pasta
@@ -534,7 +560,7 @@ Todas as telas desse ambiente mostram a faixa amarela **"Ambiente de homologaç�
   4. Se for código-fonte, execute `atualizar.bat`.
   5. Inicie normalmente (ou `instalar-servico.bat`, no modo serviço). Mudanças no banco de dados são
      aplicadas sozinhas na primeira inicialização.
-  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.6**).
+  6. Confira, no rodapé da tela de login, se aparece a versão nova (ex.: **Versão 3.1.7**).
   7. Leia as novidades da versão no `README.md` (seção "Histórico de versões") e faça os ajustes
      indicados. Vindo da 3.0.0: preencha **Segurança → Sistema → Proteção de Dados (LGPD)** (novidade da 3.0.1).
 - **Manter o servidor atualizado:** a OM deve aplicar as atualizações de segurança do Windows/Linux e

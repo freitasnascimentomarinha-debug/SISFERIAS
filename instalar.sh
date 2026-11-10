@@ -11,7 +11,7 @@
 # - Libera a porta no firewall (ufw ou firewalld), se estiver ativo.
 # - Mostra o endereço de acesso e, na primeira instalação, a senha provisória
 #   do administrador.
-# Também é usado pelo pacote .deb (já em /opt/sisferias, sem cópia).
+# Também é usado pelos pacotes .deb e .rpm (já em /opt/sisferias, sem cópia).
 set -euo pipefail
 
 DEST=/opt/sisferias
