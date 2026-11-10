@@ -90,9 +90,13 @@ jobs:
           if systemctl is-enabled sisferias 2>/dev/null; then echo "Serviço continua instalado"; exit 1; fi
           sudo test -f /opt/sisferias/data/chave-dados.key
           echo "Instalação, atualização e remoção do .deb OK (dados mantidos)."
-      - uses: actions/upload-artifact@v4
+      # Os arquivos passam para as outras etapas pelo cache do GitHub (cota própria de 10 GB),
+      # não por "artifacts" (cota pequena, que esgotou com os pacotes de várias versões).
+      - name: Guardar os pacotes para as próximas etapas
+        uses: actions/cache/save@v4
         with:
-          name: pacotes
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
           path: |
             sisferias-*.zip
             sisferias_*.deb
@@ -110,9 +114,16 @@ jobs:
     env:
       VERSAO: ${{ needs.pacotes.outputs.versao }}
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Pacotes da etapa anterior
+        uses: actions/cache/restore@v4
         with:
-          name: pacotes
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            sisferias-*.zip
+            sisferias_*.deb
+            sisferias-*.x86_64.rpm
       - name: Contêiner Oracle Linux com systemd
         timeout-minutes: 10
         run: |
@@ -169,9 +180,16 @@ jobs:
       VERSAO: ${{ needs.pacotes.outputs.versao }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Pacotes da etapa anterior
+        uses: actions/cache/restore@v4
         with:
-          name: pacotes
+          key: pacotes-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: |
+            sisferias-*.zip
+            sisferias_*.deb
+            sisferias-*.x86_64.rpm
       - name: Extrair o pacote do Windows
         shell: pwsh
         run: Expand-Archive -Path "sisferias-$env:VERSAO-windows.zip" -DestinationPath pacote
@@ -274,7 +292,9 @@ jobs:
           if (-not (Test-Path C:\SISFERIAS\data\chave-dados.key)) { throw 'Desinstalar apagou os dados' }
           Write-Host 'Instalação e desinstalação no Windows OK (dados mantidos).'
           exit 0  # o último schtasks devolve erro de propósito (serviço já removido)
-      - uses: actions/upload-artifact@v4
+      - name: Guardar o instalador para a publicação
+        uses: actions/cache/save@v4
         with:
-          name: instalador-windows
+          key: instalador-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          enableCrossOsArchive: true
           path: instaladores/sisferias-*-instalador-windows.exe
